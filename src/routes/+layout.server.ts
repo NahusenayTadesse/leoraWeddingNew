@@ -1,0 +1,55 @@
+import { db } from '$lib/server/db';
+import { vendorServices, serviceCategories, user, roles, prices } from '$lib/server/db/schema';
+import { eq, min } from 'drizzle-orm';
+import type { LayoutServerLoad } from './$types';
+
+export const load: LayoutServerLoad = async ({ locals }) => {
+	const currentUser = locals?.user;
+	let roleName = ''; // Initialize with a default value
+
+	// 1. Fetch the role name if a user exists
+	if (currentUser) {
+		const roleData = await db
+			.select({ name: roles.name })
+			.from(user)
+			.leftJoin(roles, eq(user.roleId, roles.id))
+			.where(eq(user.id, currentUser.id))
+			.then((rows) => rows[0]);
+
+		roleName = roleData?.name ?? '';
+	}
+
+	// 2. Fetch the product list (this now always runs)
+	const serviceList = await db
+		.select({
+			productId: vendorServices.id,
+			productName: vendorServices.title,
+			price: min(prices.price),
+			amount: min(prices.amount),
+			image: vendorServices.featuredImage,
+			category: serviceCategories.name
+		})
+		.from(vendorServices)
+		.leftJoin(serviceCategories, eq(serviceCategories.id, vendorServices.categoryId))
+		.leftJoin(prices, eq(prices.serviceId, vendorServices.id))
+		.where(eq(vendorServices.isActive, true))
+		.groupBy(vendorServices.id, serviceCategories.name);
+	const allPrices = await db.select().from(prices);
+
+	const productList = serviceList.map((p) => ({
+		...p,
+		priceList: allPrices
+			.filter((price) => price.serviceId === p.productId) // use productId here too
+			.map((price) => ({
+				amount: price.amount,
+				price: price.price
+			}))
+	}));
+
+	// 3. Return everything at once
+	return {
+		productList,
+		roleName,
+		user: currentUser
+	};
+};

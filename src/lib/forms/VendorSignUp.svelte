@@ -9,15 +9,23 @@
 
 	import type { SuperValidated, Infer } from 'sveltekit-superforms';
 	import { superForm } from 'sveltekit-superforms';
-	import type { SignupSchema } from '$lib/ZodSchema';
-	import DarkMode from '$lib/components/DarkMode.svelte';
-	import { Eye, Heart, EyeOff } from '@lucide/svelte';
+	import type { VendorSchema } from '$lib/ZodSchema';
+	import { Eye, EyeOff, MapPin, Type } from '@lucide/svelte';
 	import Errors from '$lib/formComponents/Errors.svelte';
 
 	let {
 		data,
-		action = '?/signup'
-	}: { data: SuperValidated<Infer<SignupSchema>>; action?: string } = $props();
+		action = '?/signup',
+		cityList = [],
+		subCityList = [],
+		categoryList = []
+	}: {
+		data: SuperValidated<Infer<VendorSchema>>;
+		action?: string;
+		cityList: { value: string | number; name: string }[];
+		categoryList: { value: string | number; name: string }[];
+		subCityList: { value: string | number; name: string; cityId: string | number }[];
+	} = $props();
 
 	const { form, errors, delayed, enhance, allErrors, message } = superForm(data, {});
 
@@ -50,54 +58,41 @@
 			</div>
 		</a>
 		<Card.Title class="flex flex-row justify-between text-2xl">Sign Up</Card.Title>
-		<Card.Description>Enter your email below to login to your account</Card.Description>
+		<Card.Description>Sign up as a vendor and sell your products</Card.Description>
 	</Card.Header>
 	<Card.Content> -->
 <form method="POST" id="main" {action} use:enhance>
 	<Errors allErrors={$allErrors} />
 
 	<div class="grid gap-4">
+		<InputComp label="Business Name" name="businessName" type="text" {form} {errors} />
 		<InputComp
-			label="Groom Name"
-			name="groomName"
-			type="text"
+			label="Business Type"
+			name="vendorCategory"
+			type="combo"
 			{form}
 			{errors}
-			placeholder="Abebe Alemu"
+			items={categoryList}
 		/>
 		<InputComp
-			label="Bride Name"
-			name="brideName"
-			type="text"
+			label="Phone Number"
+			name="phone"
+			type="tel"
 			{form}
 			{errors}
 			placeholder="Tsehay Kebede"
+			items={categoryList}
+		/>
+		<InputComp
+			label="Email Address"
+			name="email"
+			type="email"
+			{form}
+			{errors}
+			placeholder="Tsehay Kebede"
+			items={categoryList}
 		/>
 	</div>
-	<InputComp
-		label="Email Address"
-		name="email"
-		type="email"
-		{form}
-		{errors}
-		placeholder="john@example.com"
-	/>
-	<InputComp
-		label="Phone Number"
-		name="phone"
-		type="tel"
-		{form}
-		{errors}
-		placeholder="+251 9-11-00-00-00"
-	/>
-	<InputComp
-		label="Phone Number (Optional)"
-		name="phone2"
-		type="tel"
-		{form}
-		{errors}
-		placeholder="+251 9-11-00-00-00"
-	/>
 
 	<div class="grid gap-2">
 		<div class="flex items-center">
@@ -119,11 +114,75 @@
 			{#if $errors.password}<span class="text-red-500">{$errors.password}</span>{/if}
 		</div>
 	</div>
-	<Button type="submit" form="main" class="h-12 w-full text-lg shadow-md">
+	<InputComp
+		label="Description"
+		name="description"
+		type="textarea"
+		{form}
+		{errors}
+		placeholder="tell us about your business"
+	/>
+	<div class="my-8">
+		<h2 class="flex flex-row items-start justify-start gap-1 text-center font-bold">
+			<MapPin class="h-5 w-5 text-primary" />
+			Business Address
+		</h2>
+	</div>
+
+	<InputComp label="City of Business" name="city" type="combo" {form} {errors} items={cityList} />
+
+	<InputComp
+		label="Subcity"
+		name="subcity"
+		type="combo"
+		{form}
+		{errors}
+		items={$form.city
+			? subCityList.filter((item) => item.cityId === $form.city)
+			: [{ value: '', name: 'Select City First' }]}
+	/>
+	<InputComp label="Street Address or Name" name="street" type="text" {form} {errors} />
+	<InputComp
+		label="Building Name or Number"
+		name="buildingNumber"
+		type="text"
+		placeholder="Enter Building Name or Number where you are located"
+		{form}
+		{errors}
+	/>
+	<InputComp
+		label="Floor"
+		name="floor"
+		type="text"
+		placeholder="Enter Floor Number"
+		{form}
+		{errors}
+	/>
+	<InputComp
+		label="Office Number"
+		name="houseNumber"
+		type="text"
+		placeholder="Enter your office number"
+		{form}
+		{errors}
+	/>
+
+	<InputComp label="Kebele" name="kebele" type="text" placeholder="Enter Kebele" {form} {errors} />
+
+	<InputComp
+		label="Enter Your Google Maps URL"
+		name="googleMapsUrl"
+		type="url"
+		placeholder="Enter your Google Maps URL"
+		{form}
+		{errors}
+	/>
+
+	<Button type="submit" form="main" class="mt-6 h-12 w-full text-lg shadow-md">
 		{#if $delayed}
-			<LoadingBtn name="Signing You Up" />
+			<LoadingBtn name="Registering Your Business" />
 		{:else}
-			Sign Up
+			Register as a Vendor
 		{/if}
 	</Button>
 </form>

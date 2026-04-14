@@ -1,11 +1,40 @@
 import { db } from '$lib/server/db';
-import { vendorServices, serviceCategories, user, roles, prices } from '$lib/server/db/schema';
+import {
+	vendorServices,
+	serviceCategories,
+	user,
+	roles,
+	prices,
+	couples,
+	vendors,
+	weddings
+} from '$lib/server/db/schema';
 import { eq, min } from 'drizzle-orm';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
 	const currentUser = locals?.user;
-	let roleName = ''; // Initialize with a default value
+	let roleName = '';
+
+	const isVendor = await db
+		.select({ userId: vendors.userId })
+		.from(vendors)
+		.where(eq(vendors.userId, currentUser?.id));
+
+	const isCouple = await db
+		.select({ userId: couples.userId, id: couples.id })
+		.from(couples)
+		.where(eq(couples.userId, currentUser?.id))
+		.then((rows) => rows[0]);
+
+	let budget = null;
+	if (isCouple) {
+		budget = await db
+			.select()
+			.from(weddings)
+			.where(eq(weddings.coupleId, isCouple.id))
+			.then((rows) => rows[0]);
+	}
 
 	// 1. Fetch the role name if a user exists
 	if (currentUser) {
@@ -50,6 +79,9 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 	return {
 		productList,
 		roleName,
-		user: currentUser
+		user: currentUser,
+		isVendor: isVendor.length > 0,
+		isCouple,
+		budget
 	};
 };

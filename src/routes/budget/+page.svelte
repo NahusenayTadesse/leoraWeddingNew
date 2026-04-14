@@ -1,15 +1,42 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+
+	import { superForm } from 'sveltekit-superforms/client';
+	import { toast } from 'svelte-sonner';
+	import InputComp from '$lib/formComponents/InputComp.svelte';
+	import LoadingBtn from '$lib/formComponents/LoadingBtn.svelte';
+
+	import { useCart } from '$lib/hooks/cart.svelte.js';
+
+	const cart = useCart();
+	let { data } = $props();
+	const { form, errors, enhance, delayed, message, allErrors } = superForm(data.form, {
+		resetForm: false
+	});
+
+	$form.totalBudget = Number(data?.budget?.totalBudget);
+	$form.expectedGuests = Number(data?.budget?.expectedGuests);
+	$form.weddingStyle = data?.budget?.weddingStyle;
+	$form.weddingDate = data?.budget?.weddingDate.toLocaleDateString('en-CA');
+
+	$effect(() => {
+		if ($message) {
+			if ($message.type === 'error') toast.error($message.text);
+			else {
+				toast.success($message.text);
+			}
+		}
+	});
+
 	import {
-		RefreshCw,
 		Building2,
 		Utensils,
 		Camera,
 		Flower2,
 		Music,
+		Save,
 		MoreHorizontal
 	} from '@lucide/svelte';
-	import { Input } from '$lib/components/ui/input/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { budgetCategories } from '$lib/data.js';
 	import {
@@ -21,7 +48,9 @@
 		Tooltip,
 		Legend
 	} from 'chart.js';
-	import SelectComp from '$lib/formComponents/SelectComp.svelte';
+	import DialogComp from '$lib/formComponents/DialogComp.svelte';
+	import Signup from '$lib/forms/Signup.svelte';
+	import Errors from '$lib/formComponents/Errors.svelte';
 
 	Chart.register(BarElement, BarController, CategoryScale, LinearScale, Tooltip, Legend);
 
@@ -34,23 +63,23 @@
 		'more-horizontal': MoreHorizontal
 	};
 
-	let totalBudget = $state(500000);
-	let guestCount = $state(300);
-	let weddingStyle = $state('Traditional Ethiopian');
+	let totalBudget = $derived($form.totalBudget);
+	let guestCount = $derived($form.expectedGuests);
+	let weddingStyle = $derived($form.weddingStyle ?? 'Traditional Ethiopian');
 	let selectedCategories = $state<Set<number>>(new Set());
 
-	let budgetChartCanvas: HTMLCanvasElement;
-	let budgetChart: Chart | null = null;
+	let budgetChartCanvas: HTMLCanvasElement = $state();
+	let budgetChart: Chart | null = $state(null);
 
 	let breakdown = $derived(
 		budgetCategories.map((cat) => ({
 			...cat,
-			amount: Math.round(totalBudget * (cat.percent / 100))
+			amount: Math.round($form.totalBudget * (cat.percent / 100))
 		}))
 	);
 
 	let allocated = $derived(breakdown.reduce((sum, c) => sum + c.amount, 0));
-	let remaining = $derived(totalBudget - allocated);
+	let remaining = $derived(totalBudget - useCart().totalPrice);
 	let progressPct = $derived(Math.min(100, (allocated / totalBudget) * 100));
 
 	function isDark() {
@@ -83,6 +112,7 @@
 		const next = new Set(selectedCategories);
 		if (next.has(idx)) next.delete(idx);
 		else next.add(idx);
+
 		selectedCategories = next;
 	}
 
@@ -166,48 +196,60 @@
 		<div class="grid gap-8 lg:grid-cols-3">
 			<!-- ── Input Panel ── -->
 			<div class="lg:col-span-1">
-				<div
-					class="glass-card shadow-soft sticky top-32 rounded-2xl p-6 dark:border dark:border-leora-gold/10 dark:bg-gray-900"
+				<form
+					use:enhance
+					method="POST"
+					action="?/budget"
+					id="budget-form"
+					class="glass-card shadow-soft sticky top-32 rounded-2xl p-6 dark:border
+					dark:border-leora-gold/10 dark:bg-gray-900"
 				>
+					<Errors allErrors={$allErrors} />
 					<h3 class="font-display mb-6 text-xl font-semibold text-leora-charcoal dark:text-white">
 						Your Wedding Budget
 					</h3>
 
 					<div class="mb-6">
-						<label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-							Total Budget (ETB)
-						</label>
-						<div class="relative">
-							<span
-								class="absolute top-1/2 left-4 -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400"
-								>ETB</span
-							>
-							<Input
-								bind:value={totalBudget}
-								type="number"
-								name="budget"
-								class="pl-14 text-lg font-semibold dark:border-leora-gold/20 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
-							/>
-						</div>
-					</div>
-
-					<div class="mb-6">
-						<label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-							Expected Guests
-						</label>
-						<Input
-							bind:value={guestCount}
+						<InputComp
 							type="number"
-							class="dark:border-leora-gold/20 dark:bg-gray-800 dark:text-white"
+							name="totalBudget"
+							{form}
+							{errors}
+							label="Total Budget"
+							placeholder="Enter your total budget in ETB"
 						/>
 					</div>
 
 					<div class="mb-6">
-						<label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-							Wedding Style
-						</label>
-						<SelectComp
-							bind:value={weddingStyle}
+						<InputComp
+							type="date"
+							name="weddingDate"
+							year
+							oldDays={false}
+							{form}
+							{errors}
+							label="Wedding Date"
+							placeholder="Select your wedding date"
+						/>
+					</div>
+
+					<div class="mb-6">
+						<InputComp
+							type="number"
+							name="expectedGuests"
+							{form}
+							{errors}
+							label="Expected Guests"
+							placeholder="Enter the number of guests"
+						/>
+					</div>
+
+					<div class="mb-6">
+						<InputComp
+							{form}
+							{errors}
+							label="Wedding Style"
+							type="select"
 							name="weddingStyle"
 							items={[
 								{ value: 'Traditional Ethiopian', name: 'Traditional Ethiopian' },
@@ -217,11 +259,20 @@
 							]}
 						/>
 					</div>
-
-					<Button class="mb-4 w-full" size="lg">
-						<RefreshCw class="mr-2 h-4 w-4" />
-						Recalculate
-					</Button>
+					{#if data?.user}
+						<Button type="submit" class="mb-4 w-full" size="lg" form="budget-form">
+							{#if $delayed}
+								<LoadingBtn name="Saving Budget" />
+							{:else}
+								<Save class="mr-2 h-4 w-4" />
+								Save Budget
+							{/if}
+						</Button>
+					{:else}
+						<DialogComp class="w-full!" variant="default" title="Save Budget" IconComp={Save}>
+							<Signup data={data?.signupForm} action="/signup/?/signup" />
+						</DialogComp>
+					{/if}
 
 					<div class="space-y-2 border-t border-leora-gold/10 pt-4 dark:border-leora-gold/10">
 						<div class="flex items-center justify-between">
@@ -232,8 +283,13 @@
 						</div>
 						<div class="flex items-center justify-between">
 							<span class="text-sm text-gray-600 dark:text-gray-400">Remaining</span>
-							<span class="font-semibold text-green-600 dark:text-green-400">
+							<span
+								class="font-semibold {remaining > 0
+									? 'text-green-600 dark:text-green-400'
+									: 'text-destructive'}"
+							>
 								ETB {remaining.toLocaleString()}
+								{remaining > 0 ? '' : ' (exceeded)'}
 							</span>
 						</div>
 						<div class="mt-3 h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
@@ -243,7 +299,7 @@
 							></div>
 						</div>
 					</div>
-				</div>
+				</form>
 			</div>
 
 			<!-- ── Breakdown Panel ── -->
@@ -262,7 +318,8 @@
 
 				<!-- Category Pills -->
 				<div class="grid gap-4 md:grid-cols-2">
-					{#each breakdown as cat, i}
+					``
+					{#each breakdown as cat, i (cat)}
 						{@const Icon = iconMap[cat.icon]}
 						<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 						<div
@@ -311,7 +368,7 @@
 							Browse vendors that fit your budget categories
 						</p>
 					</div>
-					<Button href="/vendors" size="lg">Browse Vendors</Button>
+					<Button href="/shop/#{totalBudget * 0.35}" size="lg">Browse Vendors</Button>
 				</div>
 			</div>
 		</div>

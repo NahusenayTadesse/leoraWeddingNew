@@ -64,12 +64,14 @@
 	{/if}
 
 	{#if $errors[name]}
-		{#if $errors[name]._errors}
-			{#each $errors[name]._errors as error}
+		{#if Array.isArray($errors[name])}
+			{#each $errors[name] as error (error)}
 				<p class="flex items-center gap-2 text-red-500"><CircleAlert /> {error}</p>
 			{/each}
-		{:else}
-			<p class="text-red-500">{$errors[name]}</p>
+		{:else if $errors[name]._errors}
+			{#each $errors[name]._errors as error (error)}
+				<p class="flex items-center gap-2 text-red-500"><CircleAlert /> {error}</p>
+			{/each}
 		{/if}
 	{/if}
 </div>

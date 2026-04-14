@@ -15,6 +15,27 @@
       "when": 1774949790715,
       "tag": "0001_windy_rocket_raccoon",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1776189748457,
+      "tag": "0002_funny_martin_li",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1776195028054,
+      "tag": "0003_early_greymalkin",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1776203842247,
+      "tag": "0004_hesitant_odin",
+      "breakpoints": true
     }
   ]
 }

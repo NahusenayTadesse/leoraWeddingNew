@@ -46,6 +46,7 @@ export const weddings = mysqlTable('weddings', {
 		.notNull()
 		.references(() => couples.id),
 	weddingDate: date('wedding_date'),
+	expectedGuests: int('expected_guests'),
 	city: varchar('city', { length: 100 }),
 	totalBudget: decimal('total_budget', { precision: 12, scale: 2 }),
 	...secureFields

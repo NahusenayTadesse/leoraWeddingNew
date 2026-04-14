@@ -37,6 +37,8 @@ export const vendors = mysqlTable('vendors', {
 		.notNull()
 		.references(() => user.id),
 	businessName: varchar('business_name', { length: 200 }).notNull(),
+	phone: varchar('phone', { length: 20 }).notNull(),
+	vendorCategory: int('vendor_category').references(() => vendorCategories.id),
 	description: text('description'),
 	city: varchar('city', { length: 100 }),
 	address: int('address')
@@ -94,7 +96,8 @@ export const vendorBookings = mysqlTable('vendor_bookings', {
 export const vendorCategories = mysqlTable('vendor_categories', {
 	id: intPk(),
 	name: varchar('name', { length: 100 }).notNull().unique(),
-	description: text('description')
+	description: text('description'),
+	listable: boolean('listable').default(true)
 });
 
 // Table: vendor_category_map (composite PK)

@@ -82,7 +82,7 @@
 	{@render children()}
 
 	<Footer />
-	<Cart />
+	<Cart budget={Number(data?.budget?.totalBudget)} />
 {:else}
 	{@render children()}
 {/if}

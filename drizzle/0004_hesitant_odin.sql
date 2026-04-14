@@ -1,0 +1,1 @@
+ALTER TABLE `weddings` ADD `expected_guests` int;

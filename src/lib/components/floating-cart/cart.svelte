@@ -9,11 +9,13 @@
 
 	const cart = useCart();
 
+	let { budget }: { budget?: number } = $props();
+
 	/** Format price to currency */
 	const formatPrice = (price: number) => {
 		return new Intl.NumberFormat('en-US', {
 			style: 'currency',
-			currency: 'USD'
+			currency: 'ETB'
 		}).format(price);
 	};
 </script>
@@ -58,8 +60,28 @@
 			<!-- Footer -->
 			<div class="z-100 space-y-3 border-t border-border bg-muted p-4">
 				<div class="flex items-center justify-between">
-					<span class="text-sm text-muted-foreground">Total ({cart.totalItems} items)</span>
+					<span class="text-sm text-muted-foreground">Budget</span>
+					<span class="text-lg font-bold text-primary">{formatPrice(budget ?? 0)}</span>
+				</div>
+				<div class="flex items-center justify-between">
+					<span class="text-sm text-muted-foreground">Spent ({cart.totalItems} items)</span>
 					<span class="text-lg font-bold text-primary">{formatPrice(cart.totalPrice)}</span>
+				</div>
+				<div class="flex items-center justify-between">
+					<span class="text-sm text-muted-foreground"
+						>Remaining <span class="text-destructive"
+							>{budget ? (budget - cart.totalPrice < 0 ? 'Over Budget' : '') : ''}</span
+						>
+					</span>
+
+					<span
+						class="text-lg font-bold {budget
+							? budget - cart.totalPrice < 0
+								? 'text-destructive'
+								: 'text-primary'
+							: 'text-primary'}"
+						>{formatPrice(budget ? budget - cart.totalPrice : cart.totalPrice)}</span
+					>
 				</div>
 				<div class="flex gap-2">
 					<Button variant="outline" size="sm" class="flex-1 gap-2" onclick={() => cart.clearCart()}>

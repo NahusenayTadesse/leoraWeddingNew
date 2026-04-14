@@ -1,16 +1,25 @@
 // import { encodeBase32LowerCase } from '@oslojs/encoding';
 
-import type { Actions, PageServerLoad } from './login/$types';
+import type { Actions, PageServerLoad } from './$types';
 import { message, setError, superValidate } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
-import { add } from './schema';
+import { addUser, addVendor } from '$lib/ZodSchema';
 import { redirect } from 'sveltekit-flash-message/server';
 import { auth } from '$lib/server/auth';
 import { eq, and, sql } from 'drizzle-orm';
 
 import { db } from '$lib/server/db';
 import { APIError } from 'better-auth';
-import { orders, orderItems, roles, user, products, customers } from '$lib/server/db/schema';
+import {
+	couples,
+	roles,
+	user,
+	city,
+	subcity,
+	vendorCategories,
+	vendors,
+	address
+} from '$lib/server/db/schema';
 
 export const load: PageServerLoad = async (event) => {
 	if (event.locals.user) {
@@ -25,14 +34,23 @@ export const load: PageServerLoad = async (event) => {
 			return redirect(302, '/dashboard');
 		} else return redirect(302, '/');
 	}
-	const form = await superValidate(zod4(add));
+	const form = await superValidate(zod4(addUser));
+	const vendorForm = await superValidate(zod4(addVendor));
 
-	return { form };
+	const cityList = await db.select({ value: city.id, name: city.name }).from(city);
+	const categoryList = await db
+		.select({ value: vendorCategories.id, name: vendorCategories.name })
+		.from(vendorCategories);
+	const subCityList = await db
+		.select({ value: subcity.id, name: subcity.name, cityId: subcity.cityId })
+		.from(subcity);
+
+	return { form, vendorForm, cityList, subCityList, categoryList };
 };
 
 export const actions: Actions = {
 	signup: async (event) => {
-		const form = await superValidate(event.request, zod4(add));
+		const form = await superValidate(event.request, zod4(addUser));
 		if (!form.valid) {
 			return message(
 				form,
@@ -46,7 +64,7 @@ export const actions: Actions = {
 			);
 		}
 
-		const { name, email, password, phone } = form.data;
+		const { brideName, groomName, email, password, phone, phone2 } = form.data;
 
 		try {
 			await db.transaction(async (tx) => {
@@ -54,17 +72,19 @@ export const actions: Actions = {
 					body: {
 						email,
 						password,
-						name,
+						role: 'couple',
+						name: brideName,
 						callbackURL: '/auth/verification-success'
 					}
 				});
-				// await tx
-				// 	.update(user)
-				// 	.set({
-				// 		roleId: 2
-				// 	})
-				// 	.where(eq(user.id, newCustomer?.user.id));
-				// await tx.insert(customers).values({ email, name, phone, userId: newCustomer?.user.id });
+				await tx.insert(couples).values({
+					groomName,
+					brideName,
+					email,
+					phone,
+					userId: newCustomer?.user.id,
+					phone2
+				});
 			});
 
 			return message(form, {
@@ -72,6 +92,105 @@ export const actions: Actions = {
 				text: 'Sign Up Successful!'
 			});
 		} catch (error) {
+			if (error instanceof APIError) {
+				return message(
+					form,
+					{
+						type: 'error',
+						text: error?.message
+					},
+					{
+						status: 500
+					}
+				);
+			}
+			return message(
+				form,
+				{
+					type: 'error',
+					text: 'Registration Failed'
+				},
+				{
+					status: 500
+				}
+			);
+		}
+	},
+	vendorSignup: async (event) => {
+		const form = await superValidate(event.request, zod4(addVendor));
+		if (!form.valid) {
+			return message(
+				form,
+				{
+					type: 'error',
+					text: 'Please Check the form'
+				},
+				{
+					status: 500
+				}
+			);
+		}
+
+		const {
+			businessName,
+			phone,
+			email,
+			description,
+			city,
+			subcity,
+			vendorCategory,
+			kebele,
+			street,
+			buildingNumber,
+			houseNumber,
+			floor,
+			googleMapsUrl,
+			password
+		} = form.data;
+
+		try {
+			await db.transaction(async (tx) => {
+				const newVendor = await auth.api.signUpEmail({
+					body: {
+						email,
+						password,
+						role: 'vendor',
+						name: businessName,
+						callbackURL: '/auth/verification-success'
+					}
+				});
+
+				const [addressId] = await tx
+					.insert(address)
+					.values({
+						subcityId: subcity,
+						kebele,
+						street,
+						buildingNumber,
+						houseNumber,
+						floor,
+						googleMapsUrl
+					})
+					.$returningId();
+
+				await tx.insert(vendors).values({
+					businessName,
+					phone,
+					email,
+					description,
+
+					vendorCategory,
+					address: addressId.id,
+					userId: newVendor?.user?.id
+				});
+			});
+
+			return message(form, {
+				type: 'success',
+				text: 'Sign Up Successful!'
+			});
+		} catch (error) {
+			console.error(error.message);
 			if (error instanceof APIError) {
 				return message(
 					form,

@@ -5,6 +5,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { SearchIcon, XIcon } from '@lucide/svelte';
 	import Label from '$lib/components/ui/label/label.svelte';
+	import { page } from '$app/state';
 	let { data } = $props();
 
 	// Set app hook
@@ -53,11 +54,13 @@
 
 	// Get max price from products for slider
 	const maxProductPrice = $derived(
-		Math.max(
-			...(data?.productList.map((p) =>
-				typeof p.price === 'number' ? p.price : parseFloat(p.price as string)
-			) ?? [0])
-		)
+		page.url.hash && page.url.hash !== '#0'
+			? Number(page.url.hash.substring(1))
+			: Math.max(
+					...(data?.productList.map((p) =>
+						typeof p.price === 'number' ? p.price : parseFloat(p.price as string)
+					) ?? [0])
+				)
 	);
 
 	// Toggle category selection
@@ -74,7 +77,7 @@
 		maxPrice = maxProductPrice;
 		selectedCategories = [];
 	};
-
+	console.log(Number(page.url.hash.substring(1)));
 	// Check if any filters are active
 	const hasActiveFilters = $derived(
 		searchQuery !== '' ||
@@ -82,6 +85,14 @@
 			maxPrice < maxProductPrice ||
 			selectedCategories.length > 0
 	);
+
+	$effect(() => {
+		if (page.url.hash && page.url.hash !== '#0') {
+			maxPrice = Number(page.url.hash.substring(1));
+		} else {
+			maxPrice = maxProductPrice;
+		}
+	});
 </script>
 
 <div class="min-h-dvh bg-background pb-8 text-foreground transition-colors duration-300">

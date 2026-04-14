@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { z } from 'zod';
 	import {
 		Card,
 		CardHeader,
@@ -64,6 +63,15 @@
 			href: 'https://wa.me/'
 		}
 	];
+
+	$effect(() => {
+		if ($message) {
+			if ($message.type === 'error') toast.error($message.text);
+			else {
+				toast.success($message.text);
+			}
+		}
+	});
 </script>
 
 <div class="min-h-dvh w-full bg-background text-foreground transition-colors">

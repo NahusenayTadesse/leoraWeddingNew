@@ -40,6 +40,18 @@
 
 		return formatter.format(date.toDate(getLocalTimeZone()));
 	};
+
+	const formatDate = (date: CalendarDate | undefined): string => {
+		if (!date) return '';
+
+		const formatter = new Intl.DateTimeFormat('en-US', {
+			year: 'numeric',
+			month: 'long',
+			day: 'numeric'
+		});
+
+		return formatter.format(date.toDate(getLocalTimeZone()));
+	};
 	const displayDate = $derived(form ? formatEthiopianDate(form) : formatEthiopianDate(todayDate));
 </script>
 
@@ -55,7 +67,7 @@
 	>
 		<div class="flex items-center gap-2">
 			<CalendarIcon />
-			{displayDate}
+			{formatDate(form)} ET:{displayDate}
 		</div>
 	</Popover.Trigger>
 
@@ -65,14 +77,13 @@
 		</div>
 
 		<Calendar
-			locale="am-ET"
 			type="single"
 			captionLayout={year ? 'dropdown-years' : 'label'}
 			minValue={todayDate}
 			maxValue={futureDays ? today(getLocalTimeZone()) : undefined}
 			bind:value={form}
 		/>
-		{#each [{ label: 'Today', value: 0 }, { label: 'Tomorrow', value: 1 }, { label: 'In 3 days', value: 3 }, { label: 'In a week', value: 7 }, { label: 'In 2 weeks', value: 14 }] as preset (preset.value)}
+		<!-- {#each [{ label: 'Today', value: 0 }, { label: 'Tomorrow', value: 1 }, { label: 'In 3 days', value: 3 }, { label: 'In a week', value: 7 }, { label: 'In 2 weeks', value: 14 }] as preset (preset.value)}
 			<Button
 				variant="outline"
 				size="sm"
@@ -83,6 +94,6 @@
 			>
 				{preset.label}
 			</Button>
-		{/each}
+		{/each} -->
 	</Popover.Content>
 </Popover.Root>

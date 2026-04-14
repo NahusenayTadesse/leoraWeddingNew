@@ -1,4 +1,5 @@
 import { z } from 'zod/v4';
+import VendorCard from './components/VendorCard.svelte';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 5MB limit
 const ACCEPTED_FILE_TYPES = [
 	'image/jpeg', // Common for both platforms
@@ -9,12 +10,34 @@ const ACCEPTED_FILE_TYPES = [
 	'application/pdf' // Document format, kept from original
 ];
 export const addUser = z.object({
-	name: z.string('Name is Required').min(2).max(100),
+	groomName: z.string('Groom Name is Required').min(2).max(100),
+	brideName: z.string('Bride Name is Required').min(2).max(100),
 	phone: z.string('Phone is Required').min(10).max(15),
+	phone2: z.string('Phone is Required').min(10).max(15).optional(),
 	email: z.email('Email is Required'),
 	password: z.string('Password is required!')
 });
 export type SignupSchema = typeof addUser;
+
+export const addVendor = z.object({
+	businessName: z.string('Name is Required').min(2).max(100),
+	phone: z.string('Phone is Required').min(10).max(15),
+	email: z.email('Email is Required'),
+	description: z.string().optional(),
+	city: z.number('City is Required').positive(),
+	subcity: z.number('City is Required').positive(),
+	vendorCategory: z.number('Vendor Category is Required').positive(),
+	street: z.string().optional(),
+	kebele: z.string().optional(),
+	buildingNumber: z.string().optional(),
+	houseNumber: z.number().optional(),
+	floor: z.number().optional(),
+	googleMapsUrl: z.url().optional(),
+
+	password: z.string('Password is required!')
+});
+export type VendorSchema = typeof addVendor;
+
 export const loginSchema = z.object({
 	email: z.email({ error: 'Invalid email address' }),
 	password: z.string().min(8, { error: 'Password must be at least 8 characters' })

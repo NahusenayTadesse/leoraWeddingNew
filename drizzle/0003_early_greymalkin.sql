@@ -1,0 +1,1 @@
+ALTER TABLE `vendor_categories` ADD `listable` boolean DEFAULT true;

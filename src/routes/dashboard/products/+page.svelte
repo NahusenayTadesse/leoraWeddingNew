@@ -60,19 +60,19 @@
 </script>
 
 <svelte:head>
-	<title>Products List</title>
+	<title>Products and Services List</title>
 </svelte:head>
 
 {#if data.productList.length === 0}
 	<div class="flex h-96 w-full flex-col items-center justify-center lg:w-5xl">
 		<p class="justify-self-cente mt-4 flex flex-row gap-4 text-center text-4xl">
 			<Frown class="h-12 w-16  animate-bounce" />
-			Products List is Empty
+			Products and Services List is Empty
 		</p>
 		<Button href="/dashboard/products/add-products"><Plus />Add New Products</Button>
 	</div>
 {:else}
-	<h2 class="my-4 text-2xl">No of Products {data.productList?.length}</h2>
+	<h2 class="my-4 text-2xl">No of Products and Services: {data.productList?.length}</h2>
 
 	{#if selected.length > 0}
 		<p class="my-4 text-sm">Selected Products: {selected.length}</p>

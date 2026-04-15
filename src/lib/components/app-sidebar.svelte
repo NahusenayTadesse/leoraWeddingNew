@@ -14,7 +14,9 @@
 		OctagonMinus,
 		ListOrdered,
 		BookHeart,
-		ShelvingUnit
+		ShelvingUnit,
+		Images,
+		Star
 	} from '@lucide/svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import type { ComponentProps } from 'svelte';
@@ -25,8 +27,9 @@
 
 	const navigation = [
 		{ title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-		{ title: 'Vendors', url: '/dashboard/customers', icon: ShelvingUnit },
-		{ title: 'Couples', url: '/dashboard/customers', icon: BookHeart },
+		{ title: 'Vendors', url: '/dashboard/vendors', icon: ShelvingUnit },
+		{ title: 'Couples', url: '/dashboard/couples', icon: BookHeart },
+		{ title: 'Gallery and Video', url: '/dashboard/gallery', icon: Images },
 		{
 			title: 'Orders',
 			url: '/dashboard/orders',
@@ -45,10 +48,14 @@
 			icon: Container,
 			items: [
 				{ title: 'All Products abd Services', url: '/dashboard/products', icon: Sheet },
-				{ title: 'Add Product', url: '/dashboard/products/add-products', icon: Plus },
-				{ title: 'Suppliers', url: '/dashboard/products/suppliers', icon: Sheet },
-				{ title: 'Add Supplier', url: '/dashboard/products/add-supplier', icon: Plus }
+				{ title: 'Add Product', url: '/dashboard/products/add-products', icon: Plus }
 			]
+		},
+
+		{
+			title: 'Testimonials  ',
+			url: '/dashboard/testimonials',
+			icon: Star
 		},
 
 		{

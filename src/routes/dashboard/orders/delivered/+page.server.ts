@@ -1,10 +1,16 @@
-import { setError, superValidate, message, fail } from 'sveltekit-superforms';
+import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, min } from 'drizzle-orm';
 
 import { add, edit } from './schema';
 import { db } from '$lib/server/db';
-import { orders, orderItems, products, customers } from '$lib/server/db/schema';
+import {
+	orders,
+	orderItems,
+	vendorServices as products,
+	couples as customers,
+	prices
+} from '$lib/server/db/schema';
 import type { PageServerLoad, Actions } from './$types';
 
 export const load: PageServerLoad = async () => {
@@ -14,49 +20,44 @@ export const load: PageServerLoad = async () => {
 	const fetchedProducts = await db
 		.select({
 			value: products.id,
-			name: sql<string>`
-TRIM(
-  CONCAT(
-    ${products.name},
-    COALESCE(CONCAT(' ', ${products.price}, ' ETB'), ''),
-    COALESCE(CONCAT(' ', ${products.quantity}, ' Left'), '')
-  )
-)`,
+			name: products.title,
 
-			price: products.price
+			price: min(prices.price)
 		})
-		.from(products);
+		.from(products)
+		.leftJoin(prices, eq(products.id, prices.serviceId))
+		.groupBy(products.id);
 
 	const fetchedCustomers = await db
 		.select({
 			value: customers.id,
-			name: customers.name
+			name: sql<string>`TRIM(CONCAT(COALESCE(${customers.groomName}, ''), ' ', COALESCE(${customers.brideName}, '')))`
 		})
 		.from(customers);
 
 	const allData = await db
 		.select({
 			id: orders.id,
-			name: customers.name,
+			name: sql<string>`TRIM(CONCAT(COALESCE(${customers.groomName}, ''), ' ', COALESCE(${customers.brideName}, '')))`,
 			customerId: customers.id,
 			status: orders.status
 		})
 		.from(orders)
 		.leftJoin(customers, eq(orders.customerId, customers.id))
-		.where(eq(orders.status, 'delivered'));
+		.where(eq(orders.status, 'pending'));
 
 	const allItems = await db
 		.select({
 			id: orderItems.id,
 			orderId: orderItems.orderId,
-			product: products.name,
+			product: products.title,
 			quantity: orderItems.quantity,
 			productId: orderItems.productId,
 			price: orderItems.price,
 			total: sql<number>`${orderItems.quantity} * ${orderItems.price}`.mapWith(Number)
 		})
 		.from(orderItems)
-		.leftJoin(orders, and(eq(orders.id, orderItems.orderId), eq(orders.status, 'pending')))
+		.leftJoin(orders, and(eq(orders.id, orderItems.orderId), eq(orders.status, 'delivered')))
 		.leftJoin(products, eq(orderItems.productId, products.id));
 
 	return {

@@ -9,6 +9,24 @@ export const contactMessages = mysqlTable('contact_messages', {
 	createdAt: timestamp('created_at').defaultNow().notNull()
 });
 
+export const testimonials = mysqlTable('testimonials', {
+	id: int('id').primaryKey().autoincrement(),
+	name: varchar('name', { length: 255 }).notNull(),
+	position: varchar('position', { length: 255 }),
+	message: text('message').notNull(),
+	avatar: varchar('avatar', { length: 255 })
+});
+
+export const homeImages = mysqlTable('home_images', {
+	id: int('id').primaryKey().autoincrement(),
+	imageUrl: varchar('image_url', { length: 255 }).notNull()
+});
+
+export const youtubeUrl = mysqlTable('youtube_url', {
+	id: int('id').primaryKey().autoincrement(),
+	videoUrl: varchar('video_url', { length: 255 }).notNull()
+});
+
 export * from './vendors';
 export * from './auth.schema';
 export * from './payments';

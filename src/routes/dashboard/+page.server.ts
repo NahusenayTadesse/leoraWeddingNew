@@ -3,19 +3,36 @@ import { redirect } from 'sveltekit-flash-message/server';
 
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { products } from '$lib/server/db/schema';
-import { lte } from 'drizzle-orm';
+import { vendorServices as products, orders, orderItems } from '$lib/server/db/schema';
+import { lte, and, sql, eq } from 'drizzle-orm';
 export const load: PageServerLoad = async () => {
-	const reorderProducts = await db
+	const dailyStats = await db
 		.select({
-			name: products.name,
-			quantity: products.quantity
+			totalOrders: sql<number>`count(distinct ${orders.id})`,
+			totalItemsSold: sql<number>`coalesce(sum(${orderItems.quantity}), 0)`,
+			totalRevenue: sql<number>`coalesce(sum(${orderItems.price} * ${orderItems.quantity}), 0)`,
+			averageOrderValue: sql<number>`
+              coalesce(
+                  sum(${orderItems.price} * ${orderItems.quantity})
+                  / nullif(count(distinct ${orders.id}), 0),
+                  0
+              )
+          `,
+			// Replaced sum() with sql equivalent
+			totalPaymentsCollected: sql<number>`coalesce(sum(${orderItems.price} * ${orderItems.quantity}), 0)`
 		})
-		.from(products)
-		.where(lte(products.quantity, products.reorderLevel));
-
+		.from(orders)
+		.leftJoin(orderItems, eq(orders.id, orderItems.orderId))
+		.where(
+			and(
+				eq(orders.status, 'delivered'),
+				sql`${orders.createdAt} >= CURRENT_DATE()`,
+				sql`${orders.createdAt} < CURRENT_DATE() + INTERVAL 1 DAY`
+			)
+		)
+		.then((rows) => rows[0]);
 	return {
-		reorderProducts
+		dailyStats
 	};
 };
 

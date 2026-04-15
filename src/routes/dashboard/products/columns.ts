@@ -9,6 +9,7 @@ import ImageViewer from '$lib/components/Table/image-viewer.svelte';
 import PriceList from './priceList.svelte';
 import type { ColumnDef } from '@tanstack/table-core';
 import { Checkbox } from '$lib/components/ui/checkbox/index.js';
+import BigText from './bigText.svelte';
 
 export const columns = [
 	{
@@ -101,7 +102,13 @@ export const columns = [
 
 	{
 		accessorKey: 'description',
-		header: 'Description'
+		header: 'Description',
+		cell: ({ row }) => {
+			// You can pass whatever you need from `row.original` to the component
+			return renderComponent(BigText, {
+				text: row.original.description
+			});
+		}
 	},
 
 	{

@@ -36,6 +36,20 @@
       "when": 1776203842247,
       "tag": "0004_hesitant_odin",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1776209432370,
+      "tag": "0005_wise_demogoblin",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1776209560950,
+      "tag": "0006_workable_raider",
+      "breakpoints": true
     }
   ]
 }

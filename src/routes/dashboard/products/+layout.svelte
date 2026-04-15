@@ -11,12 +11,12 @@
 	<Button
 		href="/dashboard/products"
 		variant={page.url.pathname === '/dashboard/products' ? 'default' : 'outline'}
-		><Sheet /> Products</Button
+		><Sheet /> Products and Services</Button
 	>
 	<Button
 		href="/dashboard/products/add-products"
 		variant={page.url.pathname === '/dashboard/products/add-products' ? 'default' : 'outline'}
-		><Plus /> Add Products</Button
+		><Plus /> Add Products and Services</Button
 	>
 
 	<Button

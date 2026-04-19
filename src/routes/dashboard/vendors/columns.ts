@@ -52,18 +52,28 @@ export const columns = [
 			})
 	},
 	{
-		accessorKey: 'type NewType = NonNullable<Type>;',
+		accessorKey: 'numberOfServices',
 		header: ({ column }) =>
 			renderComponent(DataTableSort, {
 				name: 'No of Services',
 				onclick: column.getToggleSortingHandler()
 			})
 	},
+
 	{
 		accessorKey: 'address',
 		header: 'Address',
 		sortable: true,
-		cell: ({ row }) => renderComponent(Address, { ...row.original.address })
+		cell: ({ row }) =>
+			renderComponent(Address, {
+				subcity: row.original.address.subcity,
+				street: row.original.address.street,
+				kebele: row.original.address.kebele,
+				buildingNumber: row.original.address.buildingNumber,
+				floor: row.original.address.floor,
+				houseNumber: row.original.address.houseNumber,
+				googleMapsUrl: row.original.address.googleMapsUrl
+			})
 	},
 
 	{

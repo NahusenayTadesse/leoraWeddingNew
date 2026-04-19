@@ -18,18 +18,15 @@ export const load: LayoutServerLoad = async ({ locals, parent }) => {
 
 	console.log(isVendor);
 
-	if (user.role !== 'admin') {
+	if (!isVendor) {
 		error(403, 'Not Allowed');
 	}
 
-	const vendorId = isVendor
-		? await db
-				.select({ id: vendors.id })
-				.from(vendors)
-				.where(eq(vendors.userId, user.id))
-				.then((res) => res[0].id)
-		: null;
-
+	const vendorId = await db
+		.select({ id: vendors.id })
+		.from(vendors)
+		.where(eq(vendors.userId, user.id))
+		.then((res) => res[0].id);
 	console.log(vendorId);
 
 	return {

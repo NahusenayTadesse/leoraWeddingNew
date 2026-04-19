@@ -154,7 +154,7 @@ export const actions: Actions = {
 					body: {
 						email,
 						password,
-						role: 'vendor',
+
 						name: businessName,
 						callbackURL: '/auth/verification-success'
 					}
@@ -178,7 +178,6 @@ export const actions: Actions = {
 					phone,
 					email,
 					description,
-
 					vendorCategory,
 					address: addressId.id,
 					userId: newVendor?.user?.id

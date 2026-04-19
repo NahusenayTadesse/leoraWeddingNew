@@ -12,16 +12,6 @@
 		Building2
 	} from '@lucide/svelte';
 
-	type Address = {
-		subcity?: string | null;
-		street?: string | null;
-		kebele?: string | null;
-		buildingNumber?: string | null;
-		floor?: string | null;
-		houseNumber?: string | null;
-		googleMapsUrl?: string | null;
-	};
-
 	interface Props {
 		subcity?: string | null;
 		street?: string | null;
@@ -53,7 +43,6 @@
 	});
 
 	const hasAddress = $derived(addressFields.length > 0);
-	let open = $state(false);
 
 	function truncate(str, maxLength = 15) {
 		// Ensure str exists and is treated as a string
@@ -62,7 +51,21 @@
 		return safeStr.length > maxLength ? safeStr.slice(0, maxLength) + '...' : safeStr;
 	}
 
-	let mapSrc = $derived(googleMapsUrl);
+	const formatMapUrl = (userInput: string | null | undefined) => {
+		if (!userInput) return '';
+
+		// If it's already an embed link, leave it alone
+		if (userInput.includes('pb=')) return userInput;
+
+		// If it's a standard link, we extract the query and force embed mode
+		// This approach searches for the "place/" part of the URL or the "q=" part
+		const baseUrl = 'http://googleusercontent.com/maps.google.com/7';
+
+		// We use encodeURIComponent to ensure the URL doesn't break with spaces/special chars
+		return `${baseUrl}?q=${encodeURIComponent(userInput)}&output=embed`;
+	};
+
+	let mapSrc = $derived(formatMapUrl(googleMapsUrl));
 
 	const hierarchyItems = $derived([
 		{
@@ -135,11 +138,11 @@
 			title="Google Map"
 			width="100%"
 			height="400"
-			frameborder="0"
+			style="border: 0"
 			scrolling="no"
 			marginheight="0"
 			marginwidth="0"
-			src={mapSrc}
+			src={googleMapsUrl?.replace('/maps/place/', '/maps/embed/v1/place/')}
 		></iframe>
 	{:else}
 		<div class="text-sm text-muted-foreground">No address information available</div>

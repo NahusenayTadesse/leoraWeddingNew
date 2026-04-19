@@ -76,11 +76,9 @@
 		</p>
 	</div>
 {/if}
-
-{#if !page.url.pathname.startsWith('/dashboard')}
+{#if !page.url.pathname.startsWith('/dashboard') && !page.url.pathname.startsWith('/vendor-dashboard')}
 	<Header data={data?.user?.name ?? ''} />
 	{@render children()}
-
 	<Footer />
 	<Cart budget={Number(data?.budget?.totalBudget)} />
 {:else}

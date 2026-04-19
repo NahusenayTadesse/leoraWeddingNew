@@ -49,16 +49,56 @@ export const vendors = mysqlTable('vendors', {
 	...secureFields
 });
 
+// export const orders = mysqlTable('orders', {
+// 	id: int('id').autoincrement().primaryKey(),
+// 	customerId: int('customer_id').references(() => couples.id),
+// 	status: mysqlEnum('status', ['pending', 'delivered', 'cancelled']),
+// 	...secureFields
+// });
+
+// export const orderItems = mysqlTable('order_items', {
+// 	id: int('id').autoincrement().primaryKey(),
+// 	orderId: int('order_id').references(() => orders.id),
+// 	productId: int('product_id').references(() => vendorServices.id),
+// 	quantity: int('quantity').notNull(),
+// 	amount: varchar('amount', { length: 255 }).notNull(),
+// 	price: decimal('price', { precision: 10, scale: 2 }).notNull(),
+// 	...secureFields
+// });
+//
+
+// 1. THE MAIN ORDER (Customer's view / Payment record)
 export const orders = mysqlTable('orders', {
-	id: int('id').autoincrement().primaryKey(),
-	customerId: int('customer_id').references(() => couples.id),
+	id: intPk(),
+	coupleId: int('customer_id')
+		.notNull()
+		.references(() => couples.id),
+	totalAmount: decimal('total_amount', { precision: 10, scale: 2 }),
+	status: mysqlEnum('status', ['pending', 'paid', 'failed']),
+	...secureFields
+});
+
+// 2. THE VENDOR ORDER (The "Sub-Order")
+// This is what the Vendor sees in their dashboard
+export const vendorOrders = mysqlTable('vendor_orders', {
+	id: intPk(),
+	orderId: int('order_id')
+		.notNull()
+		.references(() => orders.id), // Link to the main Order
+	vendorId: int('vendor_id')
+		.notNull()
+		.references(() => vendors.id),
+	subtotal: decimal('subtotal', { precision: 10, scale: 2 }),
 	status: mysqlEnum('status', ['pending', 'delivered', 'cancelled']),
 	...secureFields
 });
 
+// 3. THE ITEMS
 export const orderItems = mysqlTable('order_items', {
-	id: int('id').autoincrement().primaryKey(),
-	orderId: int('order_id').references(() => orders.id),
+	id: intPk(),
+	vendorOrderId: int('order_id')
+		.notNull()
+		.references(() => vendorOrders.id), // Links to the Vendor's sub-order
 	productId: int('product_id').references(() => vendorServices.id),
 	quantity: int('quantity').notNull(),
 	amount: varchar('amount', { length: 255 }).notNull(),
@@ -185,7 +225,21 @@ export const serviceCategories = mysqlTable('service_categories', {
 	id: int('id').autoincrement().primaryKey(),
 	name: varchar('name', { length: 50 }).notNull().unique(),
 	description: varchar('description', { length: 255 }),
+
 	...secureFields
+});
+
+export const subCategories = mysqlTable('sub_categories', {
+	id: int('id').autoincrement().primaryKey(),
+	name: varchar('name', { length: 50 }).notNull().unique(),
+	description: varchar('description', { length: 255 }),
+	parentId: int('parent_id').references(() => serviceCategories.id, { onDelete: 'cascade' })
+});
+
+export const categoryServices = mysqlTable('category_services', {
+	id: int('id').autoincrement().primaryKey(),
+	subCategoryId: int('sub_category_id').references(() => subCategories.id, { onDelete: 'cascade' }),
+	serviceId: int('service_id').references(() => vendorServices.id, { onDelete: 'cascade' })
 });
 
 export const discounts = mysqlTable('discounts', {

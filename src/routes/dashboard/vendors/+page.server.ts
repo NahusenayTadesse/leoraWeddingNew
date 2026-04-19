@@ -34,7 +34,6 @@ export const load: PageServerLoad = async () => {
 				googleMapsUrl: address.googleMapsUrl
 			},
 			subcity: subcity.name,
-
 			daysSinceJoined: sql<number>`DATEDIFF(CURRENT_DATE, ${customers.createdAt})`,
 			createdAt: sql<string>`DATE_FORMAT(${customers.createdAt}, '%d %M %Y')`
 		})

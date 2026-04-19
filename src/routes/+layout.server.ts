@@ -7,6 +7,8 @@ import {
 	prices,
 	couples,
 	vendors,
+	subCategories,
+	categoryServices,
 	weddings
 } from '$lib/server/db/schema';
 import { eq, min } from 'drizzle-orm';
@@ -53,6 +55,8 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		.select({
 			productId: vendorServices.id,
 			productName: vendorServices.title,
+			vendorId: vendorServices.vendorId,
+			vendor: vendors.businessName,
 			price: min(prices.price),
 			amount: min(prices.amount),
 			image: vendorServices.featuredImage,
@@ -61,9 +65,23 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		.from(vendorServices)
 		.leftJoin(serviceCategories, eq(serviceCategories.id, vendorServices.categoryId))
 		.leftJoin(prices, eq(prices.serviceId, vendorServices.id))
+		.leftJoin(vendors, eq(vendors.id, vendorServices.vendorId))
 		.where(eq(vendorServices.isActive, true))
 		.groupBy(vendorServices.id, serviceCategories.name);
 	const allPrices = await db.select().from(prices);
+
+	const subs = await db
+		.select({
+			id: subCategories.id,
+			name: subCategories.name,
+			description: subCategories.description,
+			serviceId: categoryServices.serviceId
+		})
+		.from(subCategories)
+		.innerJoin(
+			categoryServices,
+			eq(subCategories.id, categoryServices.subCategoryId) // This links the tables
+		);
 
 	const productList = serviceList.map((p) => ({
 		...p,
@@ -72,12 +90,14 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 			.map((price) => ({
 				amount: price.amount,
 				price: price.price
-			}))
+			})),
+		subs: subs.filter((sub) => sub.serviceId === p.productId)
 	}));
 
 	// 3. Return everything at once
 	return {
 		productList,
+		priceList: allPrices,
 		roleName,
 		user: currentUser,
 		isVendor: isVendor.length > 0,

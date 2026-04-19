@@ -3,27 +3,31 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
 	import { ScrollArea } from '$lib/components/ui/scroll-area';
-	import { ShoppingCartIcon, TrashIcon } from '@lucide/svelte';
+	import { ShoppingCartIcon, TrashIcon, StoreIcon } from '@lucide/svelte';
 	import CartItem from './cart-item.svelte';
-	import * as Popover from '$lib/components/ui/sheet/index.js';
+	import * as Sheet from '$lib/components/ui/sheet/index.js';
+
+	import * as Label from '$lib/components/ui/label';
 
 	const cart = useCart();
 
 	let { budget }: { budget?: number } = $props();
 
-	/** Format price to currency */
-	const formatPrice = (price: number) => {
-		return new Intl.NumberFormat('en-US', {
-			style: 'currency',
-			currency: 'ETB'
-		}).format(price);
-	};
+	const userBudget = $derived(budget ?? 0);
+
+	const formatPrice = (price: number) =>
+		new Intl.NumberFormat('en-US', { style: 'currency', currency: 'ETB' }).format(price);
+
+	const remaining = $derived(userBudget - cart.totalPrice);
+	const isOverBudget = $derived(remaining < 0);
+	const progressPercent = $derived(Math.min((cart.totalPrice / (userBudget || 1)) * 100, 100));
 </script>
 
 <svelte:body style:overflow={cart.isOpen ? 'hidden' : 'auto'} />
 
-<Popover.Root>
-	<Popover.Trigger
+<Sheet.Root>
+	<!-- Floating trigger button -->
+	<Sheet.Trigger
 		class="fixed right-6 bottom-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
 	>
 		<div class="relative">
@@ -33,85 +37,166 @@
 					variant="destructive"
 					class="absolute -top-5 -right-5 flex h-5 w-5 items-center justify-center rounded-full p-0 text-[12px]"
 				>
-					{cart.totalItems}
+					{cart.totalItems > 99 ? '99+' : cart.totalItems}
 				</Badge>
 			{/if}
 		</div>
-	</Popover.Trigger>
-	<Popover.Content>
+	</Sheet.Trigger>
+
+	<Sheet.Content side="right" class="flex w-full flex-col gap-0 p-0 sm:max-w-md">
 		<!-- Header -->
-		<div class="flex items-center justify-between border-b border-border bg-muted/30 p-4">
+		<Sheet.Header
+			class="flex flex-row items-center justify-between border-b border-border bg-muted/30 px-4 py-3"
+		>
 			<div class="flex items-center gap-2">
 				<ShoppingCartIcon class="size-5 text-primary" />
-				<h3 class="font-semibold">Your Cart</h3>
+				<Sheet.Title class="font-semibold">Your Cart</Sheet.Title>
+				{#if cart.vendorCount > 0}
+					<Badge variant="secondary" class="gap-1 text-xs">
+						<StoreIcon class="size-3" />
+						{cart.vendorCount}
+						{cart.vendorCount === 1 ? 'vendor' : 'vendors'}
+					</Badge>
+				{/if}
 			</div>
-		</div>
+		</Sheet.Header>
 
-		<!-- Cart Items -->
+		<!-- Cart items grouped by vendor -->
 		{#if cart.items.length > 0}
-			<ScrollArea class="overscroll-behavior-contain min-h-0 flex-1">
-				<div class="flex flex-col gap-2 p-3">
-					{#each cart.items as item (item.productId)}
-						<CartItem {item} />
+			<ScrollArea class="min-h-0 flex-1 overscroll-contain">
+				<div class="flex flex-col gap-4 p-3">
+					{#each Object.values(cart.itemsByVendor) as group (group.vendorId)}
+						<div class="flex flex-col gap-2">
+							<!-- Vendor header -->
+							<div class="flex items-center justify-between">
+								<div class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+									<StoreIcon class="size-3.5" />
+									<span>{group.vendor}</span>
+								</div>
+								<div class="flex items-center gap-2">
+									<span class="text-xs text-muted-foreground">
+										{formatPrice(group.subtotal)}
+									</span>
+									<Button
+										size="icon"
+										variant="ghost"
+										class="size-6 text-destructive hover:bg-destructive/10 hover:text-destructive"
+										onclick={() => cart.removeVendor(group.vendorId)}
+									>
+										<TrashIcon class="size-3" />
+									</Button>
+								</div>
+							</div>
+
+							<!-- Vendor's items -->
+							<div class="flex flex-col gap-2 rounded-lg border border-border/40 p-2">
+								{#each group.items as item (item.productId)}
+									<CartItem {item} />
+								{/each}
+							</div>
+						</div>
 					{/each}
 				</div>
 			</ScrollArea>
 
 			<!-- Footer -->
-			<div class="z-100 space-y-3 border-t border-border bg-muted p-4">
-				<div class="flex items-center justify-between">
-					<span class="text-sm text-muted-foreground">Budget</span>
-					<span class="text-lg font-bold text-primary">{formatPrice(budget ?? 0)}</span>
-				</div>
-				<div class="flex items-center justify-between">
-					<span class="text-sm text-muted-foreground">Spent ({cart.totalItems} items)</span>
-					<span class="text-lg font-bold text-primary">{formatPrice(cart.totalPrice)}</span>
-				</div>
-				<div class="flex items-center justify-between">
-					<span class="text-sm text-muted-foreground"
-						>Remaining <span class="text-destructive"
-							>{budget ? (budget - cart.totalPrice < 0 ? 'Over Budget' : '') : ''}</span
+			<div class="space-y-3 border-t border-border bg-muted/50 p-4">
+				<!-- Budget row -->
+				{#if budget}
+					<div class="flex items-center justify-between text-sm">
+						<span class="text-muted-foreground">Budget</span>
+						<span class="font-semibold">{formatPrice(budget)}</span>
+					</div>
+				{/if}
+
+				<!-- Total -->
+				<div class="flex items-center justify-between text-sm">
+					<span class="text-muted-foreground">
+						Total
+						<span class="text-xs"
+							>({cart.totalItems} {cart.totalItems === 1 ? 'item' : 'items'})</span
 						>
 					</span>
-
-					<span
-						class="text-lg font-bold {budget
-							? budget - cart.totalPrice < 0
-								? 'text-destructive'
-								: 'text-primary'
-							: 'text-primary'}"
-						>{formatPrice(budget ? budget - cart.totalPrice : cart.totalPrice)}</span
-					>
+					<span class="text-lg font-bold text-primary">{formatPrice(cart.totalPrice)}</span>
 				</div>
-				<div class="flex gap-2">
+
+				<!-- Remaining / over budget -->
+				{#if budget}
+					<div
+						class="flex items-center justify-between rounded-md border border-border/50 bg-background px-3 py-2 text-sm"
+					>
+						<span class="text-muted-foreground">
+							{isOverBudget ? 'Over budget by' : 'Remaining'}
+						</span>
+						<span class="font-bold {isOverBudget ? 'text-destructive' : 'text-green-600'}">
+							{isOverBudget ? formatPrice(Math.abs(remaining!)) : formatPrice(remaining!)}
+						</span>
+					</div>
+				{/if}
+
+				<!-- Actions -->
+				<div class="flex gap-2 pt-1">
 					<Button variant="outline" size="sm" class="flex-1 gap-2" onclick={() => cart.clearCart()}>
 						<TrashIcon class="size-4" />
-						Clear
+						Clear all
 					</Button>
 					<Button size="sm" class="flex-1" href="/checkout">Checkout</Button>
 				</div>
 			</div>
 		{:else}
-			<div class=" p-8 text-center">
-				<ShoppingCartIcon class="mx-auto mb-3 size-12 text-muted-foreground/50" />
-				<p class="text-sm text-muted-foreground">Your cart is empty</p>
-				<p class="mt-1 text-xs text-muted-foreground/70">Add some products to get started</p>
+			<div class="flex flex-1 flex-col items-center justify-center p-8 text-center">
+				<ShoppingCartIcon class="mb-3 size-12 text-muted-foreground/40" />
+				<p class="text-sm font-medium text-muted-foreground">Your cart is empty</p>
+				<p class="mt-1 text-xs text-muted-foreground/60">Add some products to get started</p>
 			</div>
 		{/if}
-		<!-- <Button
-			size="icon"
-			class="shadow-lg-lg shadow-lg-primary/30 hover:shadow-lg-xl hover:shadow-lg-primary/40 z-100 size-14 rounded-full transition-all duration-200 hover:scale-105"
-			onclick={() => cart.toggle()}
-		>
-			<ShoppingCartIcon class="size-6" />
-			{#if cart.totalItems > 0}
-				<span
-					transition:fade={{ duration: 150 }}
-					class="text-destructive-foreground absolute -top-1 -right-1 flex size-6 items-center justify-center rounded-full bg-destructive text-xs font-bold"
+
+		<div class="space-y-4 border-t border-border bg-muted/50 p-4">
+			<div class="space-y-2">
+				<div class="flex items-center justify-between">
+					<Label.Root class="text-xs font-medium text-muted-foreground"
+						>Set Spending Limit</Label.Root
+					>
+					<span class="font-mono text-xs">{formatPrice(userBudget)}</span>
+				</div>
+
+				<div class="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+					<div
+						class="h-full transition-all duration-300 {isOverBudget
+							? 'bg-destructive'
+							: 'bg-primary'}"
+						style="width: {progressPercent}%"
+					></div>
+				</div>
+			</div>
+
+			<div class="space-y-2">
+				<div class="flex items-center justify-between text-sm">
+					<span class="text-muted-foreground">Total ({cart.totalItems} items)</span>
+					<span class="font-bold text-primary">{formatPrice(cart.totalPrice)}</span>
+				</div>
+
+				<div
+					class="flex items-center justify-between rounded-md border border-border/50 bg-background px-3 py-2 text-sm shadow-sm"
 				>
-					{cart.totalItems > 99 ? '99+' : cart.totalItems}
-				</span>
-			{/if}
-		</Button> -->
-	</Popover.Content>
-</Popover.Root>
+					<span class="text-muted-foreground">
+						{isOverBudget ? 'Over budget by' : 'Remaining Funds'}
+					</span>
+					<span class="font-bold {isOverBudget ? 'text-destructive' : 'text-green-600'}">
+						{formatPrice(Math.abs(remaining))}
+					</span>
+				</div>
+			</div>
+
+			<div class="flex gap-2 pt-2">
+				<Button variant="outline" size="sm" class="flex-1 gap-2" onclick={() => cart.clearCart()}>
+					<TrashIcon class="size-4" />
+					Clear
+				</Button>
+				<Button size="sm" class="flex-1" href="/checkout" disabled={isOverBudget}>
+					{isOverBudget ? 'Budget Exceeded' : 'Checkout'}
+				</Button>
+			</div>
+		</div>
+	</Sheet.Content>
+</Sheet.Root>

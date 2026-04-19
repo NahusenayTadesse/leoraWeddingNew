@@ -1,9 +1,15 @@
 import { setContext, getContext } from 'svelte';
+
 export type CartItem = {
 	productId: number;
 	productName: string;
+	vendorId: number;
+	vendor: string;
 	price: number;
 	quantity: number;
+	amount: number | string;
+	image?: string | null;
+	category?: string | null;
 };
 
 /** Cart state type */
@@ -12,7 +18,11 @@ export type CartState = {
 	isOpen: boolean;
 };
 
-const CART_STORAGE_KEY = 'svelte0-cart';
+const CART_STORAGE_KEY = 'leora-wedding';
+
+/** Match both product and its amount variation */
+const isSameVariant = (a: CartItem, b: Omit<CartItem, 'quantity'>) =>
+	a.productId === b.productId && a.amount === b.amount;
 
 /** Cart state class-based management with localStorage persistence */
 class UseCart {
@@ -25,13 +35,35 @@ class UseCart {
 	/** Total price */
 	totalPrice = $derived(this.items.reduce((sum, item) => sum + item.price * item.quantity, 0));
 
+	/** Items grouped by vendor */
+	itemsByVendor = $derived(
+		this.items.reduce(
+			(groups, item) => {
+				const key = item.vendorId;
+				if (!groups[key]) {
+					groups[key] = {
+						vendorId: item.vendorId,
+						vendor: item.vendor,
+						items: [],
+						subtotal: 0
+					};
+				}
+				groups[key].items.push(item);
+				groups[key].subtotal += item.price * item.quantity;
+				return groups;
+			},
+			{} as Record<
+				number,
+				{ vendorId: number; vendor: string; items: CartItem[]; subtotal: number }
+			>
+		)
+	);
+
+	/** Unique vendor count */
+	vendorCount = $derived(new Set(this.items.map((i) => i.vendorId)).size);
+
 	constructor() {
-		// Load cart from localStorage on initialization
-
 		this.loadFromStorage();
-
-		// Save to localStorage whenever items change
-
 		$effect(() => {
 			this.saveToStorage();
 		});
@@ -78,9 +110,9 @@ class UseCart {
 		this.isOpen = false;
 	};
 
-	/** Add item to cart */
+	/** Add item to cart — same productId + amount stacks, different amount = new line */
 	addItem = (item: Omit<CartItem, 'quantity'>, quantity: number = 1) => {
-		const existingIndex = this.items.findIndex((i) => i.productId === item.productId);
+		const existingIndex = this.items.findIndex((i) => isSameVariant(i, item));
 		if (existingIndex >= 0) {
 			this.items[existingIndex].quantity += quantity;
 		} else {
@@ -88,18 +120,23 @@ class UseCart {
 		}
 	};
 
-	/** Remove item from cart */
-	removeItem = (productId: number) => {
-		this.items = this.items.filter((item) => item.productId !== productId);
+	/** Remove a specific variant from cart */
+	removeItem = (productId: number, amount: number) => {
+		this.items = this.items.filter((item) => !isSameVariant(item, { ...item, productId, amount }));
 	};
 
-	/** Update item quantity */
-	updateQuantity = (productId: number, quantity: number) => {
+	/** Remove all items from a specific vendor */
+	removeVendor = (vendorId: number) => {
+		this.items = this.items.filter((item) => item.vendorId !== vendorId);
+	};
+
+	/** Update quantity for a specific variant */
+	updateQuantity = (productId: number, amount: number, quantity: number) => {
 		if (quantity <= 0) {
-			this.removeItem(productId);
+			this.removeItem(productId, amount);
 			return;
 		}
-		const index = this.items.findIndex((i) => i.productId === productId);
+		const index = this.items.findIndex((i) => i.productId === productId && i.amount === amount);
 		if (index >= 0) {
 			this.items[index].quantity = quantity;
 		}
@@ -108,6 +145,13 @@ class UseCart {
 	/** Clear all items from cart */
 	clearCart = () => {
 		this.items = [];
+	};
+
+	/** Get subtotal for a specific vendor */
+	getVendorSubtotal = (vendorId: number) => {
+		return this.items
+			.filter((item) => item.vendorId === vendorId)
+			.reduce((sum, item) => sum + item.price * item.quantity, 0);
 	};
 }
 

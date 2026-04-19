@@ -2,14 +2,13 @@ import { db } from '$lib/server/db';
 import {
 	serviceCategories as productCategories,
 	vendorServices as products,
-	user,
-	orderItems,
-	orders,
+	subCategories,
 	discounts,
 	prices,
-	serviceImages as productImages
+	serviceImages as productImages,
+	categoryServices
 } from '$lib/server/db/schema';
-import { eq, and, sql, isNotNull, desc } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import type { LayoutServerLoad } from './$types';
 
 import { error } from '@sveltejs/kit';
@@ -45,6 +44,21 @@ export const load: LayoutServerLoad = async ({ params }) => {
 		.where(eq(products.id, Number(id)))
 		.then((rows) => rows[0]);
 
+	const currentSubs = await db
+		.select({
+			id: subCategories.id,
+			name: subCategories.name,
+			description: subCategories.description
+		})
+		.from(subCategories)
+		.innerJoin(
+			categoryServices,
+			eq(subCategories.id, categoryServices.subCategoryId) // This links the tables
+		)
+		.where(
+			eq(categoryServices.serviceId, Number(id)) // This filters for your specific service
+		);
+
 	if (!product) {
 		error(404, 'Product not found');
 	}
@@ -62,6 +76,7 @@ export const load: LayoutServerLoad = async ({ params }) => {
 		product,
 		priceList,
 		images,
-		result
+		result,
+		subs: currentSubs
 	};
 };

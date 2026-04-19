@@ -1,143 +1,133 @@
 <script lang="ts">
-	import { Search } from '@lucide/svelte';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import { Select } from '$lib/components/ui/select/index.js';
-	import VendorCard from '$lib/components/VendorCard.svelte';
-	import { vendors as allVendors } from '$lib/data.js';
+	import * as Card from '$lib/components/ui/card';
+	import { Input } from '$lib/components/ui/input';
+	import { Badge } from '$lib/components/ui/badge';
+	import { Button } from '$lib/components/ui/button';
+	import * as Select from '$lib/components/ui/select';
+	import { MapPin, Phone, Mail, Globe, Search } from '@lucide/svelte';
 
-	let searchTerm = $state('');
-	let filterCategory = $state('');
-	let filterPrice = $state('');
-	let filterRating = $state('');
-	let sortBy = $state('recommended');
+	let { data } = $props();
 
-	let filteredVendors = $derived(() => {
-		let result = allVendors.filter((v) => {
-			const matchSearch =
-				!searchTerm ||
-				v.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				v.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				v.location.toLowerCase().includes(searchTerm.toLowerCase());
+	// Local State for filters
+	let searchQuery = $state('');
+	let selectedCategory = $state('all');
 
-			const matchCategory = !filterCategory || v.category === filterCategory;
+	// Reactive filtered list
+	const filteredVendors = $derived(
+		data.customersList.filter((vendor) => {
+			const matchesSearch =
+				vendor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+				vendor.email?.toLowerCase().includes(searchQuery.toLowerCase());
+			const matchesCategory =
+				selectedCategory === 'all' || vendor.vendorCategory === selectedCategory;
+			return matchesSearch && matchesCategory;
+		})
+	);
 
-			const matchRating = !filterRating || v.rating >= parseFloat(filterRating);
-
-			let matchPrice = true;
-			if (filterPrice === '0-50000') matchPrice = v.price < 50000;
-			else if (filterPrice === '50000-100000') matchPrice = v.price >= 50000 && v.price < 100000;
-			else if (filterPrice === '100000-200000') matchPrice = v.price >= 100000 && v.price < 200000;
-			else if (filterPrice === '200000+') matchPrice = v.price >= 200000;
-
-			return matchSearch && matchCategory && matchRating && matchPrice;
-		});
-
-		if (sortBy === 'price-asc') result = [...result].sort((a, b) => a.price - b.price);
-		else if (sortBy === 'price-desc') result = [...result].sort((a, b) => b.price - a.price);
-		else if (sortBy === 'rating') result = [...result].sort((a, b) => b.rating - a.rating);
-
-		return result;
-	});
-
-	function addToPlan(id: number) {
-		alert('Vendor added to your wedding plan! View in your dashboard.');
-	}
+	// Get unique categories for the filter
+	const categories = ['all', ...new Set(data.customersList.map((v) => v.vendorCategory))];
 </script>
 
-<svelte:head>
-	<title>Vendor Marketplace — Leora Events</title>
-</svelte:head>
-
-<div class="bg-leora-ivory min-h-screen pb-24">
-	<!-- Sticky Header & Filters -->
-	<div class="border-leora-gold/10 sticky top-20 z-40 border-b bg-white">
-		<div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-			<div class="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-				<h1 class="font-display text-leora-charcoal text-3xl font-semibold">Vendor Marketplace</h1>
-
-				<!-- Search -->
-				<div class="max-w-2xl flex-1">
-					<div class="relative">
-						<Search class="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-gray-400" />
-						<Input
-							bind:value={searchTerm}
-							placeholder="Search vendors, categories, or locations..."
-							class="rounded-full pl-12"
-						/>
-					</div>
-				</div>
-			</div>
-
-			<!-- Filters -->
-			<div class="mt-4 flex flex-wrap gap-3">
-				<Select bind:value={filterCategory}>
-					<option value="">All Categories</option>
-					<option value="venue">Venue & Hotel</option>
-					<option value="photo">Photography</option>
-					<option value="catering">Catering</option>
-					<option value="decor">Decor</option>
-					<option value="music">Music & Band</option>
-					<option value="dress">Dress & Suit</option>
-				</Select>
-
-				<Select bind:value={filterPrice}>
-					<option value="">Price Range</option>
-					<option value="0-50000">Under 50,000 ETB</option>
-					<option value="50000-100000">50,000 – 100,000 ETB</option>
-					<option value="100000-200000">100,000 – 200,000 ETB</option>
-					<option value="200000+">200,000+ ETB</option>
-				</Select>
-
-				<Select bind:value={filterRating}>
-					<option value="">Rating</option>
-					<option value="5">5 Stars</option>
-					<option value="4">4+ Stars</option>
-					<option value="3">3+ Stars</option>
-				</Select>
-
-				<Select class="w-40">
-					<option value="">Location</option>
-					<option value="addis">Addis Ababa</option>
-					<option value="bahirdar">Bahir Dar</option>
-					<option value="hawassa">Hawassa</option>
-					<option value="dire">Dire Dawa</option>
-				</Select>
-			</div>
-		</div>
-	</div>
-
-	<!-- Results -->
-	<div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-		<div class="mb-6 flex items-center justify-between">
-			<p class="text-gray-600">
-				<span class="text-leora-charcoal font-semibold">{filteredVendors().length}</span> vendors found
+<div class="mx-auto max-w-7xl space-y-8 p-8">
+	<div class="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+		<div>
+			<h1 class="text-3xl font-extrabold tracking-tight">Vendor Directory</h1>
+			<p class="text-muted-foreground">
+				Browse and manage our network of {data.customersList.length} partners.
 			</p>
-			<div class="flex items-center gap-2">
-				<span class="text-sm text-gray-600">Sort by:</span>
-				<select
-					bind:value={sortBy}
-					class="text-leora-charcoal cursor-pointer border-none bg-transparent text-sm font-medium focus:outline-none"
-				>
-					<option value="recommended">Recommended</option>
-					<option value="price-asc">Price: Low to High</option>
-					<option value="price-desc">Price: High to Low</option>
-					<option value="rating">Rating</option>
-				</select>
-			</div>
 		</div>
 
-		{#if filteredVendors().length === 0}
-			<div class="py-24 text-center text-gray-500">
-				<Search class="mx-auto mb-4 h-12 w-12 opacity-30" />
-				<p class="text-lg font-medium">No vendors found</p>
-				<p class="text-sm">Try adjusting your filters or search term</p>
+		<div class="flex flex-col gap-3 sm:flex-row">
+			<div class="relative w-full sm:w-64">
+				<Search class="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+				<Input placeholder="Search vendors..." bind:value={searchQuery} class="pl-9" />
 			</div>
-		{:else}
-			<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-				{#each filteredVendors() as vendor (vendor.id)}
-					<VendorCard {vendor} onAddToPlan={addToPlan} />
+
+			<select
+				bind:value={selectedCategory}
+				class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:ring-2 focus:ring-ring focus:outline-none sm:w-48"
+			>
+				{#each categories as category}
+					<option value={category}>{category?.charAt(0)?.toUpperCase() + category?.slice(1)}</option
+					>
 				{/each}
-			</div>
-		{/if}
+			</select>
+		</div>
 	</div>
+
+	{#if filteredVendors.length > 0}
+		<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+			{#each filteredVendors as vendor (vendor.id)}
+				<Card.Root class="overflow-hidden border-muted transition-shadow hover:shadow-lg">
+					<Card.Header class="bg-muted/20 pb-4">
+						<div class="flex items-start justify-between gap-2">
+							<div>
+								<Card.Title class="text-xl font-bold">{vendor.name}</Card.Title>
+								<Badge variant="outline" class="mt-2 bg-background">
+									{vendor.vendorCategory}
+								</Badge>
+							</div>
+							<div class="text-right">
+								<span class="text-[10px] font-bold text-primary uppercase">
+									{vendor.numberOfServices} Services
+								</span>
+							</div>
+						</div>
+					</Card.Header>
+
+					<Card.Content class="space-y-4 pt-6">
+						<div class="space-y-2 text-sm">
+							<div class="flex items-center gap-2 text-muted-foreground">
+								<Mail class="size-4" />
+								<span class="truncate">{vendor.email ?? 'No email provided'}</span>
+							</div>
+							<div class="flex items-center gap-2 text-muted-foreground">
+								<Phone class="size-4" />
+								{vendor.phone}
+							</div>
+						</div>
+
+						<hr class="border-muted" />
+
+						<div class="space-y-1">
+							<div class="flex items-start gap-2">
+								<MapPin class="mt-1 size-4 text-primary" />
+								<div class="text-sm">
+									<p class="font-medium">{vendor.address.subcity}</p>
+									<p class="text-xs text-muted-foreground">
+										{vendor.address.street}, Kebele {vendor.address.kebele}
+									</p>
+								</div>
+							</div>
+						</div>
+					</Card.Content>
+
+					<Card.Footer class="flex items-center justify-between border-t bg-muted/10 py-3">
+						<span class="text-[11px] text-muted-foreground italic">
+							Joined {vendor.createdAt}
+						</span>
+						<Button variant="ghost" size="sm" href={vendor.address.googleMapsUrl} target="_blank">
+							<Globe class="mr-2 size-4" />
+							Map
+						</Button>
+					</Card.Footer>
+				</Card.Root>
+			{/each}
+		</div>
+	{:else}
+		<div
+			class="flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-20 text-center"
+		>
+			<p class="text-lg font-medium">No vendors match your search</p>
+			<Button
+				variant="link"
+				onclick={() => {
+					searchQuery = '';
+					selectedCategory = 'all';
+				}}
+			>
+				Clear all filters
+			</Button>
+		</div>
+	{/if}
 </div>

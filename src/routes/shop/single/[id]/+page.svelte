@@ -45,7 +45,12 @@
 
 <div class="min-h-screen w-full bg-slate-50 pb-16 text-slate-900">
 	<section class="border-b bg-white shadow-sm">
-		<ProductDetail {...data?.product} priceList={data?.priceList} images={data?.images} />
+		<ProductDetail
+			{...data?.product}
+			priceList={data?.priceList}
+			subs={data?.subs}
+			images={data?.images}
+		/>
 	</section>
 	{#if data?.images?.length}
 		<div class="mx-auto mt-12 w-full max-w-7xl px-4 sm:px-6 lg:px-8">

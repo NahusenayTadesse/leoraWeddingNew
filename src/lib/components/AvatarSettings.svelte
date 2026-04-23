@@ -31,7 +31,7 @@
 			<DropdownMenu.Item>
 				<form
 					method="post"
-					action="/dashboard/?/logout"
+					action="/?/logout"
 					use:enhance={() => {
 						deleting = true; // 1. start spinner
 
@@ -49,7 +49,7 @@
 						{#if deleting}
 							<LoadingBtn name="Logging Out" />
 						{:else}
-							<LogOut class="" /> Logout
+							<LogOut /> Logout
 						{/if}
 					</button>
 				</form></DropdownMenu.Item

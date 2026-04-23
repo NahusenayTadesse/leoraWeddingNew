@@ -10,7 +10,7 @@
 	import InputComp from '$lib/formComponents/InputComp.svelte';
 
 	import LoadingBtn from '$lib/formComponents/LoadingBtn.svelte';
-	import { ArrowLeft, Pencil, Save, History, Plus, Tag } from '@lucide/svelte';
+	import { ArrowLeft, Pencil, Save, History, Plus, Tag, ChevronRight } from '@lucide/svelte';
 	import type { Snapshot } from '@sveltejs/kit';
 	import Delete from '$lib/forms/Delete.svelte';
 	import SingleView from '$lib/components/SingleView.svelte';
@@ -234,6 +234,19 @@
 					/>
 				{/if}
 
+				{#if $form.subCategory && data?.subsubs?.filter( (sub) => $form.subCategory.includes(sub.parentId) ).length}
+					<InputComp
+						{form}
+						{errors}
+						type="checkbox"
+						name="subSubCategory"
+						label="Product Sub Sub Categories"
+						placeholder="Select Sub Sub Categories"
+						required
+						items={data?.subsubs?.filter((sub) => $form.subCategory.includes(sub.parentId))}
+					/>
+				{/if}
+
 				<InputComp
 					{form}
 					{errors}
@@ -278,21 +291,22 @@
 								<p class="mt-2 line-clamp-2 text-sm text-gray-600">
 									{sub.description || 'No description provided for this sub-category.'}
 								</p>
+
+								<ul class="mt-4 flex flex-wrap gap-2">
+									{#each data?.currentSubSubs.filter((p) => p.parentId === sub.id) as subsub (subsub.id)}
+										<li
+											class="rounded-full border border-gray-100 bg-gray-50 px-2.5 py-0.5 text-xs font-medium text-gray-600 transition-colors hover:border-leora-gold/30 hover:text-leora-gold"
+										>
+											{subsub.name}
+										</li>
+									{/each}
+								</ul>
 							</div>
 
 							<span
 								class="inline-flex items-center justify-center rounded-lg bg-background p-2 text-leora-gold transition-colors group-hover:bg-leora-gold group-hover:text-background"
 							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									class="h-5 w-5"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"><path d="m9 18 6-6-6-6" /></svg
-								>
+								<ChevronRight class="h-5 w-5" />
 							</span>
 						</div>
 					</div>

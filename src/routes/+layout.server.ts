@@ -94,6 +94,8 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		subs: subs.filter((sub) => sub.serviceId === p.productId)
 	}));
 
+	const categories = await db.select().from(serviceCategories);
+
 	// 3. Return everything at once
 	return {
 		productList,
@@ -102,6 +104,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		user: currentUser,
 		isVendor: isVendor.length > 0,
 		isCouple,
-		budget
+		budget,
+		categories
 	};
 };

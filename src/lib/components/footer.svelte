@@ -1,15 +1,5 @@
 <script lang="ts">
-	import {
-		Heart,
-		Instagram,
-		Facebook,
-		Twitter,
-		X,
-		Youtube,
-		Mail,
-		Phone,
-		MapPin
-	} from '@lucide/svelte';
+	import { Heart, Mail, Phone, MapPin } from '@lucide/svelte';
 </script>
 
 <footer class="border-t border-leora-gold/10 bg-white pt-16 pb-8">
@@ -32,8 +22,8 @@
 					Ethiopia's premier luxury wedding planning platform. Making dream weddings come true
 					through technology and elegance.
 				</p>
-				<div class="flex gap-4">
-					{#each [Instagram, Facebook, Twitter, Youtube] as Icon}
+				<!-- <div class="flex gap-4">
+					{#each [Instagram, Youtube] as Icon}
 						<a
 							href="#"
 							class="flex h-10 w-10 items-center justify-center rounded-full bg-leora-ivory text-leora-charcoal transition-colors hover:bg-leora-gold hover:text-white"
@@ -41,7 +31,7 @@
 							<Icon class="h-5 w-5" />
 						</a>
 					{/each}
-				</div>
+				</div> -->
 			</div>
 
 			<!-- Quick Links -->

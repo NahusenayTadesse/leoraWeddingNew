@@ -13,20 +13,20 @@ export const add = z.object({
 	productName: z.string().min(1, { message: 'Product Name is required.' }),
 	category: z.number('Category cannot be empty. Please select a Category'),
 	subCategory: z.number('Sub Category cannot be empty. Please select a Category').array(),
+	subSubCategory: z
+		.number('Sub Sub Category cannot be empty. Please select a Category')
+		.array()
+		.optional(),
 
 	description: z
 		.string()
 		.max(500, { message: "Product description can't be more than 500 characters." })
 		.optional(),
 
-	image: z
-		.instanceof(File)
-		.refine((file) => file.size <= MAX_FILE_SIZE, `Max file size is 10MB.`)
-		.refine((file) => ACCEPTED_FILE_TYPES.includes(file.type), 'Invalid file type.'),
+	image: z.file('Product Image is required').max(10000000, 'Image can not be more than 10MB'),
 	gallery: z
-		.instanceof(File)
-		.refine((file) => file.size <= MAX_FILE_SIZE, `Max file size is 10MB.`)
-		.refine((file) => ACCEPTED_FILE_TYPES.includes(file.type), 'Invalid file type.')
+		.file('Product Image is required')
+		.max(10000000, 'Image can not be more than 10MB')
 		.array()
 		.optional()
 });

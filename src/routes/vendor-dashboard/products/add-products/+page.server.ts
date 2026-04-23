@@ -9,12 +9,13 @@ import {
 	subCategories,
 	serviceImages as productImages,
 	categoryServices,
-	vendors
+	vendors,
+	subSubCategories
 } from '$lib/server/db/schema';
 import type { Actions } from './$types';
 import type { PageServerLoad } from './$types.js';
 import { setFlash } from 'sveltekit-flash-message/server';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 
 export const load: PageServerLoad = async () => {
 	const allCategories = await db
@@ -34,11 +35,21 @@ export const load: PageServerLoad = async () => {
 			parentId: subCategories.parentId
 		})
 		.from(subCategories);
+
+	const subsubs = await db
+		.select({
+			value: subSubCategories.id,
+			name: subSubCategories.name,
+			description: subSubCategories.description,
+			parentId: subSubCategories.parentId
+		})
+		.from(subSubCategories);
 	const form = await superValidate(zod4(add));
 
 	return {
 		form,
 		subs,
+		subsubs,
 		allCategories
 	};
 };
@@ -74,45 +85,61 @@ export const actions: Actions = {
 			);
 		}
 
-		const { productName, category, description, subCategory, image, gallery } = form.data;
+		const { productName, category, description, subCategory, subSubCategory, image, gallery } =
+			form.data;
 
 		try {
 			await db.transaction(async (tx) => {
-				// 1. Upload images first (usually done before the DB transaction starts
-				// to avoid keeping a DB connection open during slow network I/O)
 				const featuredImage = await saveUploadedFile(image);
-				const galleryImages = await uploadGallery(gallery);
 
-				// 2. Insert the main product
 				const [product] = await tx
 					.insert(inventory)
 					.values({
 						title: productName,
 						vendorId: vendorId.vendorId,
 						categoryId: category,
-
 						description,
 						featuredImage
 					})
 					.$returningId();
 
-				// 3. Insert the prices
-				const priceRecords = subCategory.map((p) => ({
-					serviceId: product.id,
-					subCategoryId: p
-				}));
-				await tx.insert(categoryServices).values(priceRecords);
+				if (subSubCategory) {
+					const subs = await tx
+						.select()
+						.from(subSubCategories)
+						.where(inArray(subSubCategories.id, subSubCategory));
+
+					const insertData = subs.map((sub) => ({
+						serviceId: product.id,
+						subCategoryId: sub.parentId,
+						subSubId: sub.id
+					}));
+
+					if (insertData.length > 0) {
+						await tx.insert(categoryServices).values(insertData);
+					}
+				} else {
+					const priceRecords = subCategory.map((p) => ({
+						serviceId: product.id,
+						subCategoryId: p
+					}));
+
+					await tx.insert(categoryServices).values(priceRecords).$returningId();
+				}
 
 				const newProductId = product.id;
 
-				// 3. Prepare and insert the gallery images
-				if (galleryImages.length > 0) {
-					const imageRecords = galleryImages.map((url) => ({
-						productId: newProductId,
-						imageUrl: url
-					}));
+				if (gallery) {
+					const galleryImages = await uploadGallery(gallery);
 
-					await tx.insert(productImages).values(imageRecords);
+					if (galleryImages.length > 0) {
+						const imageRecords = galleryImages.map((url) => ({
+							productId: newProductId,
+							imageUrl: url
+						}));
+
+						await tx.insert(productImages).values(imageRecords);
+					}
 				}
 
 				// Return the ID or the full object if needed

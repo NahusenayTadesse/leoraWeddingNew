@@ -4,25 +4,14 @@
 		Calculator,
 		Search,
 		Brain,
-		PieChart,
 		RefreshCw,
 		CheckCircle,
 		Sparkles,
-		Building2,
-		Camera,
-		Utensils,
-		Flower2,
-		Music,
-		Car,
-		Shirt,
-		Cake,
-		Mail,
-		Gem,
-		Wine
+		ChartBar
 	} from '@lucide/svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import VendorCard from '$lib/components/VendorCard.svelte';
-	import Footer from '$lib/components/Footer.svelte';
+	// import Footer from '$lib/components/Footer.svelte';
 	import { vendors, categories, testimonials } from '$lib/data.js';
 	import { Chart, ArcElement, Tooltip, Legend, DoughnutController } from 'chart.js';
 
@@ -30,20 +19,22 @@
 
 	let heroChartCanvas: HTMLCanvasElement;
 
-	const iconMap: Record<string, any> = {
-		'building-2': Building2,
-		camera: Camera,
-		utensils: Utensils,
-		'flower-2': Flower2,
-		music: Music,
-		car: Car,
-		sparkles: Sparkles,
-		shirt: Shirt,
-		cake: Cake,
-		mail: Mail,
-		gem: Gem,
-		wine: Wine
-	};
+	let { data } = $props();
+
+	// const iconMap: Record<string, any> = {
+	// 	'building-2': Building2,
+	// 	camera: Camera,
+	// 	utensils: Utensils,
+	// 	'flower-2': Flower2,
+	// 	music: Music,
+	// 	car: Car,
+	// 	sparkles: Sparkles,
+	// 	shirt: Shirt,
+	// 	cake: Cake,
+	// 	mail: Mail,
+	// 	gem: Gem,
+	// 	wine: Wine
+	// };
 
 	onMount(() => {
 		if (heroChartCanvas) {
@@ -74,6 +65,16 @@
 		{ label: 'Photography', amount: '60,000', color: 'bg-leora-champagne' },
 		{ label: 'Catering', amount: '125,000', color: 'bg-leora-sage' },
 		{ label: 'Decor', amount: '75,000', color: 'bg-leora-blush' }
+	];
+
+	let recom = [
+		{ icon: Brain, name: 'Smart Recommendations', desc: 'AI suggests best vendor combinations' },
+		{ icon: ChartBar, name: 'Visual Breakdown', desc: 'See exactly where your money goes' },
+		{
+			icon: RefreshCw,
+			name: 'Flexible Adjustments',
+			desc: 'Swap vendors and see real-time updates'
+		}
 	];
 </script>
 
@@ -143,7 +144,7 @@
 		<!-- Hero Images Grid -->
 		<div class="relative hidden lg:block">
 			<div
-				class="absolute inset-0 rounded-3xl bg-gradient-to-r from-leora-gold/20 to-leora-champagne/20 blur-3xl"
+				class="absolute inset-0 rounded-3xl bg-linear-to-r from-leora-gold/20 to-leora-champagne/20 blur-3xl"
 			></div>
 			<div class="relative grid grid-cols-2 gap-4">
 				<div class="mt-8 space-y-4">
@@ -196,7 +197,7 @@
 		</div>
 
 		<div class="grid gap-8 md:grid-cols-3">
-			{#each [{ num: '01', title: 'Set Your Budget', desc: 'Enter your total wedding budget and let our AI recommend the perfect vendor combination within your range.' }, { num: '02', title: 'Discover Vendors', desc: 'Browse curated vendors by category, compare prices, view portfolios, and read authentic reviews.' }, { num: '03', title: 'Plan & Book', desc: 'Organize your wedding timeline, track payments, and book your dream team all in one dashboard.' }] as step}
+			{#each [{ num: '01', title: 'Set Your Budget', desc: 'Enter your total wedding budget and let our AI recommend the perfect vendor combination within your range.' }, { num: '02', title: 'Discover Vendors', desc: 'Browse curated vendors by category, compare prices, view portfolios, and read authentic reviews.' }, { num: '03', title: 'Plan & Book', desc: 'Organize your wedding timeline, track payments, and book your dream team all in one dashboard.' }] as step (step.num)}
 				<div class="group relative text-center">
 					<div
 						class="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-leora-gold/10 transition-colors group-hover:bg-leora-gold/20"
@@ -225,16 +226,16 @@
 				</p>
 
 				<div class="space-y-4">
-					{#each [[Brain, 'Smart Recommendations', 'AI suggests best vendor combinations'], [PieChart, 'Visual Breakdown', 'See exactly where your money goes'], [RefreshCw, 'Flexible Adjustments', 'Swap vendors and see real-time updates']] as [Icon, title, desc]}
+					{#each recom as rec (rec.name)}
 						<div class="flex items-center gap-4">
 							<div
 								class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-leora-gold/10"
 							>
-								<Icon class="h-6 w-6 text-leora-gold" />
+								<rec.icon class="h-6 w-6 text-leora-gold" />
 							</div>
 							<div>
-								<h4 class="font-semibold">{title}</h4>
-								<p class="text-sm text-gray-600">{desc}</p>
+								<h4 class="font-semibold">{rec.name}</h4>
+								<p class="text-sm text-gray-600">{rec.desc}</p>
 							</div>
 						</div>
 					{/each}
@@ -281,8 +282,7 @@
 		</div>
 
 		<div class="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6">
-			{#each categories as cat}
-				{@const Icon = iconMap[cat.icon]}
+			{#each data?.categories as cat (cat.name)}
 				<a
 					href="/vendors"
 					class="category-card glass-card cursor-pointer rounded-xl p-4 text-center hover:border-leora-gold/30"
@@ -290,9 +290,9 @@
 					<div
 						class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-leora-gold/10"
 					>
-						{#if Icon}
+						<!-- {#if Icon}
 							<Icon class="h-6 w-6 text-leora-gold" />
-						{/if}
+						{/if} -->
 					</div>
 					<h4 class="text-xs leading-tight font-medium text-leora-charcoal">{cat.name}</h4>
 					<p class="text-xs text-gray-500">{cat.count} vendors</p>
@@ -316,7 +316,7 @@
 		</div>
 
 		<div class="grid gap-6 md:grid-cols-3">
-			{#each vendors.slice(0, 3) as vendor}
+			{#each vendors.slice(0, 3) as vendor (vendor.id)}
 				<VendorCard {vendor} onAddToPlan={(id) => alert(`Vendor ${id} added to your plan!`)} />
 			{/each}
 		</div>
@@ -334,7 +334,7 @@
 		</div>
 
 		<div class="grid gap-8 md:grid-cols-3">
-			{#each testimonials as t}
+			{#each testimonials as t (t.quote)}
 				<div class="glass-card hover-lift rounded-2xl p-8">
 					<div class="mb-4 flex items-center gap-1">
 						{#each { length: 5 } as _}
@@ -382,7 +382,7 @@
 		</div>
 
 		<div class="mt-12 flex flex-wrap justify-center gap-6 text-sm text-gray-400">
-			{#each ['Free for first 2 bookings', 'No monthly fees to start', 'Instant exposure'] as perk}
+			{#each ['Free for first 2 bookings', 'No monthly fees to start', 'Instant exposure'] as perk (perk)}
 				<span class="flex items-center gap-2">
 					<CheckCircle class="h-4 w-4 text-leora-gold" />
 					{perk}
@@ -391,5 +391,3 @@
 		</div>
 	</div>
 </section>
-
-<Footer />

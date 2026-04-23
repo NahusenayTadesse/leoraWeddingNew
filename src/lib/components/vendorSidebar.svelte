@@ -13,7 +13,8 @@
 		Banknote,
 		Heart,
 		BanknoteArrowUp,
-		ScanLine
+		ScanLine,
+		Clock
 	} from '@lucide/svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import type { ComponentProps } from 'svelte';
@@ -35,7 +36,7 @@
 			icon: ListOrdered
 		},
 
-		{ title: 'Reports', url: '/vendor-dashboard/reports', icon: ChartArea },
+		{ title: 'Availability', url: '/vendor-dashboard/calendar', icon: Clock },
 
 		{ title: 'Transactions', url: '/vendor-dashboard/transactions', icon: ScanLine }
 	];

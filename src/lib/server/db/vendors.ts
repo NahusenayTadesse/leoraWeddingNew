@@ -236,9 +236,18 @@ export const subCategories = mysqlTable('sub_categories', {
 	parentId: int('parent_id').references(() => serviceCategories.id, { onDelete: 'cascade' })
 });
 
+export const subSubCategories = mysqlTable('sub_sub_categories', {
+	id: int('id').autoincrement().primaryKey(),
+	name: varchar('name', { length: 50 }).notNull().unique(),
+	description: varchar('description', { length: 255 }),
+	parentId: int('parent_id').references(() => subCategories.id, { onDelete: 'cascade' })
+});
+
 export const categoryServices = mysqlTable('category_services', {
 	id: int('id').autoincrement().primaryKey(),
 	subCategoryId: int('sub_category_id').references(() => subCategories.id, { onDelete: 'cascade' }),
+	subSubId: int('sub_sub_id').references(() => subSubCategories.id, { onDelete: 'cascade' }),
+
 	serviceId: int('service_id').references(() => vendorServices.id, { onDelete: 'cascade' })
 });
 

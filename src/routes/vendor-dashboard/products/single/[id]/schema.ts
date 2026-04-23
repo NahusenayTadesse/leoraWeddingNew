@@ -13,6 +13,10 @@ export const edit = z.object({
 	productName: z.string().min(1, { message: 'Product Name is required.' }),
 	category: z.number('Category cannot be empty. Please select a Category'),
 	subCategory: z.coerce.number('Sub Categories is required').array(),
+	subSubCategory: z
+		.number('Sub Sub Category cannot be empty. Please select a Category')
+		.array()
+		.optional(),
 
 	description: z
 		.string()

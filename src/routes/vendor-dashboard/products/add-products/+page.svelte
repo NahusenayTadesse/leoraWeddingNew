@@ -84,7 +84,7 @@
 		<InputComp
 			{form}
 			{errors}
-			type="select"
+			type="combo"
 			name="category"
 			label="Product Category"
 			placeholder="Enter Product Name"
@@ -101,6 +101,19 @@
 				placeholder="Select Subcategories"
 				required
 				items={data?.subs?.filter((sub) => sub.parentId === $form.category)}
+			/>
+		{/if}
+
+		{#if $form.subCategory && data?.subsubs?.filter( (sub) => $form.subCategory.includes(sub.parentId) ).length}
+			<InputComp
+				{form}
+				{errors}
+				type="checkbox"
+				name="subSubCategory"
+				label="Product Sub Sub Categories"
+				placeholder="Select Sub Sub Categories"
+				required
+				items={data?.subsubs?.filter((sub) => $form.subCategory.includes(sub.parentId))}
 			/>
 		{/if}
 

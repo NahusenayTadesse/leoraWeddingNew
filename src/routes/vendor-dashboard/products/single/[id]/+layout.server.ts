@@ -13,7 +13,8 @@ import {
 	prices,
 	serviceImages as productImages,
 	subCategories,
-	categoryServices
+	categoryServices,
+	subSubCategories
 } from '$lib/server/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import type { LayoutServerLoad } from './$types';
@@ -106,7 +107,7 @@ export const load: LayoutServerLoad = async ({ params, parent }) => {
 		.from(subCategories);
 
 	const currentSubs = await db
-		.select({
+		.selectDistinct({
 			id: subCategories.id,
 			name: subCategories.name,
 			description: subCategories.description
@@ -120,24 +121,48 @@ export const load: LayoutServerLoad = async ({ params, parent }) => {
 			eq(categoryServices.serviceId, Number(id)) // This filters for your specific service
 		);
 
+	const subsubs = await db
+		.select({
+			value: subSubCategories.id,
+			name: subSubCategories.name,
+			description: subSubCategories.description,
+			parentId: subSubCategories.parentId
+		})
+		.from(subSubCategories);
+	const currentSubSubs = await db
+		.selectDistinct({
+			id: subSubCategories.id,
+			name: subSubCategories.name,
+			description: subSubCategories.description,
+			parentId: subSubCategories.parentId
+		})
+		.from(subSubCategories)
+		.innerJoin(
+			categoryServices,
+			eq(subSubCategories.id, categoryServices.subSubId) // This links the tables
+		)
+		.where(
+			eq(categoryServices.serviceId, Number(id)) // This filters for your specific service
+		);
+
 	const editProductForm = {
 		productName: product.name,
 		category: product.categoryId,
 		subCategory: currentSubs.map((sub) => sub.id),
+		subSubCategory: currentSubSubs.map((sub) => sub.id),
 		description: product.description
 	};
 
 	const form = await superValidate(editProductForm, zod4(edit));
 
-	console.log('currentSubs:', currentSubs);
-	console.log('form after superValidate:', form.data);
 	return {
 		product,
 		form,
 		categories,
 		currentSubs,
 		subs,
-
+		subsubs,
+		currentSubSubs,
 		galleryEdit,
 		addPriceForm,
 

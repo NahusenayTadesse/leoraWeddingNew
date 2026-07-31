@@ -1,100 +1,66 @@
+import { fail } from '@sveltejs/kit';
 import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
-import { eq, and, sql } from 'drizzle-orm';
+import { checkoutSchema } from '$lib/schemas/checkout';
+import { priceCart, createOrder } from '$lib/server/checkout';
+import { getCoupleByUserId } from '$lib/server/couples';
+import type { Actions, PageServerLoad } from './$types';
 
-import { addUser, loginSchema } from '$lib/ZodSchema';
-import { add } from './schema';
-import { db } from '$lib/server/db';
-import { orders, orderItems, products, customers } from '$lib/server/db/schema';
-import type { PageServerLoad, Actions } from './$types';
+export const load: PageServerLoad = async ({ locals }) => {
+	const couple = locals.user ? await getCoupleByUserId(locals.user.id) : null;
 
-export const load: PageServerLoad = async () => {
-	const form = await superValidate(zod4(add));
-	const signupForm = await superValidate(zod4(addUser));
-	const loginForm = await superValidate(zod4(loginSchema));
+	const form = await superValidate(zod4(checkoutSchema));
 
-	const fetchedProducts = await db
-		.select({
-			value: products.id,
-			name: sql<string>`
-TRIM(
-  CONCAT(
-    ${products.name},
-    COALESCE(CONCAT(' ', ${products.price}, ' ETB'), ''),
-    COALESCE(CONCAT(' ', ${products.quantity}, ' Left'), '')
-  )
-)`,
-
-			price: products.price
-		})
-		.from(products);
-
-	const fetchedCustomers = await db
-		.select({
-			value: customers.id,
-			name: customers.name
-		})
-		.from(customers);
-
+	// Keep your existing signupForm / loginForm lines here.
 	return {
 		form,
-		signupForm,
-		loginForm,
-		fetchedProducts,
-		fetchedCustomers
+		user: locals.user ?? null,
+		hasCouple: !!couple
 	};
 };
 
 export const actions: Actions = {
 	add: async ({ request, locals }) => {
-		const form = await superValidate(request, zod4(add));
-		if (!form.valid) {
-			return message(form, { type: 'error', text: 'Please check the form for Errors' });
+		const form = await superValidate(request, zod4(checkoutSchema));
+
+		if (!locals.user) {
+			return message(form, { type: 'error', text: 'Please sign in to place your order.' }, { status: 401 });
+		}
+		if (!form.valid) return fail(400, { form });
+
+		const couple = await getCoupleByUserId(locals.user.id);
+		if (!couple) {
+			return message(
+				form,
+				{ type: 'error', text: 'Add your couple details before ordering.' },
+				{ status: 400 }
+			);
 		}
 
-		const { selectedProducts } = form.data;
+		const priced = await priceCart(form.data.items);
 
-		try {
-			await db.transaction(async (tx) => {
-				const fetchedProducts = await tx // ← tx, not db
-					.select({ value: products.id, price: products.price })
-					.from(products);
-
-				const customer = await tx
-					.select({ value: customers.id })
-					.from(customers)
-					.where(eq(customers.userId, locals?.user?.id))
-					.then((rows) => rows[0]);
-
-				const [orderId] = await tx
-					.insert(orders)
-					.values({ customerId: customer.value, status: 'pending' })
-					.$returningId();
-
-				if (selectedProducts.length) {
-					await tx.insert(orderItems).values(
-						selectedProducts.map((product) => ({
-							orderId: orderId.id,
-							productId: Number(product.product),
-							quantity: Number(product.quantity),
-							price: getPrice(fetchedProducts, Number(product.product)),
-							createdBy: locals?.user?.id
-						}))
-					);
-				}
-			});
-
-			return message(form, { type: 'success', text: 'Order Successfully Added' });
-		} catch (err) {
-			return message(form, {
-				type: 'error',
-				text: 'Error Adding Orders: ' + err?.message
-			});
+		if (priced.issues.length > 0) {
+			return message(
+				form,
+				{
+					type: 'error',
+					text: 'Some items changed. Review your cart and try again.',
+					issues: priced.issues
+				},
+				{ status: 409 }
+			);
 		}
+
+		if (priced.lines.length === 0) {
+			return message(form, { type: 'error', text: 'Your cart is empty.' }, { status: 400 });
+		}
+
+		const orderId = await createOrder(couple.id, locals.user.id, priced.lines);
+
+		return message(form, {
+			type: 'success',
+			text: 'Order placed. The vendors will confirm shortly.',
+			orderId
+		});
 	}
 };
-
-function getPrice(list: Array<{ value: number; price: string }>, value: number): number {
-	const item = list.find((i) => i.value === value);
-	return item ? Number(item.price) : 0;
-}

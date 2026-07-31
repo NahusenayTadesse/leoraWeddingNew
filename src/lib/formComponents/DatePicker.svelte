@@ -1,104 +1,123 @@
 <script lang="ts">
-	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
+	import { buttonVariants } from '$lib/components/ui/button/index.js';
 	import { Calendar } from '$lib/components/ui/calendar';
 	import * as Popover from '$lib/components/ui/popover/index.js';
-	import ScrollArea from '$lib/components/ui/scroll-area/scroll-area.svelte';
 	import { cn } from '$lib/utils.js';
-	import { CalendarDate, getLocalTimeZone, today, parseDate } from '@internationalized/date';
+	import {
+		CalendarDate,
+		type DateValue,
+		getLocalTimeZone,
+		today,
+		parseDate
+	} from '@internationalized/date';
 	import { CalendarIcon } from '@lucide/svelte';
 
 	let {
-		data = $bindable(''), // Expects "YYYY-MM-DD,YYYY-MM-DD"
+		data = $bindable(),
 		oldDays = false,
+		futureDays = true,
 		year = false,
-		futureDays = false
+		placeholder = 'Pick a date'
 	}: {
-		data: string;
+		data: string | null | undefined;
+		/** allow dates before today */
 		oldDays?: boolean;
-		year?: boolean;
+		/** allow dates after today */
 		futureDays?: boolean;
+		year?: boolean;
+		placeholder?: string;
 	} = $props();
 
-	const tz = getLocalTimeZone();
-	const minDate = $derived(oldDays ? undefined : today(tz));
-	const maxDate = $derived(futureDays ? today(tz) : undefined);
+	const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
-	// Internal state is now an array
-	let selectedDates = $state<CalendarDate[]>(
-		data ? data.split(',').map((d) => parseDate(d.trim())) : []
-	);
+	/** Never throws. Tolerates full ISO timestamps, null, empty string, junk. */
+	function safeParse(v: unknown): CalendarDate | undefined {
+		if (v == null) return undefined;
+		const s = String(v).trim().slice(0, 10);
+		if (!ISO.test(s)) return undefined;
+		try {
+			return parseDate(s);
+		} catch {
+			return undefined;
+		}
+	}
 
-	// Sync internal state back to the 'data' string prop
+	const now = today(getLocalTimeZone());
+	const minValue = $derived(oldDays ? undefined : now);
+	const maxValue = $derived(futureDays ? undefined : now);
+
+	let value = $state<CalendarDate | undefined>(safeParse(data));
+	let anchor = $state<DateValue>(safeParse(data) ?? now);
+
+	// prop -> local, guarded so it can't loop
 	$effect(() => {
-		data = selectedDates.map((d) => d.toString()).join(',');
+		const incoming = safeParse(data);
+		if ((incoming?.toString() ?? '') !== (value?.toString() ?? '')) {
+			value = incoming;
+			if (incoming) anchor = incoming;
+		}
 	});
 
-	const formatEthiopianDate = (date: CalendarDate): string => {
-		const formatter = new Intl.DateTimeFormat('am-ET', {
-			year: 'numeric',
-			month: 'short',
-			day: 'numeric',
-			calendar: 'ethiopic'
-		});
-		return formatter.format(date.toDate(tz));
-	};
+	// local -> prop, only on real interaction (no mount-time dirtying)
+	function commit(v: DateValue | undefined) {
+		data = v ? v.toString() : '';
+	}
 
-	// Derived label for the trigger button
-	const displayLabel = $derived.by(() => {
-		if (selectedDates.length === 0) return 'Select dates';
-		if (selectedDates.length === 1) return formatEthiopianDate(selectedDates[0]);
-		return `${selectedDates.length} dates selected`;
+	const gregorian = new Intl.DateTimeFormat('en-US', {
+		year: 'numeric',
+		month: 'long',
+		day: 'numeric'
 	});
+	const ethiopic = new Intl.DateTimeFormat('am-ET-u-ca-ethiopic', {
+		year: 'numeric',
+		month: 'long',
+		day: 'numeric'
+	});
+
+	function fmt(f: Intl.DateTimeFormat, d: CalendarDate | undefined) {
+		if (!d) return '';
+		try {
+			return f.format(d.toDate(getLocalTimeZone()));
+		} catch {
+			return '';
+		}
+	}
+
+	const label = $derived(value ? fmt(gregorian, value) : placeholder);
+	const ethLabel = $derived(fmt(ethiopic, value));
 </script>
 
 <Popover.Root>
 	<Popover.Trigger
 		class={cn(
-			buttonVariants({
-				variant: 'outline',
-				class: 'w-full justify-start text-left font-normal'
-			}),
-			selectedDates.length === 0 && 'text-muted-foreground'
+			buttonVariants({ variant: 'outline', class: 'w-full justify-between font-normal' }),
+			!value && 'text-muted-foreground'
 		)}
 	>
-		<CalendarIcon class="mr-2 h-4 w-4" />
-		{displayLabel}
+		<span class="flex items-center gap-2 truncate">
+			<CalendarIcon class="size-4 shrink-0" />
+			<span class="truncate">
+				{label}{#if ethLabel}<span class="text-muted-foreground"> · {ethLabel}</span>{/if}
+			</span>
+		</span>
 	</Popover.Trigger>
 
-	<Popover.Content class="flex w-auto flex-col gap-2 p-4">
-		<ScrollArea class="h-80">
-			<div class="flex flex-col text-sm text-muted-foreground">
-				{#if selectedDates.length > 0}
-					<ScrollArea class="m-2 max-h-24">
-						<ul class="flex max-h-24 max-w-72 flex-row flex-wrap gap-2 rounded-lg border">
-							{#each selectedDates as date}
-								<li
-									class="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-xs text-primary"
-								>
-									{formatEthiopianDate(date)}
-								</li>
-							{/each}
-						</ul>
-					</ScrollArea>
-				{:else}No dates selected{/if}
+	<Popover.Content class="w-auto p-0">
+		{#if ethLabel}
+			<div class="border-b px-3 py-2 text-sm text-muted-foreground">
+				Ethiopian date: <span class="font-semibold text-foreground">{ethLabel}</span>
 			</div>
-			<div class="mt-4 grid grid-cols-2 gap-2">
-				<Button variant="secondary" size="sm" onclick={() => (selectedDates = [today(tz)])}>
-					Today Only
-				</Button>
-				<Button variant="ghost" size="sm" onclick={() => (selectedDates = [])}>Clear All</Button>
-			</div>
-			<ScrollArea>
-				<Calendar
-					locale="am-ET"
-					type="multiple"
-					captionLayout={year ? 'dropdown-years' : 'label'}
-					minValue={minDate}
-					maxValue={maxDate}
-					bind:value={selectedDates}
-					class="h-72"
-				/>
-			</ScrollArea>
-		</ScrollArea>
+		{/if}
+
+		<Calendar
+			type="single"
+			captionLayout={year ? 'dropdown-years' : 'label'}
+			{minValue}
+			{maxValue}
+			preventDeselect
+			bind:value
+			bind:placeholder={anchor}
+			onValueChange={commit}
+		/>
 	</Popover.Content>
 </Popover.Root>

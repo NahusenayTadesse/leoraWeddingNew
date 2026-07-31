@@ -27,6 +27,7 @@
 	import Cart from '$lib/components/floating-cart/cart.svelte';
 	import Header from '$lib/components/header.svelte';
 	import Footer from '$lib/components/footer.svelte';
+	import FloatingChat from '$lib/components/FloatingChat.svelte';
 
 	// This initializes the class and puts it into Svelte's context
 	setCart();
@@ -56,6 +57,9 @@
 		}
 		$flash = undefined;
 	});
+	const cart = setCart();
+	$effect(() => cart.hydrate());
+
 </script>
 
 <svelte:head>
@@ -81,6 +85,7 @@
 	{@render children()}
 	<Footer />
 	<Cart budget={Number(data?.budget?.totalBudget)} />
+	<FloatingChat />
 {:else}
 	{@render children()}
 {/if}

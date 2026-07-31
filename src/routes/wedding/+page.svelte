@@ -1,481 +1,416 @@
 <script lang="ts">
-	import type { PageData } from './$types';
+	import * as Card from '$lib/components/ui/card';
+	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Progress } from '$lib/components/ui/progress';
 	import { Separator } from '$lib/components/ui/separator';
+	import {
+		CalendarHeart,
+		Wallet,
+		Users,
+		ListChecks,
+		Store,
+		ArrowRight,
+		TriangleAlert,
+		CalendarClock,
+		Star,
+		BadgeCheck,
+		MapPin,
+		Sparkles,
+		CircleCheck,
+		Link2
+	} from '@lucide/svelte';
 
-	let { data }: { data: PageData } = $props();
+	let { data } = $props();
 
-	const { wedding, couple, budgetItems, guests, tasks, stats } = data;
+	const etb = (n: number) =>
+		new Intl.NumberFormat('en-ET', { maximumFractionDigits: 0 }).format(n);
 
-	const fmt = new Intl.NumberFormat('en-US', {
-		style: 'currency',
-		currency: 'USD',
-		maximumFractionDigits: 0
-	});
-
-	function formatDate(d: string | null | undefined) {
-		if (!d) return '—';
-		return new Date(d).toLocaleDateString('en-US', {
+	function prettyDate(iso: string) {
+		if (!iso) return null;
+		return new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', {
 			weekday: 'long',
-			year: 'numeric',
+			day: 'numeric',
 			month: 'long',
-			day: 'numeric'
+			year: 'numeric'
 		});
 	}
 
-	function relativeDate(d: string | null | undefined) {
-		if (!d) return null;
-		const diff = Math.ceil((new Date(d).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-		if (diff < 0) return 'Overdue';
-		if (diff === 0) return 'Today';
-		if (diff === 1) return 'Tomorrow';
-		return `In ${diff}d`;
+	function shortDate(iso: string) {
+		if (!iso) return 'No date';
+		return new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', {
+			day: 'numeric',
+			month: 'short'
+		});
 	}
 
-	const brideGuests = $derived(guests.filter((g) => g.side === 'bride'));
-	const groomGuests = $derived(guests.filter((g) => g.side === 'groom'));
-	const pendingTasks = $derived(tasks.filter((t) => !t.isConfirmed));
-	const doneTasks = $derived(tasks.filter((t) => t.isConfirmed));
-
-	const budgetPct = $derived(
-		stats.totalPlanned > 0
-			? Math.min(100, Math.round((stats.totalActual / stats.totalPlanned) * 100))
-			: 0
-	);
-	const taskPct = $derived(
-		stats.totalTasks > 0 ? Math.round((stats.completedTasks / stats.totalTasks) * 100) : 0
-	);
-	const guestPct = $derived(
-		stats.totalGuests > 0 ? Math.round((stats.confirmedGuests / stats.totalGuests) * 100) : 0
-	);
+	function dueLabel(days: number | null) {
+		if (days === null) return 'No due date';
+		if (days === 0) return 'Due today';
+		if (days === 1) return 'Due tomorrow';
+		if (days < 0) return `${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} overdue`;
+		return `In ${days} days`;
+	}
 </script>
 
-<svelte:head>
-	<title>{couple.brideName} & {couple.groomName} — Wedding</title>
-	<link rel="preconnect" href="https://fonts.googleapis.com" />
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-	<link
-		href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap"
-		rel="stylesheet"
-	/>
-</svelte:head>
-
-<div class="min-h-screen bg-[#faf8f5]" style="font-family: 'Jost', sans-serif;">
-	<!-- Hero Header -->
-	<header class="relative overflow-hidden bg-[#2d1f1a] text-[#f5ede3]">
-		<!-- Decorative botanical SVG -->
-		<svg
-			class="absolute top-0 left-0 h-full w-64 opacity-10"
-			viewBox="0 0 200 400"
-			fill="none"
-			xmlns="http://www.w3.org/2000/svg"
-		>
-			<path
-				d="M40 400 Q60 300 20 200 Q-10 100 40 0"
-				stroke="#c9a882"
-				stroke-width="1.5"
-				fill="none"
-			/>
-			<ellipse cx="30" cy="180" rx="28" ry="14" fill="#c9a882" transform="rotate(-30 30 180)" />
-			<ellipse cx="55" cy="240" rx="22" ry="11" fill="#c9a882" transform="rotate(20 55 240)" />
-			<ellipse cx="20" cy="120" rx="20" ry="10" fill="#c9a882" transform="rotate(-50 20 120)" />
-			<ellipse cx="65" cy="310" rx="18" ry="9" fill="#c9a882" transform="rotate(40 65 310)" />
-		</svg>
-		<svg
-			class="absolute top-0 right-0 h-full w-64 scale-x-[-1] opacity-10"
-			viewBox="0 0 200 400"
-			fill="none"
-			xmlns="http://www.w3.org/2000/svg"
-		>
-			<path
-				d="M40 400 Q60 300 20 200 Q-10 100 40 0"
-				stroke="#c9a882"
-				stroke-width="1.5"
-				fill="none"
-			/>
-			<ellipse cx="30" cy="180" rx="28" ry="14" fill="#c9a882" transform="rotate(-30 30 180)" />
-			<ellipse cx="55" cy="240" rx="22" ry="11" fill="#c9a882" transform="rotate(20 55 240)" />
-			<ellipse cx="20" cy="120" rx="20" ry="10" fill="#c9a882" transform="rotate(-50 20 120)" />
-			<ellipse cx="65" cy="310" rx="18" ry="9" fill="#c9a882" transform="rotate(40 65 310)" />
-		</svg>
-
-		<div class="relative mx-auto max-w-4xl px-6 py-16 text-center">
-			<p class="mb-3 text-xs tracking-[0.4em] text-[#c9a882] uppercase">Wedding Dashboard</p>
-
-			<h1
-				class="mb-2 text-5xl leading-tight font-light md:text-6xl"
-				style="font-family: 'Cormorant Garamond', serif; font-style: italic;"
-			>
-				{couple.brideName}
-				<span class="mx-3 text-[#c9a882] not-italic" style="font-weight: 300;">&</span>
-				{couple.groomName}
+{#if !data.ready}
+	<!-- Setup state -->
+	<div class="mx-auto max-w-2xl py-10">
+		<Card.Root class="p-8 text-center">
+			<CalendarHeart class="text-primary mx-auto size-10" />
+			<h1 class="mt-4 text-2xl font-semibold tracking-tight">
+				Almost there, {data.coupleName}
 			</h1>
+			<p class="text-muted-foreground mt-2 text-sm">
+				Add your wedding date, city and budget and we'll build your planning space around them —
+				checklist, budget tracker and guest list included.
+			</p>
+			<Button href="/wedding/wedding" class="mt-6">
+				Set up your wedding <ArrowRight class="ml-2 size-4" />
+			</Button>
+		</Card.Root>
+	</div>
+{:else}
+	{@const w = data.wedding}
+	{@const budgetPct = w.totalBudget > 0 ? Math.min(100, (data.budget.spent / w.totalBudget) * 100) : 0}
+	{@const guestPct =
+		w.expectedGuests > 0 ? Math.min(100, (data.guests.total / w.expectedGuests) * 100) : 0}
+	{@const taskPct = data.tasks.total > 0 ? (data.tasks.done / data.tasks.total) * 100 : 0}
+	{@const bookingPct = data.bookings.agreed > 0 ? Math.min(100, (data.bookings.paid / data.bookings.agreed) * 100) : 0}
+	{@const overBudget = data.budget.planned > w.totalBudget && w.totalBudget > 0}
 
-			<div class="mt-5 flex items-center justify-center gap-3 text-sm text-[#c9a882]">
-				<span>✦</span>
-				<span class="text-xs font-light tracking-widest uppercase"
-					>{formatDate(wedding.weddingDate)}</span
-				>
-				<span>✦</span>
-			</div>
+	<div class="space-y-6">
+		<!-- Hero -->
+		<Card.Root class="from-primary/10 overflow-hidden bg-gradient-to-br to-transparent p-6 sm:p-8">
+			<div class="flex flex-wrap items-start justify-between gap-6">
+				<div class="min-w-0">
+					<div class="flex flex-wrap items-center gap-2">
+						<h1 class="text-2xl font-semibold tracking-tight sm:text-3xl">{data.coupleName}</h1>
+						{#if data.verified}
+							<Badge class="gap-1"><BadgeCheck class="size-3.5" /> Verified</Badge>
+						{/if}
+					</div>
 
-			{#if wedding.city}
-				<p class="mt-2 text-sm font-light tracking-wide text-[#d4bfa8]">{wedding.city}</p>
-			{/if}
+					<div class="text-muted-foreground mt-3 flex flex-wrap items-center gap-4 text-sm">
+						{#if w.date}
+							<span class="flex items-center gap-1.5">
+								<CalendarHeart class="size-4" />{prettyDate(w.date)}
+							</span>
+						{/if}
+						{#if w.city}
+							<span class="flex items-center gap-1.5"><MapPin class="size-4" />{w.city}</span>
+						{/if}
+						{#if w.style}
+							<span>{w.style}</span>
+						{/if}
+					</div>
 
-			{#if stats.daysUntilWedding !== null}
-				<div class="mt-8 inline-block border border-[#c9a882]/30 px-8 py-3">
-					{#if stats.daysUntilWedding > 0}
-						<span
-							class="text-3xl font-light text-[#f5ede3]"
-							style="font-family: 'Cormorant Garamond', serif;">{stats.daysUntilWedding}</span
+					{#if data.slug}
+						<a
+							href="/w/{data.slug}"
+							class="text-muted-foreground hover:text-foreground mt-3 inline-flex items-center gap-1.5 text-xs"
 						>
-						<span class="ml-2 text-xs tracking-[0.3em] text-[#c9a882] uppercase">days to go</span>
-					{:else if stats.daysUntilWedding === 0}
-						<span class="text-lg tracking-[0.3em] text-[#c9a882] uppercase"
-							>Today is the day! 🎉</span
-						>
+							<Link2 class="size-3.5" /> leoraevents.com/w/{data.slug}
+						</a>
+					{/if}
+				</div>
+
+				<div class="text-right">
+					{#if w.daysAway === null}
+						<p class="text-muted-foreground text-sm">No date set</p>
+					{:else if w.daysAway > 0}
+						<p class="text-4xl font-semibold sm:text-5xl">{w.daysAway}</p>
+						<p class="text-muted-foreground text-sm">
+							day{w.daysAway === 1 ? '' : 's'} to go
+						</p>
+					{:else if w.daysAway === 0}
+						<p class="text-3xl font-semibold sm:text-4xl">Today!</p>
+						<p class="text-muted-foreground text-sm">Congratulations</p>
 					{:else}
-						<span class="text-xs tracking-[0.3em] text-[#c9a882] uppercase">Happily married ♡</span>
+						<p class="text-3xl font-semibold sm:text-4xl">Married</p>
+						<p class="text-muted-foreground text-sm">
+							{Math.abs(w.daysAway)} days ago
+						</p>
 					{/if}
 				</div>
-			{/if}
-		</div>
-	</header>
+			</div>
+		</Card.Root>
 
-	<main class="mx-auto max-w-4xl space-y-10 px-4 py-12">
-		<!-- At-a-Glance Stats -->
-		<section class="grid grid-cols-2 gap-4 md:grid-cols-4">
-			{#each [{ label: 'Expected Guests', value: wedding.expectedGuests ?? '—', sub: null }, { label: 'RSVP Confirmed', value: `${stats.confirmedGuests}/${stats.totalGuests}`, sub: `${guestPct}%` }, { label: 'Budget Spent', value: fmt.format(stats.totalActual), sub: `of ${fmt.format(stats.totalPlanned > 0 ? stats.totalPlanned : Number(wedding.totalBudget ?? 0))}` }, { label: 'Tasks Done', value: `${stats.completedTasks}/${stats.totalTasks}`, sub: `${taskPct}%` }] as card}
-				<div class="border border-[#e8ddd4] bg-white p-5 text-center shadow-sm">
-					<p class="mb-1 text-[10px] tracking-[0.3em] text-[#9c7f6e] uppercase">{card.label}</p>
-					<p
-						class="text-2xl font-light text-[#2d1f1a]"
-						style="font-family: 'Cormorant Garamond', serif;"
-					>
-						{card.value}
+		<!-- Alerts -->
+		{#if data.tasks.overdue > 0 || overBudget || data.bookings.outstanding > 0}
+			<div class="grid gap-3 sm:grid-cols-3">
+				{#if data.tasks.overdue > 0}
+					<a href="/wedding/tasks" class="block">
+						<Card.Root
+							class="border-destructive/30 bg-destructive/5 hover:bg-destructive/10 p-4 transition-colors"
+						>
+							<p class="text-destructive flex items-center gap-2 text-sm font-medium">
+								<TriangleAlert class="size-4" />
+								{data.tasks.overdue} overdue task{data.tasks.overdue === 1 ? '' : 's'}
+							</p>
+						</Card.Root>
+					</a>
+				{/if}
+
+				{#if overBudget}
+					<a href="/wedding/budget" class="block">
+						<Card.Root
+							class="border-destructive/30 bg-destructive/5 hover:bg-destructive/10 p-4 transition-colors"
+						>
+							<p class="text-destructive flex items-center gap-2 text-sm font-medium">
+								<TriangleAlert class="size-4" />
+								{etb(data.budget.planned - w.totalBudget)} ETB over budget
+							</p>
+						</Card.Root>
+					</a>
+				{/if}
+
+				{#if data.bookings.outstanding > 0}
+					<a href="/wedding/bookings" class="block">
+						<Card.Root class="hover:bg-accent p-4 transition-colors">
+							<p class="flex items-center gap-2 text-sm font-medium">
+								<Wallet class="size-4" />
+								{etb(data.bookings.outstanding)} ETB left to pay
+							</p>
+						</Card.Root>
+					</a>
+				{/if}
+			</div>
+		{/if}
+
+		<!-- Four pillars -->
+		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+			<!-- Budget -->
+			<a href="/wedding/budget" class="block">
+				<Card.Root class="hover:border-primary/40 h-full p-5 transition-colors">
+					<div class="text-muted-foreground flex items-center gap-2 text-xs">
+						<Wallet class="size-4" /> Budget
+					</div>
+					<p class="mt-2 text-2xl font-semibold">{etb(data.budget.spent)}</p>
+					<p class="text-muted-foreground text-xs">of {etb(w.totalBudget)} ETB spent</p>
+					<Progress value={budgetPct} class="mt-3 h-1.5" />
+				</Card.Root>
+			</a>
+
+			<!-- Guests -->
+			<a href="/wedding/guests" class="block">
+				<Card.Root class="hover:border-primary/40 h-full p-5 transition-colors">
+					<div class="text-muted-foreground flex items-center gap-2 text-xs">
+						<Users class="size-4" /> Guests
+					</div>
+					<p class="mt-2 text-2xl font-semibold">{data.guests.total}</p>
+					<p class="text-muted-foreground text-xs">
+						{data.guests.confirmed} confirmed · {w.expectedGuests || '—'} expected
 					</p>
-					{#if card.sub}
-						<p class="mt-0.5 text-xs text-[#b89e8c]">{card.sub}</p>
-					{/if}
-				</div>
-			{/each}
-		</section>
+					<Progress value={guestPct} class="mt-3 h-1.5" />
+				</Card.Root>
+			</a>
 
-		<!-- Couple & Wedding Details -->
-		<section class="grid gap-6 md:grid-cols-2">
-			<!-- Couple -->
-			<div class="border border-[#e8ddd4] bg-white p-6 shadow-sm">
-				<h2 class="section-title">The Couple</h2>
-				<Separator class="mb-4 bg-[#e8ddd4]" />
-				<dl class="space-y-3 text-sm">
-					<div class="flex justify-between">
-						<dt class="tracking-wide text-[#9c7f6e]">Bride</dt>
-						<dd class="font-medium text-[#2d1f1a]">{couple.brideName}</dd>
+			<!-- Tasks -->
+			<a href="/wedding/tasks" class="block">
+				<Card.Root class="hover:border-primary/40 h-full p-5 transition-colors">
+					<div class="text-muted-foreground flex items-center gap-2 text-xs">
+						<ListChecks class="size-4" /> Tasks
 					</div>
-					<div class="flex justify-between">
-						<dt class="tracking-wide text-[#9c7f6e]">Groom</dt>
-						<dd class="font-medium text-[#2d1f1a]">{couple.groomName}</dd>
+					<p class="mt-2 text-2xl font-semibold">
+						{data.tasks.done}<span class="text-muted-foreground text-base">/{data.tasks.total}</span>
+					</p>
+					<p class="text-muted-foreground text-xs">
+						{data.tasks.total - data.tasks.done} still to do
+					</p>
+					<Progress value={taskPct} class="mt-3 h-1.5" />
+				</Card.Root>
+			</a>
+
+			<!-- Bookings -->
+			<a href="/wedding/bookings" class="block">
+				<Card.Root class="hover:border-primary/40 h-full p-5 transition-colors">
+					<div class="text-muted-foreground flex items-center gap-2 text-xs">
+						<Store class="size-4" /> Vendors
 					</div>
-					{#if couple.email}
-						<div class="flex justify-between">
-							<dt class="tracking-wide text-[#9c7f6e]">Email</dt>
-							<dd class="text-[#2d1f1a]">{couple.email}</dd>
-						</div>
-					{/if}
-					{#if couple.phone}
-						<div class="flex justify-between">
-							<dt class="tracking-wide text-[#9c7f6e]">Phone</dt>
-							<dd class="text-[#2d1f1a]">{couple.phone}</dd>
-						</div>
-					{/if}
-					{#if couple.phone2}
-						<div class="flex justify-between">
-							<dt class="tracking-wide text-[#9c7f6e]">Phone 2</dt>
-							<dd class="text-[#2d1f1a]">{couple.phone2}</dd>
-						</div>
-					{/if}
-					<div class="flex justify-between">
-						<dt class="tracking-wide text-[#9c7f6e]">Status</dt>
-						<dd>
-							{#if couple.verified}
-								<span
-									class="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700"
-								>
-									<span>✓</span> Verified
-								</span>
+					<p class="mt-2 text-2xl font-semibold">{data.bookings.total}</p>
+					<p class="text-muted-foreground text-xs">
+						{data.bookings.confirmed} confirmed · {data.bookings.pending} pending
+					</p>
+					<Progress value={bookingPct} class="mt-3 h-1.5" />
+				</Card.Root>
+			</a>
+		</div>
+
+		<div class="grid gap-6 lg:grid-cols-3">
+			<!-- Next up -->
+			<Card.Root class="lg:col-span-2">
+				<Card.Header class="flex-row items-center justify-between">
+					<div>
+						<Card.Title>Next up</Card.Title>
+						<Card.Description>Your most urgent tasks.</Card.Description>
+					</div>
+					<Button variant="ghost" size="sm" href="/wedding/tasks">
+						All tasks <ArrowRight class="ml-1.5 size-4" />
+					</Button>
+				</Card.Header>
+
+				<Card.Content>
+					{#if data.tasks.next.length === 0}
+						<div class="py-8 text-center">
+							{#if data.tasks.total === 0}
+								<ListChecks class="text-muted-foreground mx-auto size-7" />
+								<p class="text-muted-foreground mt-3 text-sm">No tasks yet.</p>
+								<Button variant="outline" size="sm" class="mt-4" href="/wedding/tasks">
+									<Sparkles class="mr-2 size-4" /> Build your checklist
+								</Button>
 							{:else}
-								<span
-									class="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs text-amber-700"
-								>
-									Pending
-								</span>
+								<CircleCheck class="mx-auto size-7 text-emerald-600" />
+								<p class="text-muted-foreground mt-3 text-sm">Everything's done. Nice.</p>
 							{/if}
-						</dd>
-					</div>
-				</dl>
-			</div>
+						</div>
+					{:else}
+						<ul class="divide-y">
+							{#each data.tasks.next as task (task.id)}
+								<li class="flex items-center gap-3 py-2.5">
+									<div class="border-muted-foreground/30 size-4 shrink-0 rounded border"></div>
+									<div class="min-w-0 flex-1">
+										<p class="truncate text-sm font-medium">{task.title}</p>
+										<p
+											class="flex items-center gap-1 text-xs"
+											class:text-destructive={task.daysAway !== null && task.daysAway < 0}
+											class:text-muted-foreground={task.daysAway === null || task.daysAway >= 0}
+										>
+											<CalendarClock class="size-3" />{dueLabel(task.daysAway)}
+										</p>
+									</div>
+								</li>
+							{/each}
+						</ul>
+					{/if}
+				</Card.Content>
+			</Card.Root>
 
-			<!-- Wedding Details -->
-			<div class="border border-[#e8ddd4] bg-white p-6 shadow-sm">
-				<h2 class="section-title">Wedding Details</h2>
-				<Separator class="mb-4 bg-[#e8ddd4]" />
-				<dl class="space-y-3 text-sm">
-					{#if wedding.weddingStyle}
-						<div class="flex justify-between">
-							<dt class="tracking-wide text-[#9c7f6e]">Style</dt>
-							<dd>
-								<span
-									class="border border-[#c9a882]/40 bg-[#fdf5ed] px-2.5 py-0.5 text-xs tracking-wide text-[#7a5c48] capitalize"
-									>{wedding.weddingStyle}</span
-								>
-							</dd>
-						</div>
-					{/if}
-					<div class="flex justify-between">
-						<dt class="tracking-wide text-[#9c7f6e]">Date</dt>
-						<dd class="text-right text-[#2d1f1a]">{formatDate(wedding.weddingDate)}</dd>
-					</div>
-					{#if wedding.city}
-						<div class="flex justify-between">
-							<dt class="tracking-wide text-[#9c7f6e]">City</dt>
-							<dd class="text-[#2d1f1a]">{wedding.city}</dd>
-						</div>
-					{/if}
-					<div class="flex justify-between">
-						<dt class="tracking-wide text-[#9c7f6e]">Expected Guests</dt>
-						<dd class="text-[#2d1f1a]">{wedding.expectedGuests ?? '—'}</dd>
-					</div>
-					{#if wedding.totalBudget}
-						<div class="flex justify-between">
-							<dt class="tracking-wide text-[#9c7f6e]">Total Budget</dt>
-							<dd class="font-medium text-[#2d1f1a]">{fmt.format(Number(wedding.totalBudget))}</dd>
-						</div>
-					{/if}
-				</dl>
-			</div>
-		</section>
+			<!-- Payments -->
+			<Card.Root>
+				<Card.Header>
+					<Card.Title>Outstanding</Card.Title>
+					<Card.Description>What's still owed to vendors.</Card.Description>
+				</Card.Header>
 
-		<!-- Budget -->
-		{#if budgetItems.length > 0}
-			<section class="border border-[#e8ddd4] bg-white p-6 shadow-sm">
-				<div class="mb-1 flex items-end justify-between">
-					<h2 class="section-title mb-0">Budget</h2>
-					<span class="text-xs text-[#9c7f6e]"
-						>{fmt.format(stats.totalActual)} spent of {fmt.format(stats.totalPlanned)} planned</span
-					>
-				</div>
-				<div class="mt-2 mb-6 h-1.5 w-full overflow-hidden rounded-full bg-[#f0e8e0]">
-					<div
-						class="h-full rounded-full transition-all"
-						class:bg-emerald-500={budgetPct < 80}
-						class:bg-amber-500={budgetPct >= 80 && budgetPct < 100}
-						class:bg-rose-500={budgetPct >= 100}
-						style="width: {budgetPct}%"
-					></div>
-				</div>
-				<div class="divide-y divide-[#f0e8e0]">
-					{#each budgetItems as item}
-						{@const planned = Number(item.plannedAmount ?? 0)}
-						{@const actual = Number(item.actualAmount ?? 0)}
-						{@const pct = planned > 0 ? Math.min(100, Math.round((actual / planned) * 100)) : 0}
-						<div class="grid grid-cols-[1fr_auto_auto] items-center gap-4 py-3 text-sm">
-							<div>
-								<span class="text-[#2d1f1a]">Category #{item.categoryId}</span>
-								{#if item.notes}
-									<p class="mt-0.5 truncate text-xs text-[#9c7f6e]">{item.notes}</p>
-								{/if}
+				<Card.Content class="space-y-4">
+					<div>
+						<p class="text-2xl font-semibold">{etb(data.bookings.outstanding)}</p>
+						<p class="text-muted-foreground text-xs">
+							{etb(data.bookings.paid)} of {etb(data.bookings.agreed)} ETB settled
+						</p>
+						{#if data.bookings.awaitingConfirmation > 0}
+							<p class="text-muted-foreground mt-1 text-xs">
+								{etb(data.bookings.awaitingConfirmation)} awaiting vendor confirmation
+							</p>
+						{/if}
+					</div>
+
+					{#if data.bookings.upcoming.length > 0}
+						<Separator />
+						<ul class="space-y-3">
+							{#each data.bookings.upcoming as booking (booking.id)}
+								<li class="flex items-center justify-between gap-3">
+									<div class="min-w-0">
+										<p class="truncate text-sm font-medium">{booking.vendorName}</p>
+										<p class="text-muted-foreground text-xs">{shortDate(booking.eventDate)}</p>
+									</div>
+									<span class="text-sm font-medium tabular-nums">{etb(booking.balance)}</span>
+								</li>
+							{/each}
+						</ul>
+					{/if}
+
+					<Button variant="outline" size="sm" class="w-full" href="/wedding/bookings">
+						Manage bookings
+					</Button>
+				</Card.Content>
+			</Card.Root>
+		</div>
+
+		<!-- Budget breakdown -->
+		{#if data.budget.topCategories.length > 0}
+			<Card.Root>
+				<Card.Header class="flex-row items-center justify-between">
+					<div>
+						<Card.Title>Where the money goes</Card.Title>
+						<Card.Description>Your biggest planned categories.</Card.Description>
+					</div>
+					<Button variant="ghost" size="sm" href="/wedding/budget">
+						Full budget <ArrowRight class="ml-1.5 size-4" />
+					</Button>
+				</Card.Header>
+
+				<Card.Content class="space-y-4">
+					{#each data.budget.topCategories as cat (cat.name)}
+						{@const pct = cat.planned > 0 ? Math.min(100, (cat.actual / cat.planned) * 100) : 0}
+						<div>
+							<div class="mb-1.5 flex items-center justify-between text-sm">
+								<span class="font-medium">{cat.name}</span>
+								<span class="text-muted-foreground tabular-nums">
+									{etb(cat.actual)} / {etb(cat.planned)}
+								</span>
 							</div>
-							<div class="text-right">
-								<p class="font-medium text-[#2d1f1a]">{fmt.format(actual)}</p>
-								<p class="text-xs text-[#9c7f6e]">of {fmt.format(planned)}</p>
-							</div>
-							<div class="w-16">
-								<div class="h-1 overflow-hidden rounded-full bg-[#f0e8e0]">
-									<div
-										class="h-full rounded-full"
-										class:bg-emerald-400={pct < 80}
-										class:bg-amber-400={pct >= 80 && pct < 100}
-										class:bg-rose-400={pct >= 100}
-										style="width: {pct}%"
-									></div>
-								</div>
-								<p class="mt-0.5 text-right text-[10px] text-[#b89e8c]">{pct}%</p>
-							</div>
+							<Progress value={pct} class="h-1.5" />
 						</div>
 					{/each}
-				</div>
-			</section>
+				</Card.Content>
+			</Card.Root>
 		{/if}
 
-		<!-- Guest List -->
-		{#if guests.length > 0}
-			<section class="border border-[#e8ddd4] bg-white p-6 shadow-sm">
-				<div class="flex items-end justify-between">
-					<h2 class="section-title">Guest List</h2>
-					<span class="text-xs text-[#9c7f6e]"
-						>{stats.confirmedGuests} of {stats.totalGuests} confirmed</span
-					>
-				</div>
-				<Separator class="my-4 bg-[#e8ddd4]" />
-				<div class="grid gap-6 md:grid-cols-2">
-					<!-- Bride's side -->
+		<!-- Recommended vendors -->
+		{#if data.recommended.length > 0}
+			<Card.Root>
+				<Card.Header class="flex-row items-center justify-between">
 					<div>
-						<h3 class="mb-3 text-[10px] tracking-[0.3em] text-[#c9a882] uppercase">Bride's Side</h3>
-						{#if brideGuests.length === 0}
-							<p class="text-sm text-[#b89e8c] italic">No guests added yet</p>
-						{:else}
-							<ul class="space-y-2">
-								{#each brideGuests as guest}
-									<li
-										class="flex items-center justify-between border-b border-[#f5ede3] py-1.5 text-sm last:border-0"
-									>
-										<span class="text-[#2d1f1a]">{guest.fullName}</span>
-										{#if guest.isConfirmed}
-											<span
-												class="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-600"
-												>Confirmed</span
-											>
-										{:else}
-											<span
-												class="rounded-full border border-[#e8ddd4] bg-[#f5ede3] px-2 py-0.5 text-[10px] text-[#9c7f6e]"
-												>Pending</span
-											>
-										{/if}
-									</li>
-								{/each}
-							</ul>
-						{/if}
+						<Card.Title>Vendors you might like</Card.Title>
+						<Card.Description>Top-rated on Leora Events.</Card.Description>
 					</div>
-					<!-- Groom's side -->
-					<div>
-						<h3 class="mb-3 text-[10px] tracking-[0.3em] text-[#c9a882] uppercase">Groom's Side</h3>
-						{#if groomGuests.length === 0}
-							<p class="text-sm text-[#b89e8c] italic">No guests added yet</p>
-						{:else}
-							<ul class="space-y-2">
-								{#each groomGuests as guest}
-									<li
-										class="flex items-center justify-between border-b border-[#f5ede3] py-1.5 text-sm last:border-0"
-									>
-										<span class="text-[#2d1f1a]">{guest.fullName}</span>
-										{#if guest.isConfirmed}
-											<span
-												class="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-600"
-												>Confirmed</span
-											>
-										{:else}
-											<span
-												class="rounded-full border border-[#e8ddd4] bg-[#f5ede3] px-2 py-0.5 text-[10px] text-[#9c7f6e]"
-												>Pending</span
-											>
-										{/if}
-									</li>
-								{/each}
-							</ul>
-						{/if}
-					</div>
-				</div>
-			</section>
-		{/if}
+					<Button variant="ghost" size="sm" href="/vendors">
+						Browse all <ArrowRight class="ml-1.5 size-4" />
+					</Button>
+				</Card.Header>
 
-		<!-- Tasks -->
-		{#if tasks.length > 0}
-			<section class="border border-[#e8ddd4] bg-white p-6 shadow-sm">
-				<div class="flex items-end justify-between">
-					<h2 class="section-title">Tasks</h2>
-					<span class="text-xs text-[#9c7f6e]">{stats.completedTasks}/{stats.totalTasks} done</span>
-				</div>
-				<div class="mt-2 mb-5 h-1.5 w-full overflow-hidden rounded-full bg-[#f0e8e0]">
-					<div
-						class="h-full rounded-full bg-[#c9a882] transition-all"
-						style="width: {taskPct}%"
-					></div>
-				</div>
-
-				{#if pendingTasks.length > 0}
-					<h3 class="mb-2 text-[10px] tracking-[0.3em] text-[#9c7f6e] uppercase">Pending</h3>
-					<ul class="mb-6 space-y-2">
-						{#each pendingTasks as task}
-							{@const rel = relativeDate(task.dueDate)}
-							<li
-								class="flex items-center justify-between gap-3 border-b border-[#f5ede3] py-2.5 last:border-0"
-							>
-								<div class="flex items-center gap-3">
-									<div class="h-4 w-4 flex-shrink-0 rounded-full border border-[#c9a882]"></div>
-									<span class="text-sm text-[#2d1f1a]">{task.title}</span>
-								</div>
-								{#if rel}
-									<span
-										class="flex-shrink-0 rounded-full border px-2 py-0.5 text-[10px]"
-										class:text-rose-600={rel === 'Overdue'}
-										class:bg-rose-50={rel === 'Overdue'}
-										class:border-rose-200={rel === 'Overdue'}
-										class:text-amber-600={rel === 'Today' || rel === 'Tomorrow'}
-										class:bg-amber-50={rel === 'Today' || rel === 'Tomorrow'}
-										class:border-amber-200={rel === 'Today' || rel === 'Tomorrow'}
-										class:text-[#9c7f6e]={rel !== 'Overdue' &&
-											rel !== 'Today' &&
-											rel !== 'Tomorrow'}
-										class:bg-[#f5ede3]={rel !== 'Overdue' && rel !== 'Today' && rel !== 'Tomorrow'}
-										class:border-[#e8ddd4]={rel !== 'Overdue' &&
-											rel !== 'Today' &&
-											rel !== 'Tomorrow'}>{rel}</span
-									>
-								{/if}
-							</li>
-						{/each}
-					</ul>
-				{/if}
-
-				{#if doneTasks.length > 0}
-					<h3 class="mb-2 text-[10px] tracking-[0.3em] text-[#9c7f6e] uppercase">Completed</h3>
-					<ul class="space-y-2">
-						{#each doneTasks as task}
-							<li
-								class="flex items-center gap-3 border-b border-[#f5ede3] py-2 text-sm text-[#b89e8c] last:border-0"
-							>
-								<div
-									class="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border border-[#c9a882]/40 bg-[#c9a882]/20"
-								>
-									<svg class="h-2.5 w-2.5 text-[#c9a882]" viewBox="0 0 10 8" fill="none">
-										<path
-											d="M1 4l2.5 2.5L9 1"
-											stroke="currentColor"
-											stroke-width="1.5"
-											stroke-linecap="round"
-											stroke-linejoin="round"
+				<Card.Content>
+					<div class="grid gap-4 sm:grid-cols-3">
+						{#each data.recommended as vendor (vendor.id)}
+							<a href="/vendors/{vendor.id}" class="group block">
+								<div class="bg-muted aspect-[4/3] overflow-hidden rounded-lg">
+									{#if vendor.cover}
+										<img
+											src={vendor.cover}
+											alt={vendor.name}
+											loading="lazy"
+											class="size-full object-cover transition-transform duration-300 group-hover:scale-105"
 										/>
-									</svg>
+									{:else}
+										<div class="text-muted-foreground flex size-full items-center justify-center">
+											<Store class="size-7" />
+										</div>
+									{/if}
 								</div>
-								<span class="line-through">{task.title}</span>
-							</li>
-						{/each}
-					</ul>
-				{/if}
-			</section>
-		{/if}
-	</main>
 
-	<!-- Footer -->
-	<footer class="mt-12 border-t border-[#e8ddd4] py-8 text-center">
-		<p class="text-xs tracking-[0.3em] text-[#b89e8c] uppercase">
-			{couple.brideName} ✦ {couple.groomName}
-		</p>
-		{#if wedding.weddingDate}
-			<p class="mt-1 text-[10px] text-[#c9a882]">{new Date(wedding.weddingDate).getFullYear()}</p>
+								<p class="mt-2 flex items-center gap-1.5 truncate text-sm font-medium">
+									{vendor.name}
+									{#if vendor.isVerified}
+										<BadgeCheck class="text-primary size-3.5 shrink-0" />
+									{/if}
+								</p>
+
+								<div class="text-muted-foreground flex items-center gap-2 text-xs">
+									{#if vendor.category}<span>{vendor.category}</span>{/if}
+									{#if vendor.reviewCount > 0}
+										<span class="flex items-center gap-0.5">
+											<Star class="size-3 fill-amber-400 text-amber-400" />
+											{vendor.rating?.toFixed(1)}
+										</span>
+									{/if}
+								</div>
+							</a>
+						{/each}
+					</div>
+				</Card.Content>
+			</Card.Root>
 		{/if}
-	</footer>
-</div>
-<!--
-<style>
-	:global(.section-title) {
-		font-family: 'Cormorant Garamond', serif;
-		font-size: 1.25rem;
-		font-weight: 400;
-		color: #2d1f1a;
-		letter-spacing: 0.03em;
-		margin-bottom: 0;
-	}
-</style> -->
+	</div>
+{/if}

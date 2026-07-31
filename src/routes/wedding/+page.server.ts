@@ -1,69 +1,132 @@
-import { db } from '$lib/server/db';
-import {
-	weddings,
-	couples,
-	weddingBudgetItems,
-	weddingGuests,
-	weddingTasks
-} from '$lib/server/db/schema';
-import { eq } from 'drizzle-orm';
-import { error } from '@sveltejs/kit';
+import { redirect } from '@sveltejs/kit';
+import { listBudgetItems } from '$lib/server/budget';
+import { listGuests } from '$lib/server/guests';
+import { listTasks, toDateInput } from '$lib/server/tasks';
+import { listBookings } from '$lib/server/bookings';
+import { listVendors } from '$lib/server/vendorDirectory';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async () => {
-	const weddingId = 5;
-	if (isNaN(weddingId)) {
-		throw error(400, 'Invalid wedding ID');
-	}
+export const load: PageServerLoad = async ({ parent }) => {
+	const { couple, wedding } = await parent();
+	if (!couple) throw redirect(302, '/dashboard/profile');
 
-	const [wedding] = await db.select().from(weddings).where(eq(weddings.id, weddingId)).limit(1);
-
+	// No wedding yet — show the setup path instead of empty widgets.
 	if (!wedding) {
-		throw error(404, 'Wedding not found');
+		return {
+			ready: false as const,
+			coupleName: `${couple.brideName} & ${couple.groomName}`
+		};
 	}
 
-	const [couple] = await db.select().from(couples).where(eq(couples.id, wedding.coupleId)).limit(1);
-
-	if (!couple) {
-		throw error(404, 'Couple not found');
-	}
-
-	const [budgetItems, guests, tasks] = await Promise.all([
-		db.select().from(weddingBudgetItems).where(eq(weddingBudgetItems.weddingId, weddingId)),
-
-		db.select().from(weddingGuests).where(eq(weddingGuests.weddingId, weddingId)),
-
-		db
-			.select()
-			.from(weddingTasks)
-			.where(eq(weddingTasks.weddingId, weddingId))
-			.orderBy(weddingTasks.dueDate)
+	const [budgetItems, guests, tasks, bookings, recommended] = await Promise.all([
+		listBudgetItems(wedding.id),
+		listGuests(wedding.id),
+		listTasks(wedding.id),
+		listBookings(wedding.id),
+		listVendors({ sort: 'recommended', page: 1 })
 	]);
 
-	const totalPlanned = budgetItems.reduce((sum, item) => sum + Number(item.plannedAmount ?? 0), 0);
-	const totalActual = budgetItems.reduce((sum, item) => sum + Number(item.actualAmount ?? 0), 0);
+	const activeBookings = bookings.filter((b) => b.status !== 'cancelled');
 
-	const confirmedGuests = guests.filter((g) => g.isConfirmed).length;
-	const completedTasks = tasks.filter((t) => t.isConfirmed).length;
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
+	const todayMs = today.getTime();
 
-	const daysUntilWedding = wedding.weddingDate
-		? Math.ceil((new Date(wedding.weddingDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-		: null;
+	const dayDiff = (value: unknown) => {
+		const iso = toDateInput(value);
+		if (!iso) return null;
+		const d = new Date(`${iso}T00:00:00`);
+		return isNaN(d.getTime()) ? null : Math.round((d.getTime() - todayMs) / 86_400_000);
+	};
+
+	const openTasks = tasks
+		.filter((t) => !t.isConfirmed)
+		.map((t) => ({
+			id: t.id,
+			title: t.title,
+			dueDate: toDateInput(t.dueDate),
+			daysAway: dayDiff(t.dueDate)
+		}));
 
 	return {
-		wedding,
-		couple,
-		budgetItems,
-		guests,
-		tasks,
-		stats: {
-			totalPlanned,
-			totalActual,
-			confirmedGuests,
-			totalGuests: guests.length,
-			completedTasks,
-			totalTasks: tasks.length,
-			daysUntilWedding
-		}
+		ready: true as const,
+		coupleName: `${couple.brideName} & ${couple.groomName}`,
+		verified: couple.verified,
+		slug: couple.slug,
+
+		wedding: {
+			date: toDateInput(wedding.weddingDate),
+			daysAway: dayDiff(wedding.weddingDate),
+			city: wedding.city,
+			style: wedding.weddingStyle,
+			expectedGuests: wedding.expectedGuests ?? 0,
+			totalBudget: Number(wedding.totalBudget ?? 0)
+		},
+
+		budget: {
+			itemCount: budgetItems.length,
+			planned: budgetItems.reduce((s, i) => s + i.plannedAmount, 0),
+			spent: budgetItems.reduce((s, i) => s + i.actualAmount, 0),
+			topCategories: [...budgetItems]
+				.sort((a, b) => b.plannedAmount - a.plannedAmount)
+				.slice(0, 4)
+				.map((i) => ({
+					name: i.categoryName,
+					planned: i.plannedAmount,
+					actual: i.actualAmount
+				}))
+		},
+
+		guests: {
+			total: guests.length,
+			confirmed: guests.filter((g) => g.isConfirmed).length,
+			bride: guests.filter((g) => g.side === 'bride').length,
+			groom: guests.filter((g) => g.side === 'groom').length
+		},
+
+		tasks: {
+			total: tasks.length,
+			done: tasks.filter((t) => t.isConfirmed).length,
+			overdue: openTasks.filter((t) => t.daysAway !== null && t.daysAway < 0).length,
+			// Overdue first, then soonest. Undated tasks last.
+			next: openTasks
+				.sort((a, b) => {
+					if (a.daysAway === null) return 1;
+					if (b.daysAway === null) return -1;
+					return a.daysAway - b.daysAway;
+				})
+				.slice(0, 5)
+		},
+
+		bookings: {
+			total: activeBookings.length,
+			confirmed: activeBookings.filter((b) => b.status === 'confirmed').length,
+			pending: activeBookings.filter((b) => b.status === 'pending').length,
+			agreed: activeBookings.reduce((s, b) => s + b.agreedPrice, 0),
+			paid: activeBookings.reduce((s, b) => s + b.paid, 0),
+			outstanding: activeBookings.reduce((s, b) => s + b.balance, 0),
+			awaitingConfirmation: activeBookings.reduce((s, b) => s + b.pendingPaid, 0),
+			upcoming: activeBookings
+				.filter((b) => b.balance > 0)
+				.sort((a, b) => b.balance - a.balance)
+				.slice(0, 3)
+				.map((b) => ({
+					id: b.id,
+					vendorName: b.vendorName,
+					status: b.status,
+					balance: b.balance,
+					eventDate: toDateInput(b.eventDate)
+				}))
+		},
+
+		recommended: recommended.vendors.slice(0, 3).map((v) => ({
+			id: v.id,
+			name: v.businessName,
+			category: v.categoryName,
+			cover: v.cover,
+			rating: v.avgRating,
+			reviewCount: v.reviewCount,
+			isVerified: v.isVerified
+		}))
 	};
 };

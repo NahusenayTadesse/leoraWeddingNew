@@ -45,7 +45,7 @@
 		<div class="border-leora-gold/10 flex items-center justify-between border-t pt-3">
 			<div>
 				<p class="text-xs text-gray-500">Starting from</p>
-				<p class="text-leora-gold font-bold">ETB {vendor.price.toLocaleString()}</p>
+				<p class="text-leora-gold font-bold">ETB {vendor.price}</p>
 			</div>
 			<button
 				onclick={() => onAddToPlan?.(vendor.id)}

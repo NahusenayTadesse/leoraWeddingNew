@@ -2,109 +2,99 @@ import { db } from '$lib/server/db';
 import {
 	vendorServices,
 	serviceCategories,
-	user,
+	user as userTable,
 	roles,
-	prices,
-	couples,
 	vendors,
-	subCategories,
-	categoryServices,
+	couples,
 	weddings
 } from '$lib/server/db/schema';
-import { eq, min } from 'drizzle-orm';
+import { and, desc, eq, isNull } from 'drizzle-orm';
+import { serviceCardQuery, isListable } from '$lib/server/services';
 import type { LayoutServerLoad } from './$types';
 
+/**
+ * This load intentionally reads NOTHING from `url` or `params`, so SvelteKit
+ * runs it once per full page load and reuses the result across every
+ * client-side navigation. Anything that needs to react to the URL (filters,
+ * pagination, search) belongs in a route-level +page.server.ts instead.
+ */
 export const load: LayoutServerLoad = async ({ locals }) => {
-	const currentUser = locals?.user;
-	let roleName = '';
+	const currentUser = locals.user ?? null;
 
-	const isVendor = await db
-		.select({ userId: vendors.userId })
-		.from(vendors)
-		.where(eq(vendors.userId, currentUser?.id));
+	// Newest 10 listable services, for the home carousel / nav previews.
+	const featuredQuery = serviceCardQuery()
+		.where(isListable)
+		.orderBy(desc(vendorServices.createdAt))
+		.limit(10);
 
-	const isCouple = await db
-		.select({ userId: couples.userId, id: couples.id })
-		.from(couples)
-		.where(eq(couples.userId, currentUser?.id))
-		.then((rows) => rows[0]);
+	// Small, cacheable, used by the nav + shop facets.
+	const categoriesQuery = db
+		.select({
+			id: serviceCategories.id,
+			name: serviceCategories.name,
+			description: serviceCategories.description
+		})
+		.from(serviceCategories)
+		.where(and(eq(serviceCategories.isActive, true), isNull(serviceCategories.deletedAt)))
+		.orderBy(serviceCategories.name);
 
-	let budget = null;
-	if (isCouple) {
-		budget = await db
-			.select()
-			.from(weddings)
-			.where(eq(weddings.coupleId, isCouple.id))
-			.then((rows) => rows[0]);
+	if (!currentUser) {
+		const [featured, categories] = await Promise.all([featuredQuery, categoriesQuery]);
+		return {
+			user: null,
+			roleName: '',
+			vendorId: null,
+			couple: null,
+			budget: null,
+			featured,
+			categories
+		};
 	}
 
-	// 1. Fetch the role name if a user exists
-	if (currentUser) {
-		const roleData = await db
-			.select({ name: roles.name })
-			.from(user)
-			.leftJoin(roles, eq(user.roleId, roles.id))
-			.where(eq(user.id, currentUser.id))
-			.then((rows) => rows[0]);
+	// Guarded: the original ran these with `currentUser?.id` even when signed
+	// out, which compiles to `where user_id = NULL` and silently matches nothing.
+	const [featured, categories, profile, vendorRow, couple] = await Promise.all([
+		featuredQuery,
+		categoriesQuery,
+		db
+			.select({ roleName: roles.name })
+			.from(userTable)
+			.leftJoin(roles, eq(userTable.roleId, roles.id))
+			.where(eq(userTable.id, currentUser.id))
+			.limit(1)
+			.then((r) => r[0]),
+		db
+			.select({ id: vendors.id })
+			.from(vendors)
+			.where(and(eq(vendors.userId, currentUser.id), isNull(vendors.deletedAt)))
+			.limit(1)
+			.then((r) => r[0]),
+		db
+			.select({ id: couples.id, slug: couples.slug, verified: couples.verified })
+			.from(couples)
+			.where(and(eq(couples.userId, currentUser.id), isNull(couples.deletedAt)))
+			.limit(1)
+			.then((r) => r[0])
+	]);
 
-		roleName = roleData?.name ?? '';
-	}
+	const budget = couple
+		? await db
+				.select()
+				.from(weddings)
+				.where(eq(weddings.coupleId, couple.id))
+				.limit(1)
+				.then((r) => r[0] ?? null)
+		: null;
 
-	// 2. Fetch the product list (this now always runs)
-	const serviceList = await db
-		.select({
-			productId: vendorServices.id,
-			productName: vendorServices.title,
-			vendorId: vendorServices.vendorId,
-			vendor: vendors.businessName,
-			price: min(prices.price),
-			amount: min(prices.amount),
-			image: vendorServices.featuredImage,
-			category: serviceCategories.name
-		})
-		.from(vendorServices)
-		.leftJoin(serviceCategories, eq(serviceCategories.id, vendorServices.categoryId))
-		.leftJoin(prices, eq(prices.serviceId, vendorServices.id))
-		.leftJoin(vendors, eq(vendors.id, vendorServices.vendorId))
-		.where(eq(vendorServices.isActive, true))
-		.groupBy(vendorServices.id, serviceCategories.name);
-	const allPrices = await db.select().from(prices);
-
-	const subs = await db
-		.select({
-			id: subCategories.id,
-			name: subCategories.name,
-			description: subCategories.description,
-			serviceId: categoryServices.serviceId
-		})
-		.from(subCategories)
-		.innerJoin(
-			categoryServices,
-			eq(subCategories.id, categoryServices.subCategoryId) // This links the tables
-		);
-
-	const productList = serviceList.map((p) => ({
-		...p,
-		priceList: allPrices
-			.filter((price) => price.serviceId === p.productId) // use productId here too
-			.map((price) => ({
-				amount: price.amount,
-				price: price.price
-			})),
-		subs: subs.filter((sub) => sub.serviceId === p.productId)
-	}));
-
-	const categories = await db.select().from(serviceCategories);
-
-	// 3. Return everything at once
 	return {
-		productList,
-		priceList: allPrices,
-		roleName,
 		user: currentUser,
-		isVendor: isVendor.length > 0,
-		isCouple,
+		roleName: profile?.roleName ?? '',
+		// Return the id, not a boolean — every vendor route needs it anyway,
+		// and `!!data.vendorId` still reads fine at the call site.
+		vendorId: vendorRow?.id ?? null,
+		couple: couple ?? null,
 		budget,
+		featured,
 		categories
 	};
 };

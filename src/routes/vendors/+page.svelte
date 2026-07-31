@@ -1,133 +1,291 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import { page as pageState } from '$app/state';
+	import { enhance as formEnhance } from '$app/forms';
 	import * as Card from '$lib/components/ui/card';
-	import { Input } from '$lib/components/ui/input';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Button } from '$lib/components/ui/button';
 	import * as Select from '$lib/components/ui/select';
-	import { MapPin, Phone, Mail, Globe, Search } from '@lucide/svelte';
+	import { Input } from '$lib/components/ui/input';
+	import { Button } from '$lib/components/ui/button';
+	import { Badge } from '$lib/components/ui/badge';
+	import { Separator } from '$lib/components/ui/separator';
+	import {
+		Search,
+		Star,
+		BadgeCheck,
+		MapPin,
+		Heart,
+		Store,
+		Sparkles,
+		X,
+		ChevronLeft,
+		ChevronRight
+	} from '@lucide/svelte';
 
 	let { data } = $props();
 
-	// Local State for filters
-	let searchQuery = $state('');
-	let selectedCategory = $state('all');
+	const SORT_ITEMS = [
+		{ value: 'recommended', name: 'Recommended' },
+		{ value: 'rating', name: 'Highest rated' },
+		{ value: 'newest', name: 'Newest' },
+		{ value: 'name', name: 'A–Z' }
+	];
 
-	// Reactive filtered list
-	const filteredVendors = $derived(
-		data.customersList.filter((vendor) => {
-			const matchesSearch =
-				vendor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-				vendor.email?.toLowerCase().includes(searchQuery.toLowerCase());
-			const matchesCategory =
-				selectedCategory === 'all' || vendor.vendorCategory === selectedCategory;
-			return matchesSearch && matchesCategory;
-		})
+	let query = $state(data.applied.q);
+	let debounce: ReturnType<typeof setTimeout>;
+
+	const favorites = $derived(new Set(data.favoriteIds));
+
+	function apply(patch: Record<string, string | number | null>, resetPage = true) {
+		const params = new URLSearchParams(pageState.url.searchParams);
+		for (const [key, value] of Object.entries(patch)) {
+			if (value === null || value === '' || value === 'all') params.delete(key);
+			else params.set(key, String(value));
+		}
+		if (resetPage) params.delete('page');
+		goto(`?${params.toString()}`, { keepFocus: true, noScroll: true });
+	}
+
+	function onSearchInput() {
+		clearTimeout(debounce);
+		debounce = setTimeout(() => apply({ q: query }), 350);
+	}
+
+	const hasFilters = $derived(
+		!!data.applied.q || !!data.applied.categoryId || !!data.applied.city
 	);
 
-	// Get unique categories for the filter
-	const categories = ['all', ...new Set(data.customersList.map((v) => v.vendorCategory))];
+	const categoryLabel = $derived(
+		data.filters.categoryItems.find((c) => c.value === String(data.applied.categoryId))?.name ??
+			'All categories'
+	);
+
+	const sortLabel = $derived(
+		SORT_ITEMS.find((s) => s.value === data.applied.sort)?.name ?? 'Recommended'
+	);
+
+	const stars = (rating: number | null) => Math.round(rating ?? 0);
 </script>
 
-<div class="mx-auto max-w-7xl space-y-8 p-8">
-	<div class="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-		<div>
-			<h1 class="text-3xl font-extrabold tracking-tight">Vendor Directory</h1>
-			<p class="text-muted-foreground">
-				Browse and manage our network of {data.customersList.length} partners.
-			</p>
-		</div>
+<svelte:head>
+	<title>Wedding vendors · Leora Events</title>
+	<meta
+		name="description"
+		content="Browse photographers, venues, caterers and more for your wedding in Ethiopia."
+	/>
+</svelte:head>
 
-		<div class="flex flex-col gap-3 sm:flex-row">
-			<div class="relative w-full sm:w-64">
-				<Search class="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-				<Input placeholder="Search vendors..." bind:value={searchQuery} class="pl-9" />
-			</div>
-
-			<select
-				bind:value={selectedCategory}
-				class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:ring-2 focus:ring-ring focus:outline-none sm:w-48"
-			>
-				{#each categories as category}
-					<option value={category}>{category?.charAt(0)?.toUpperCase() + category?.slice(1)}</option
-					>
-				{/each}
-			</select>
-		</div>
+<div class="mx-auto max-w-7xl px-4 py-8 lg:px-6">
+	<div class="mb-8">
+		<h1 class="text-3xl font-semibold tracking-tight">Find your vendors</h1>
+		<p class="text-muted-foreground mt-1">
+			{data.total} vendor{data.total === 1 ? '' : 's'} ready to help with your wedding.
+		</p>
 	</div>
 
-	{#if filteredVendors.length > 0}
-		<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-			{#each filteredVendors as vendor (vendor.id)}
-				<Card.Root class="overflow-hidden border-muted transition-shadow hover:shadow-lg">
-					<Card.Header class="bg-muted/20 pb-4">
-						<div class="flex items-start justify-between gap-2">
-							<div>
-								<Card.Title class="text-xl font-bold">{vendor.name}</Card.Title>
-								<Badge variant="outline" class="mt-2 bg-background">
-									{vendor.vendorCategory}
-								</Badge>
-							</div>
-							<div class="text-right">
-								<span class="text-[10px] font-bold text-primary uppercase">
-									{vendor.numberOfServices} Services
-								</span>
-							</div>
-						</div>
-					</Card.Header>
+	<!-- Filters -->
+	<div class="mb-6 flex flex-wrap items-center gap-3">
+		<div class="relative min-w-0 flex-1 sm:max-w-sm">
+			<Search class="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+			<Input
+				bind:value={query}
+				oninput={onSearchInput}
+				placeholder="Search vendors"
+				class="pl-9"
+			/>
+		</div>
 
-					<Card.Content class="space-y-4 pt-6">
-						<div class="space-y-2 text-sm">
-							<div class="flex items-center gap-2 text-muted-foreground">
-								<Mail class="size-4" />
-								<span class="truncate">{vendor.email ?? 'No email provided'}</span>
-							</div>
-							<div class="flex items-center gap-2 text-muted-foreground">
-								<Phone class="size-4" />
-								{vendor.phone}
-							</div>
-						</div>
+		<Select.Root
+			type="single"
+			value={data.applied.categoryId ? String(data.applied.categoryId) : 'all'}
+			onValueChange={(v) => apply({ category: v })}
+		>
+			<Select.Trigger class="w-44">{categoryLabel}</Select.Trigger>
+			<Select.Content>
+				<Select.Item value="all">All categories</Select.Item>
+				{#each data.filters.categoryItems as item (item.value)}
+					<Select.Item value={item.value}>{item.name}</Select.Item>
+				{/each}
+			</Select.Content>
+		</Select.Root>
 
-						<hr class="border-muted" />
+		<Select.Root
+			type="single"
+			value={data.applied.city || 'all'}
+			onValueChange={(v) => apply({ city: v })}
+		>
+			<Select.Trigger class="w-40">{data.applied.city || 'All cities'}</Select.Trigger>
+			<Select.Content>
+				<Select.Item value="all">All cities</Select.Item>
+				{#each data.filters.cityItems as item (item.value)}
+					<Select.Item value={item.value}>{item.name}</Select.Item>
+				{/each}
+			</Select.Content>
+		</Select.Root>
 
-						<div class="space-y-1">
-							<div class="flex items-start gap-2">
-								<MapPin class="mt-1 size-4 text-primary" />
-								<div class="text-sm">
-									<p class="font-medium">{vendor.address.subcity}</p>
-									<p class="text-xs text-muted-foreground">
-										{vendor.address.street}, Kebele {vendor.address.kebele}
-									</p>
+		<Select.Root
+			type="single"
+			value={data.applied.sort}
+			onValueChange={(v) => apply({ sort: v })}
+		>
+			<Select.Trigger class="w-40">{sortLabel}</Select.Trigger>
+			<Select.Content>
+				{#each SORT_ITEMS as item (item.value)}
+					<Select.Item value={item.value}>{item.name}</Select.Item>
+				{/each}
+			</Select.Content>
+		</Select.Root>
+
+		{#if hasFilters}
+			<Button
+				variant="ghost"
+				size="sm"
+				onclick={() => {
+					query = '';
+					apply({ q: null, category: null, city: null });
+				}}
+			>
+				<X class="mr-1.5 size-4" /> Clear
+			</Button>
+		{/if}
+	</div>
+
+	<!-- Results -->
+	{#if data.vendors.length === 0}
+		<Card.Root class="p-14 text-center">
+			<Store class="text-muted-foreground mx-auto size-10" />
+			<p class="mt-4 font-medium">No vendors match your filters</p>
+			<p class="text-muted-foreground mt-1 text-sm">
+				Try a different category or clear your search.
+			</p>
+		</Card.Root>
+	{:else}
+		<div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+			{#each data.vendors as vendor (vendor.id)}
+				<Card.Root class="group overflow-hidden p-0 transition-shadow hover:shadow-md">
+					<a href="/vendors/{vendor.id}" class="block">
+						<div class="bg-muted relative aspect-4/3 overflow-hidden">
+							{#if vendor.cover}
+								<img
+									src="/files/{vendor.cover}"
+									alt={vendor.businessName}
+									loading="lazy"
+									class="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+								/>
+							{:else}
+								<div class="text-muted-foreground flex size-full items-center justify-center">
+									<Store class="size-10" />
 								</div>
-							</div>
-						</div>
-					</Card.Content>
+							{/if}
 
-					<Card.Footer class="flex items-center justify-between border-t bg-muted/10 py-3">
-						<span class="text-[11px] text-muted-foreground italic">
-							Joined {vendor.createdAt}
-						</span>
-						<Button variant="ghost" size="sm" href={vendor.address.googleMapsUrl} target="_blank">
-							<Globe class="mr-2 size-4" />
-							Map
-						</Button>
-					</Card.Footer>
+							{#if vendor.isFeatured}
+								<Badge class="absolute top-3 left-3 gap-1">
+									<Sparkles class="size-3" /> Featured
+								</Badge>
+							{/if}
+						</div>
+					</a>
+
+					<div class="p-4">
+						<div class="flex items-start justify-between gap-2">
+							<div class="min-w-0">
+								<a href="/vendors/{vendor.id}" class="hover:underline">
+									<h2 class="flex items-center gap-1.5 truncate font-medium">
+										{vendor.businessName}
+										{#if vendor.isVerified}
+											<BadgeCheck class="text-primary size-4 shrink-0" />
+										{/if}
+									</h2>
+								</a>
+								{#if vendor.categoryName}
+									<p class="text-muted-foreground text-xs">{vendor.categoryName}</p>
+								{/if}
+							</div>
+
+							<form method="POST" action="?/favorite" use:formEnhance>
+								<input type="hidden" name="vendorId" value={vendor.id} />
+								<button
+									type="submit"
+									class="text-muted-foreground hover:text-foreground p-1"
+									aria-label={favorites.has(vendor.id) ? 'Remove from favourites' : 'Save vendor'}
+								>
+									<Heart
+										class="size-5 {favorites.has(vendor.id)
+											? 'fill-red-500 text-red-500'
+											: ''}"
+									/>
+								</button>
+							</form>
+						</div>
+
+						{#if vendor.description}
+							<p class="text-muted-foreground mt-2 line-clamp-2 text-sm">
+								{vendor.description}
+							</p>
+						{/if}
+
+						<div class="mt-3 flex flex-wrap items-center gap-3 text-xs">
+							{#if vendor.reviewCount > 0}
+								<span class="flex items-center gap-1">
+									<span class="flex">
+										{#each [1, 2, 3, 4, 5] as s (s)}
+											<Star
+												class="size-3.5 {s <= stars(vendor.avgRating)
+													? 'fill-amber-400 text-amber-400'
+													: 'text-muted-foreground/30'}"
+											/>
+										{/each}
+									</span>
+									<span class="text-muted-foreground">
+										{vendor.avgRating?.toFixed(1)} ({vendor.reviewCount})
+									</span>
+								</span>
+							{:else}
+								<span class="text-muted-foreground">No reviews yet</span>
+							{/if}
+
+							{#if vendor.city}
+								<span class="text-muted-foreground flex items-center gap-1">
+									<MapPin class="size-3.5" />{vendor.city}
+								</span>
+							{/if}
+						</div>
+
+						{#if vendor.priceRange}
+							<div>
+								<Separator class="my-3" />
+								<p class="text-sm font-medium">{vendor.priceRange}</p>
+							</div>
+						{/if}
+					</div>
 				</Card.Root>
 			{/each}
 		</div>
-	{:else}
-		<div
-			class="flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-20 text-center"
-		>
-			<p class="text-lg font-medium">No vendors match your search</p>
-			<Button
-				variant="link"
-				onclick={() => {
-					searchQuery = '';
-					selectedCategory = 'all';
-				}}
-			>
-				Clear all filters
-			</Button>
-		</div>
+
+		<!-- Pagination -->
+		{#if data.pages > 1}
+			<div class="mt-10 flex items-center justify-center gap-2">
+				<Button
+					variant="outline"
+					size="sm"
+					disabled={data.page <= 1}
+					onclick={() => apply({ page: data.page - 1 }, false)}
+				>
+					<ChevronLeft class="size-4" />
+				</Button>
+
+				<span class="text-muted-foreground px-3 text-sm">
+					Page {data.page} of {data.pages}
+				</span>
+
+				<Button
+					variant="outline"
+					size="sm"
+					disabled={data.page >= data.pages}
+					onclick={() => apply({ page: data.page + 1 }, false)}
+				>
+					<ChevronRight class="size-4" />
+				</Button>
+			</div>
+		{/if}
 	{/if}
 </div>

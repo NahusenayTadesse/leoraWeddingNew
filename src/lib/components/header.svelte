@@ -9,7 +9,8 @@
 	let { data } = $props();
 
 	const navLinks = [
-		{ label: 'Vendors', href: '/shop' },
+		{ label: 'Services', href: '/shop' },
+		{ label: 'Vendors', href: '/vendors' },
 		{ label: 'Budget Planner', href: '/budget' },
 		{ label: 'My Wedding', href: '/wedding' },
 		{ label: 'For Vendors', href: '/vendor-dashboard' }

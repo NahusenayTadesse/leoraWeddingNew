@@ -14,20 +14,20 @@ export const load: LayoutServerLoad = async ({ locals, parent }) => {
 	}
 
 	// 2. Get parent data once
-	const { isVendor } = await parent();
+	const { vendorId } = await parent();
 
-	console.log(isVendor);
 
-	if (!isVendor) {
+
+	if (!vendorId) {
 		error(403, 'Not Allowed');
 	}
 
-	const vendorId = await db
-		.select({ id: vendors.id })
-		.from(vendors)
-		.where(eq(vendors.userId, user.id))
-		.then((res) => res[0].id);
-	console.log(vendorId);
+	// const vendorId = await db
+	// 	.select({ id: vendors.id })
+	// 	.from(vendors)
+	// 	.where(eq(vendors.userId, user.id))
+	// 	.then((res) => res[0].id);
+	// console.log(vendorId);
 
 	return {
 		name: user.name,

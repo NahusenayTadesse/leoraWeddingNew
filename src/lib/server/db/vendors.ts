@@ -10,7 +10,8 @@ import {
 	tinyint,
 	timestamp,
 	primaryKey,
-	index
+	index,
+	unique
 } from 'drizzle-orm/mysql-core';
 import { secureFields, idMaker as intPk } from './auth.schema';
 import { user } from './auth.schema';
@@ -107,30 +108,49 @@ export const orderItems = mysqlTable('order_items', {
 });
 
 // Table: vendor_availability
-export const vendorAvailability = mysqlTable('vendor_availability', {
-	id: intPk(),
-	vendorId: int('vendor_id')
-		.notNull()
-		.references(() => vendors.id),
-	availableDate: date('available_date').notNull(),
-	isAvailable: boolean('is_available').default(true)
-});
+export const vendorAvailability = mysqlTable(
+	'vendor_availability',
+	{
+		id: intPk(),
+		vendorId: int('vendor_id')
+			.notNull()
+			.references(() => vendors.id, { onDelete: 'cascade' }),
+		availableDate: date('available_date', { mode: 'string' }).notNull(),
+		isAvailable: boolean('is_available').default(true).notNull()
+	},
+	(table) => [
+		unique('vendor_availability_vendor_date_uq').on(table.vendorId, table.availableDate),
+		index('vendor_availability_vendor_idx').on(table.vendorId)
+	]
+);
 
 // Table: vendor_bookings
-export const vendorBookings = mysqlTable('vendor_bookings', {
-	id: intPk(),
-	weddingId: int('wedding_id')
-		.notNull()
-		.references(() => weddings.id),
-	vendorId: int('vendor_id')
-		.notNull()
-		.references(() => vendors.id),
-	serviceId: int('service_id').references(() => vendorServices.id),
-	status: mysqlEnum('status', ['pending', 'confirmed', 'cancelled']).default('pending'),
-	agreedPrice: decimal('agreed_price', { precision: 10, scale: 2 }),
-	eventDate: date('event_date'),
-	...secureFields
-});
+// vendors.ts
+export const vendorBookings = mysqlTable(
+	'vendor_bookings',
+	{
+		id: intPk(),
+		weddingId: int('wedding_id')
+			.notNull()
+			.references(() => weddings.id),
+		vendorId: int('vendor_id')
+			.notNull()
+			.references(() => vendors.id),
+		serviceId: int('service_id').references(() => vendorServices.id),
+		status: mysqlEnum('status', ['pending', 'confirmed', 'cancelled']).default('pending').notNull(),
+		agreedPrice: decimal('agreed_price', { precision: 10, scale: 2 }),
+		eventDate: date('event_date', { mode: 'string' }),
+		cancellationReason: text('cancellation_reason'),
+		cancelledBy: mysqlEnum('cancelled_by', ['couple', 'vendor', 'admin']),
+		cancelledAt: timestamp('cancelled_at'),
+		...secureFields
+	},
+	(table) => [
+		index('vendor_bookings_vendor_idx').on(table.vendorId),
+		index('vendor_bookings_vendor_date_idx').on(table.vendorId, table.eventDate),
+		index('vendor_bookings_wedding_idx').on(table.weddingId)
+	]
+);
 
 // Table: vendor_categories
 export const vendorCategories = mysqlTable('vendor_categories', {

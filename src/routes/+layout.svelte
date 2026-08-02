@@ -17,18 +17,17 @@
 	async function notifyBrowser(title: string, body: string) {
 		if (!('Notification' in window)) return; // Safari iOS etc.
 		if (Notification.permission === 'granted') {
-			new Notification(title, { body, icon: '/logo.png' });
+			new Notification(title, { body, icon: '/leora-logo.jpg' });
 		} else if (Notification.permission !== 'denied') {
 			const perm = await Notification.requestPermission();
-			if (perm === 'granted') new Notification(title, { body, icon: '/logo.png' });
+			if (perm === 'granted') new Notification(title, { body, icon: '/leora-logo.jpg' });
 		}
 	}
 	import { setCart } from '$lib/hooks/cart.svelte'; // Adjust path
 	import Cart from '$lib/components/floating-cart/cart.svelte';
 	import Header from '$lib/components/header.svelte';
 	import Footer from '$lib/components/footer.svelte';
-	import FloatingChat from '$lib/components/FloatingChat.svelte';
-
+	import FloatingChat from '$lib/components/FloatingChat.svelte'
 	// This initializes the class and puts it into Svelte's context
 	setCart();
 
@@ -60,10 +59,11 @@
 	const cart = setCart();
 	$effect(() => cart.hydrate());
 
+
 </script>
 
 <svelte:head>
-	<link rel="icon" href="/logo.png" />
+	<link rel="icon" href="/leora-logo.jpg" />
 </svelte:head>
 <ModeWatcher />
 
@@ -80,7 +80,12 @@
 		</p>
 	</div>
 {/if}
-{#if !page.url.pathname.startsWith('/dashboard') && !page.url.pathname.startsWith('/vendor-dashboard')}
+<!--
+	Routes that ship their own full-page shell (sidebar + own chrome) opt out of
+	the marketing header/footer. `/dashboard` is NOT one of them — it is the
+	couple's planner and carries the normal site header, as dashboard.php did.
+-->
+{#if !page.url.pathname.startsWith('/vendor-dashboard')}
 	<Header data={data?.user?.name ?? ''} />
 	{@render children()}
 	<Footer />

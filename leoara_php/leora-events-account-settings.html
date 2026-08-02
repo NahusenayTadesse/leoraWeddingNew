@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Account Settings — Leora Events</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --gold:#D4AF37; --gold-dark:#B68D28; --gold-soft: rgba(212,175,55,0.14);
+    --royal:#0B1F3A; --navy:#081626; --surface-dark:#0E1728;
+    --ivory:#FAF7F2; --white:#FFFFFF; --text-dark:#111827; --text-light:#F8FAFC;
+    --bg: var(--ivory); --bg-elevated: var(--white); --text: var(--text-dark);
+    --text-muted: #6B6458; --border: rgba(17,24,39,0.08);
+    --card-shadow: 0 1px 2px rgba(17,24,39,0.04), 0 12px 32px -12px rgba(17,24,39,0.10);
+    --danger:#B42828;
+  }
+  html[data-theme="dark"]{
+    --bg: var(--navy); --bg-elevated: var(--surface-dark); --text: var(--text-light);
+    --text-muted: #93A0B4; --border: rgba(248,250,252,0.08);
+    --card-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 20px 48px -16px rgba(0,0,0,0.55);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;transition:background .4s ease,color .4s ease;}
+  h1,h2,h3,.display{font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:-0.02em;margin:0;}
+  p{margin:0;color:var(--text-muted);line-height:1.6;}
+  a{color:inherit;text-decoration:none;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 32px;}
+  header{position:sticky;top:0;z-index:50;background:color-mix(in srgb, var(--bg) 82%, transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);}
+  nav{max-width:1080px;margin:0 auto;padding:14px 32px;display:flex;align-items:center;justify-content:space-between;gap:24px;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand .mono{width:36px;height:36px;border-radius:9px;background:linear-gradient(160deg,var(--royal),var(--navy));display:flex;align-items:center;justify-content:center;color:var(--gold);font-family:'Plus Jakarta Sans';font-weight:800;font-size:17px;}
+  .brand span{font-family:'Plus Jakarta Sans';font-weight:800;font-size:17px;}
+  .theme-toggle{width:40px;height:22px;border-radius:20px;background:var(--border);position:relative;cursor:pointer;}
+  .theme-toggle .knob{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--gold);transition:transform .3s ease;}
+  html[data-theme="dark"] .theme-toggle .knob{transform:translateX(18px);}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 16px;border-radius:10px;font-weight:600;font-size:13.5px;cursor:pointer;border:none;}
+  .btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border);}
+  .btn-ghost:hover{border-color:var(--gold);}
+  .btn-gold{background:var(--gold);color:#1a1204;}
+  .btn-gold:hover{background:var(--gold-dark);}
+  .btn-danger{background:transparent;color:var(--danger);border:1px solid rgba(180,40,40,0.35);}
+  .btn-danger:hover{background:rgba(180,40,40,0.08);}
+
+  main{padding:36px 0 90px;}
+  h1.page-title{font-size:26px;margin-bottom:26px;}
+  .settings-grid{display:grid;grid-template-columns:220px 1fr;gap:28px;align-items:start;}
+  @media (max-width:800px){.settings-grid{grid-template-columns:1fr;}}
+  .settings-nav{display:flex;flex-direction:column;gap:4px;position:sticky;top:90px;}
+  .settings-nav .item{padding:10px 14px;border-radius:10px;font-size:14px;font-weight:600;color:var(--text-muted);cursor:pointer;}
+  .settings-nav .item.active{background:var(--gold-soft);color:var(--gold-dark);}
+  html[data-theme="dark"] .settings-nav .item.active{color:var(--gold);}
+  .panel{display:none;}
+  .panel.active{display:block;}
+  .card{background:var(--bg-elevated);border:1px solid var(--border);border-radius:16px;box-shadow:var(--card-shadow);padding:24px 26px;margin-bottom:20px;}
+  .card h3{font-size:16px;margin-bottom:16px;}
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;}
+  .field input, .field select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:'Inter';font-size:14px;outline:none;}
+  .field input:focus,.field select:focus{border-color:var(--gold);}
+  .field-row{display:flex;gap:14px;flex-wrap:wrap;}
+  .field-row .field{flex:1;min-width:180px;}
+  .plan-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--border);}
+  .plan-row:last-child{border-bottom:none;}
+  .toggle-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);}
+  .toggle-row:last-child{border-bottom:none;}
+  .toggle-row p{font-size:13px;}
+  .mini-switch{width:38px;height:21px;border-radius:20px;background:var(--border);position:relative;cursor:pointer;flex-shrink:0;}
+  .mini-switch .knob{position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:var(--bg-elevated);transition:transform .2s ease;}
+  .mini-switch.on{background:var(--gold);}
+  .mini-switch.on .knob{transform:translateX(17px);}
+</style>
+</head>
+<body>
+
+<header>
+  <nav>
+    <a class="brand" href="leora-events-homepage.html">
+      <div class="mono">L</div>
+      <span>Leora Events</span>
+    </a>
+    <div style="display:flex;align-items:center;gap:14px;">
+      <div class="theme-toggle" id="themeToggle"><div class="knob"></div></div>
+      <a class="btn-ghost" href="dashboard.php">Back to Dashboard</a>
+    </div>
+  </nav>
+</header>
+
+<main class="wrap">
+  <h1 class="page-title">Account Settings</h1>
+  <div class="settings-grid">
+    <div class="settings-nav" id="settingsNav">
+      <div class="item active" data-panel="profile">Profile</div>
+      <div class="item" data-panel="billing">Plan & Billing</div>
+      <div class="item" data-panel="notifications">Notifications</div>
+      <div class="item" data-panel="security">Security</div>
+      <div class="item" data-panel="danger">Account</div>
+    </div>
+
+    <div>
+      <div class="panel active" id="panel-profile">
+        <div class="card">
+          <h3>Personal Information</h3>
+          <div class="field-row">
+            <div class="field"><label>First name</label><input type="text" value="Selam"></div>
+            <div class="field"><label>Last name</label><input type="text" value="Tesfaye"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Email</label><input type="email" value="selam.tesfaye@email.com"></div>
+            <div class="field"><label>Phone</label><input type="text" value="+251 91_ ___ ___"></div>
+          </div>
+          <button class="btn btn-gold" onclick="alert('Profile changes would be saved.')">Save Changes</button>
+        </div>
+        <div class="card">
+          <h3>Wedding Details</h3>
+          <div class="field-row">
+            <div class="field"><label>Partner's name</label><input type="text" value="Yonas Bekele"></div>
+            <div class="field"><label>Wedding date</label><input type="text" value="Nov 14, 2026"></div>
+          </div>
+          <button class="btn btn-gold" onclick="alert('Wedding details would be saved.')">Save Changes</button>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-billing">
+        <div class="card">
+          <h3>Current Plan</h3>
+          <div class="plan-row">
+            <div><strong>Premium Plan</strong><p>ETB 2,500/month · renews Aug 1, 2026</p></div>
+            <a class="btn btn-ghost" href="leora-events-pricing.html">Change Plan</a>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Payment Method</h3>
+          <div class="plan-row">
+            <div><strong>Telebirr</strong><p>Connected · 09xx xxx xxx</p></div>
+            <a class="btn btn-ghost" href="checkout.php?plan=premium">Update</a>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Billing History</h3>
+          <div class="plan-row"><div><strong>Jul 1, 2026</strong><p>Premium Plan — Monthly</p></div><span>ETB 2,875</span></div>
+          <div class="plan-row"><div><strong>Jun 1, 2026</strong><p>Premium Plan — Monthly</p></div><span>ETB 2,875</span></div>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-notifications">
+        <div class="card">
+          <h3>Email Notifications</h3>
+          <div class="toggle-row"><div><strong>New vendor messages</strong><p>Get emailed when a vendor replies</p></div><div class="mini-switch on" onclick="this.classList.toggle('on')"><div class="knob"></div></div></div>
+          <div class="toggle-row"><div><strong>Booking confirmations</strong><p>Get emailed when a booking is confirmed</p></div><div class="mini-switch on" onclick="this.classList.toggle('on')"><div class="knob"></div></div></div>
+          <div class="toggle-row"><div><strong>Budget alerts</strong><p>Get notified when nearing your budget limit</p></div><div class="mini-switch" onclick="this.classList.toggle('on')"><div class="knob"></div></div></div>
+          <div class="toggle-row"><div><strong>Product updates & tips</strong><p>Occasional emails about new features</p></div><div class="mini-switch" onclick="this.classList.toggle('on')"><div class="knob"></div></div></div>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-security">
+        <div class="card">
+          <h3>Change Password</h3>
+          <div class="field"><label>Current password</label><input type="password" placeholder="••••••••"></div>
+          <div class="field"><label>New password</label><input type="password" placeholder="••••••••"></div>
+          <button class="btn btn-gold" onclick="alert('Password would be updated.')">Update Password</button>
+        </div>
+        <div class="card">
+          <h3>Two-Factor Authentication</h3>
+          <div class="toggle-row"><div><strong>SMS verification</strong><p>Require a code sent to your phone when logging in</p></div><div class="mini-switch" onclick="this.classList.toggle('on')"><div class="knob"></div></div></div>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-danger">
+        <div class="card">
+          <h3>Deactivate Account</h3>
+          <p style="margin-bottom:16px;">Temporarily hide your profile and pause all activity. You can reactivate anytime by logging back in.</p>
+          <button class="btn btn-ghost" onclick="alert('This would deactivate your account.')">Deactivate Account</button>
+        </div>
+        <div class="card">
+          <h3>Delete Account</h3>
+          <p style="margin-bottom:16px;">This permanently deletes your profile, messages, and saved vendors. This cannot be undone.</p>
+          <button class="btn btn-danger" onclick="alert('This would ask for confirmation before permanently deleting the account.')">Delete Account</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  const toggle = document.getElementById('themeToggle');
+  const root = document.documentElement;
+  let dark = false;
+  toggle.addEventListener('click', ()=>{ dark = !dark; root.setAttribute('data-theme', dark?'dark':'light'); });
+
+  document.querySelectorAll('.settings-nav .item').forEach(item=>{
+    item.addEventListener('click', ()=>{
+      document.querySelectorAll('.settings-nav .item').forEach(i=>i.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      item.classList.add('active');
+      document.getElementById('panel-'+item.dataset.panel).classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

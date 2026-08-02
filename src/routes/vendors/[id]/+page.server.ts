@@ -2,7 +2,6 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { db } from '$lib/server/db';
-import { reviews } from '$lib/server/db/schema';
 import { reviewSchema, favoriteSchema } from '$lib/schemas/reviews';
 import {
 	getVendor,
@@ -10,7 +9,8 @@ import {
 	getVendorReviews,
 	getUserReview,
 	getFavoriteVendorIds,
-	toggleFavorite
+	toggleFavorite,
+	upsertVendorReview
 } from '$lib/server/vendorDirectory';
 import { and, eq } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
@@ -64,29 +64,20 @@ export const actions: Actions = {
 		const vendor = await getVendor(vendorId);
 		if (!vendor) throw error(404, 'Vendor not found');
 
-		const existing = await getUserReview(vendorId, locals.user.id);
-
-		const values = {
+		const result = await upsertVendorReview(locals.user.id, vendorId, {
 			rating: form.data.rating,
 			comment: form.data.comment || null
-		};
+		});
 
-		if (existing) {
-			await db
-				.update(reviews)
-				.set({ ...values, updatedBy: locals.user.id })
-				.where(and(eq(reviews.id, existing.id), eq(reviews.userId, locals.user.id)));
-		} else {
-			await db.insert(reviews).values({
-				...values,
-				vendorId,
-				userId: locals.user.id,
-				createdBy: locals.user.id,
-				updatedBy: locals.user.id
-			});
+		if (!result.ok) {
+			return message(
+				form,
+				'Create your wedding profile before reviewing a vendor.',
+				{ status: 403 }
+			);
 		}
 
-		return message(form, existing ? 'Your review was updated.' : 'Thanks for your review!');
+		return message(form, result.updated ? 'Your review was updated.' : 'Thanks for your review!');
 	},
 
 	favorite: async ({ request, locals, url }) => {

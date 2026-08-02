@@ -1,0 +1,73 @@
+# ============================================
+# Leora Events — Apache / cPanel configuration
+# ============================================
+#
+# NOTE ON THE 403 ERROR: the previous version of this file mixed Apache 2.4
+# syntax ("Require all denied") with Apache 2.2 syntax ("Order deny,allow" /
+# "Deny from all") in the same block. On a host that only has ONE of those
+# authorization modules loaded, the other directive is unrecognized, which
+# makes Apache treat the whole .htaccess as broken and can surface as a
+# blanket 403 (or 500) across the entire site. Every access-control block
+# below is now wrapped in <IfModule> so only the directive your server
+# actually understands is applied.
+
+# Which file to serve when someone visits a folder (php first, html fallback)
+DirectoryIndex index.php index.html
+
+# Custom error pages
+ErrorDocument 404 /leora-events-404.html
+
+# Don't allow browsing folder contents
+Options -Indexes
+
+# ---- Block direct web access to backend internals ----
+# config/, includes/ and database/ each also have their own .htaccess with
+# the same portable deny block, as defense in depth. This blocks the .env
+# file and any stray .sql/.md files from ever being served, WITHOUT relying
+# on mod_rewrite (some shared-hosting accounts restrict AllowOverride for
+# rewrite rules but still allow FilesMatch-based access control).
+<FilesMatch "(^\.env|\.sql$|\.md$)">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+# ---- Optional: force HTTPS ----
+# Uncomment once your SSL certificate is active in cPanel (AutoSSL / Let's Encrypt)
+# <IfModule mod_rewrite.c>
+#   RewriteEngine On
+#   RewriteCond %{HTTPS} off
+#   RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# </IfModule>
+
+# ---- Optional: force www (or non-www) ----
+# Pick ONE of the two blocks below, uncomment it, and replace yourdomain.com
+
+# Force www:
+# <IfModule mod_rewrite.c>
+#   RewriteEngine On
+#   RewriteCond %{HTTP_HOST} !^www\. [NC]
+#   RewriteRule ^ https://www.yourdomain.com%{REQUEST_URI} [L,R=301]
+# </IfModule>
+
+# Force non-www:
+# <IfModule mod_rewrite.c>
+#   RewriteEngine On
+#   RewriteCond %{HTTP_HOST} ^www\.yourdomain\.com [NC]
+#   RewriteRule ^ https://yourdomain.com%{REQUEST_URI} [L,R=301]
+# </IfModule>
+
+# ---- Basic browser caching for faster repeat visits ----
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/html "access plus 0 seconds"
+  ExpiresByType text/css "access plus 1 week"
+  ExpiresByType application/javascript "access plus 1 week"
+  ExpiresByType image/png "access plus 1 month"
+  ExpiresByType image/jpeg "access plus 1 month"
+  ExpiresByType image/svg+xml "access plus 1 month"
+</IfModule>

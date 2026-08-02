@@ -6,8 +6,9 @@ import {
 	vendorPromotions,
 	serviceImages,
 	prices,
-	reviews,
-	favorites,
+	vendorReviews,
+	savedVendors,
+	couples,
 	user,
 	address,
 	subcity,
@@ -20,31 +21,33 @@ export const PAGE_SIZE = 12;
 
 export type VendorSort = 'recommended' | 'rating' | 'newest' | 'name';
 
-/** Aggregated review stats, reusable as a joinable subquery. */
-function ratingSubquery() {
-	return db
-		.select({
-			vendorId: reviews.vendorId,
-			avgRating: sql<string>`AVG(${reviews.rating})`.as('avg_rating'),
-			reviewCount: sql<number>`COUNT(*)`.as('review_count')
-		})
-		.from(reviews)
-		.where(and(eq(reviews.isActive, true), isNull(reviews.deletedAt)))
-		.groupBy(reviews.vendorId)
-		.as('rating_agg');
-}
+/**
+ * Public visibility. `status = 'approved'` is the gate; `isVerified` is only a
+ * trust badge and must never be used to filter. See docs/schema-conventions.md.
+ *
+ * Ratings are no longer aggregated per query — `vendors.ratingAvg` and
+ * `vendors.reviewCount` are maintained on review write, so listing pages read
+ * them directly instead of joining a GROUP BY subquery on every request.
+ */
+const publicVendor = and(
+	eq(vendors.status, 'approved'),
+	eq(vendors.isActive, true),
+	isNull(vendors.deletedAt)
+);
 
 /** Vendor ids with a live 'featured' promotion right now. */
 export async function featuredVendorIds() {
-	const now = new Date();
+	// startsAt/endsAt are DATE columns in string mode, so compare with a
+	// yyyy-mm-dd string rather than a Date object.
+	const today = new Date().toISOString().slice(0, 10);
 	const rows = await db
 		.select({ vendorId: vendorPromotions.vendorId })
 		.from(vendorPromotions)
 		.where(
 			and(
 				eq(vendorPromotions.type, 'featured'),
-				lte(vendorPromotions.startsAt, now),
-				gte(vendorPromotions.endsAt, now)
+				lte(vendorPromotions.startsAt, today),
+				gte(vendorPromotions.endsAt, today)
 			)
 		);
 
@@ -61,9 +64,7 @@ type ListArgs = {
 
 export async function listVendors(args: ListArgs) {
 	const { q, categoryId, city, sort = 'recommended', page = 1 } = args;
-	const rating = ratingSubquery();
-
-	const filters = [eq(vendors.isActive, true), isNull(vendors.deletedAt)];
+	const filters = [publicVendor];
 
 	if (q) {
 		const needle = `%${q}%`;
@@ -71,7 +72,7 @@ export async function listVendors(args: ListArgs) {
 			or(like(vendors.businessName, needle), like(vendors.description, needle))!
 		);
 	}
-	if (categoryId) filters.push(eq(vendors.vendorCategory, categoryId));
+	if (categoryId) filters.push(eq(vendors.categoryId, categoryId));
 	if (city) filters.push(eq(vendors.city, city));
 
 	const where = and(...filters);
@@ -91,7 +92,7 @@ export async function listVendors(args: ListArgs) {
 
 		switch (sort) {
 			case 'rating':
-				return [desc(sql`COALESCE(${rating.avgRating}, 0)`), desc(rating.reviewCount)];
+				return [desc(vendors.ratingAvg), desc(vendors.reviewCount)];
 			case 'newest':
 				return [desc(vendors.createdAt)];
 			case 'name':
@@ -100,7 +101,7 @@ export async function listVendors(args: ListArgs) {
 				return [
 					...featuredFirst,
 					desc(vendors.isVerified),
-					desc(sql`COALESCE(${rating.avgRating}, 0)`),
+					desc(vendors.ratingAvg),
 					asc(vendors.businessName)
 				];
 		}
@@ -112,16 +113,16 @@ export async function listVendors(args: ListArgs) {
 			businessName: vendors.businessName,
 			description: vendors.description,
 			city: vendors.city,
-			priceRange: vendors.priceRange,
+			priceMin: vendors.priceMin,
+			priceMax: vendors.priceMax,
 			isVerified: vendors.isVerified,
-			categoryId: vendors.vendorCategory,
+			categoryId: vendors.categoryId,
 			categoryName: vendorCategories.name,
-			avgRating: rating.avgRating,
-			reviewCount: rating.reviewCount
+			avgRating: vendors.ratingAvg,
+			reviewCount: vendors.reviewCount
 		})
 		.from(vendors)
-		.leftJoin(vendorCategories, eq(vendors.vendorCategory, vendorCategories.id))
-		.leftJoin(rating, eq(rating.vendorId, vendors.id))
+		.leftJoin(vendorCategories, eq(vendors.categoryId, vendorCategories.id))
 		.where(where)
 		.orderBy(...orderBy)
 		.limit(PAGE_SIZE)
@@ -182,7 +183,7 @@ export async function listDirectoryFilters() {
 		db
 			.selectDistinct({ city: vendors.city })
 			.from(vendors)
-			.where(and(eq(vendors.isActive, true), isNull(vendors.deletedAt)))
+			.where(publicVendor)
 			.orderBy(asc(vendors.city))
 	]);
 
@@ -193,8 +194,6 @@ export async function listDirectoryFilters() {
 }
 
 export async function getVendor(vendorId: number) {
-	const rating = ratingSubquery();
-
 	const [row] = await db
 		.select({
 			id: vendors.id,
@@ -202,12 +201,13 @@ export async function getVendor(vendorId: number) {
 			description: vendors.description,
 			phone: vendors.phone,
 			city: vendors.city,
-			priceRange: vendors.priceRange,
+			priceMin: vendors.priceMin,
+			priceMax: vendors.priceMax,
 			isVerified: vendors.isVerified,
 			createdAt: vendors.createdAt,
 			categoryName: vendorCategories.name,
-			avgRating: rating.avgRating,
-			reviewCount: rating.reviewCount,
+			avgRating: vendors.ratingAvg,
+			reviewCount: vendors.reviewCount,
 			street: address.street,
 			kebele: address.kebele,
 			buildingNumber: address.buildingNumber,
@@ -217,13 +217,12 @@ export async function getVendor(vendorId: number) {
 			regionName: region.name
 		})
 		.from(vendors)
-		.leftJoin(vendorCategories, eq(vendors.vendorCategory, vendorCategories.id))
-		.leftJoin(rating, eq(rating.vendorId, vendors.id))
-		.leftJoin(address, eq(vendors.address, address.id))
+		.leftJoin(vendorCategories, eq(vendors.categoryId, vendorCategories.id))
+		.leftJoin(address, eq(vendors.addressId, address.id))
 		.leftJoin(subcity, eq(address.subcityId, subcity.id))
 		.leftJoin(cityTable, eq(subcity.cityId, cityTable.id))
 		.leftJoin(region, eq(cityTable.regionId, region.id))
-		.where(and(eq(vendors.id, vendorId), eq(vendors.isActive, true), isNull(vendors.deletedAt)))
+		.where(and(eq(vendors.id, vendorId), publicVendor))
 		.limit(1);
 
 	if (!row) return null;
@@ -282,23 +281,34 @@ export async function getVendorServices(vendorId: number) {
 	}));
 }
 
+/**
+ * Reviews are attributed to the *couple*, not one partner, so either partner
+ * can post and edit the same review. The author name comes from the profile of
+ * whichever partner holds the workspace.
+ */
 export async function getVendorReviews(vendorId: number, limit = 20) {
 	const rows = await db
 		.select({
-			id: reviews.id,
-			rating: reviews.rating,
-			comment: reviews.comment,
-			createdAt: reviews.createdAt,
+			id: vendorReviews.id,
+			rating: vendorReviews.rating,
+			title: vendorReviews.title,
+			comment: vendorReviews.comment,
+			createdAt: vendorReviews.createdAt,
 			authorName: user.name,
 			authorImage: user.image,
 			authorId: user.id
 		})
-		.from(reviews)
-		.innerJoin(user, eq(reviews.userId, user.id))
+		.from(vendorReviews)
+		.innerJoin(couples, eq(vendorReviews.coupleId, couples.id))
+		.leftJoin(user, eq(couples.partner1UserId, user.id))
 		.where(
-			and(eq(reviews.vendorId, vendorId), eq(reviews.isActive, true), isNull(reviews.deletedAt))
+			and(
+				eq(vendorReviews.vendorId, vendorId),
+				eq(vendorReviews.isActive, true),
+				isNull(vendorReviews.deletedAt)
+			)
 		)
-		.orderBy(desc(reviews.createdAt))
+		.orderBy(desc(vendorReviews.createdAt))
 		.limit(limit);
 
 	// Star distribution for the summary bars.
@@ -310,15 +320,43 @@ export async function getVendorReviews(vendorId: number, limit = 20) {
 	return { reviews: rows, buckets };
 }
 
-export async function getUserReview(vendorId: number, userId: string) {
+/**
+ * Resolves the couple workspace a user belongs to, from either side of the
+ * marriage. Everything couple-scoped below goes through this so call sites can
+ * keep passing a user id.
+ */
+async function coupleIdFor(userId: string): Promise<number | null> {
 	const [row] = await db
-		.select({ id: reviews.id, rating: reviews.rating, comment: reviews.comment })
-		.from(reviews)
+		.select({ id: couples.id })
+		.from(couples)
 		.where(
 			and(
-				eq(reviews.vendorId, vendorId),
-				eq(reviews.userId, userId),
-				isNull(reviews.deletedAt)
+				or(eq(couples.partner1UserId, userId), eq(couples.partner2UserId, userId)),
+				isNull(couples.deletedAt)
+			)
+		)
+		.limit(1);
+
+	return row?.id ?? null;
+}
+
+export async function getUserReview(vendorId: number, userId: string) {
+	const coupleId = await coupleIdFor(userId);
+	if (!coupleId) return null;
+
+	const [row] = await db
+		.select({
+			id: vendorReviews.id,
+			rating: vendorReviews.rating,
+			title: vendorReviews.title,
+			comment: vendorReviews.comment
+		})
+		.from(vendorReviews)
+		.where(
+			and(
+				eq(vendorReviews.vendorId, vendorId),
+				eq(vendorReviews.coupleId, coupleId),
+				isNull(vendorReviews.deletedAt)
 			)
 		)
 		.limit(1);
@@ -326,29 +364,105 @@ export async function getUserReview(vendorId: number, userId: string) {
 	return row ?? null;
 }
 
+/** The couple's shortlist. Empty for a user with no workspace yet. */
 export async function getFavoriteVendorIds(userId: string) {
+	const coupleId = await coupleIdFor(userId);
+	if (!coupleId) return [];
+
 	const rows = await db
-		.select({ vendorId: favorites.vendorId })
-		.from(favorites)
-		.where(eq(favorites.userId, userId));
+		.select({ vendorId: savedVendors.vendorId })
+		.from(savedVendors)
+		.where(eq(savedVendors.coupleId, coupleId));
 
 	return rows.map((r) => r.vendorId);
 }
 
+/** Returns the new state: true if now saved, false if removed. */
 export async function toggleFavorite(userId: string, vendorId: number) {
+	const coupleId = await coupleIdFor(userId);
+	if (!coupleId) return false;
+
 	const [existing] = await db
-		.select({ vendorId: favorites.vendorId })
-		.from(favorites)
-		.where(and(eq(favorites.userId, userId), eq(favorites.vendorId, vendorId)))
+		.select({ id: savedVendors.id })
+		.from(savedVendors)
+		.where(and(eq(savedVendors.coupleId, coupleId), eq(savedVendors.vendorId, vendorId)))
 		.limit(1);
 
 	if (existing) {
-		await db
-			.delete(favorites)
-			.where(and(eq(favorites.userId, userId), eq(favorites.vendorId, vendorId)));
+		await db.delete(savedVendors).where(eq(savedVendors.id, existing.id));
 		return false;
 	}
 
-	await db.insert(favorites).values({ userId, vendorId });
+	await db.insert(savedVendors).values({ coupleId, vendorId });
 	return true;
 }
+
+/**
+ * Creates or updates the couple's review and refreshes the vendor's cached
+ * rating in the same transaction.
+ *
+ * `vendors.ratingAvg` / `vendors.reviewCount` are denormalised — nothing in the
+ * database keeps them in step with `vendor_reviews`, so every write path has to
+ * recompute them or listing pages slowly drift out of sync.
+ */
+export async function upsertVendorReview(
+	userId: string,
+	vendorId: number,
+	values: { rating: number; title?: string | null; comment?: string | null }
+) {
+	const coupleId = await coupleIdFor(userId);
+	if (!coupleId) return { ok: false as const, reason: 'no-couple' as const };
+
+	const existing = await db
+		.select({ id: vendorReviews.id })
+		.from(vendorReviews)
+		.where(
+			and(
+				eq(vendorReviews.vendorId, vendorId),
+				eq(vendorReviews.coupleId, coupleId),
+				isNull(vendorReviews.deletedAt)
+			)
+		)
+		.limit(1)
+		.then((r) => r[0]);
+
+	await db.transaction(async (tx) => {
+		if (existing) {
+			await tx
+				.update(vendorReviews)
+				.set({ ...values, updatedBy: userId })
+				.where(eq(vendorReviews.id, existing.id));
+		} else {
+			await tx.insert(vendorReviews).values({
+				...values,
+				vendorId,
+				coupleId,
+				createdBy: userId,
+				updatedBy: userId
+			});
+		}
+
+		await tx
+			.update(vendors)
+			.set({
+				ratingAvg: sql`(
+					SELECT COALESCE(ROUND(AVG(${vendorReviews.rating}), 2), 0)
+					FROM ${vendorReviews}
+					WHERE ${vendorReviews.vendorId} = ${vendorId}
+					  AND ${vendorReviews.deletedAt} IS NULL
+				)`,
+				reviewCount: sql`(
+					SELECT COUNT(*) FROM ${vendorReviews}
+					WHERE ${vendorReviews.vendorId} = ${vendorId}
+					  AND ${vendorReviews.deletedAt} IS NULL
+				)`
+			})
+			.where(eq(vendors.id, vendorId));
+	});
+
+	return { ok: true as const, updated: Boolean(existing) };
+}
+
+// formatPriceRange moved to $lib/price — components need it, and this module
+// is server-only.
+export { formatPriceRange } from '$lib/price';

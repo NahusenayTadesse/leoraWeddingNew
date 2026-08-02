@@ -27,8 +27,13 @@ export const youtubeUrl = mysqlTable('youtube_url', {
 	videoUrl: varchar('video_url', { length: 255 }).notNull()
 });
 
-export * from './vendors';
 export * from './auth.schema';
-export * from './payments';
+export * from './common';
+export * from './rbac';
+export * from './profiles';
 export * from './weddings';
+export * from './budget';
+export * from './vendors';
+export * from './payments';
+export * from './communications';
 export * from './locations';

@@ -1,163 +1,179 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import '@fontsource-variable/inter';
+@import '@fontsource-variable/plus-jakarta-sans';
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Leora Events theme.
+ *
+ * Ported from the PHP app's CSS custom properties. That palette was authored
+ * in hex; the shadcn tokens below are its exact OKLCH equivalents, so the two
+ * apps render the same colours:
+ *
+ *   --gold        #D4AF37     --ivory        #FAF7F2
+ *   --gold-dark   #B68D28     --text-dark    #111827
+ *   --royal       #0B1F3A     --text-muted   #6B6458
+ *   --navy        #081626     --border       rgba(17,24,39,.08)
+ *
+ * Gold is the primary. It is a mid-light colour, so its foreground is dark ink
+ * (#1a1305, as in the PHP buttons) — white on gold fails contrast at body sizes.
+ */
+
 :root {
-	--color-leora-gold: #c9a227;
-	--color-leora-gold-dark: #b8941f;
-	--color-leora-ivory: #fff9f0;
-	--color-leora-champagne: #e8dcc3;
-	--color-leora-charcoal: #2b2b2b;
-	--color-leora-cream: #fdf8f3;
-	--color-leora-sage: #9caf88;
-	--color-leora-blush: #f4e7e7;
+	/* Raw brand values, for the few places that need a literal colour
+	   (gradients, glows, shadows) rather than a semantic token. */
+	--leora-gold: #d4af37;
+	--leora-gold-dark: #b68d28;
+	--leora-gold-soft: rgba(212, 175, 55, 0.14);
+	--leora-royal: #0b1f3a;
+	--leora-navy: #081626;
+	--leora-ivory: #faf7f2;
+	--leora-ink: #1a1305;
 
-	/* Typography */
-	--font-display: 'Playfair Display', serif;
-	--font-body: 'Inter', sans-serif;
-	--font-alt: 'Lato', sans-serif;
+	--card-shadow:
+		0 1px 2px rgba(17, 24, 39, 0.04), 0 12px 32px -12px rgba(17, 24, 39, 0.1);
+	--hero-glow: radial-gradient(circle at 80% 20%, rgba(212, 175, 55, 0.14), transparent 55%);
 
-	/* Shadows */
-	--shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.08);
-	--shadow-gold: 0 4px 20px rgba(201, 162, 39, 0.15);
-	--shadow-elevated: 0 10px 40px rgba(0, 0, 0, 0.12);
-	 --background: oklch(1.0000 0 0);
-  --foreground: oklch(0.2161 0.0061 56.0434);
-  --card: oklch(1.0000 0 0);
-  --card-foreground: oklch(0.2161 0.0061 56.0434);
-  --popover: oklch(1.0000 0 0);
-  --popover-foreground: oklch(0.2161 0.0061 56.0434);
-  --primary: oklch(0.7280 0.1380 89.7263);
-  --primary-foreground: oklch(1.0000 0 0);
-  --secondary: oklch(0.9582 0.0152 90.2357);
-  --secondary-foreground: oklch(0.6812 0.1309 89.9756);
-  --muted: oklch(0.9699 0.0013 106.4238);
-  --muted-foreground: oklch(0.5534 0.0116 58.0708);
-  --accent: oklch(0.9792 0.0151 90.2329);
-  --accent-foreground: oklch(0.6812 0.1309 89.9756);
-  --destructive: oklch(0.6368 0.2078 25.3313);
-  --destructive-foreground: oklch(0.9848 0.0013 106.4233);
-  --border: oklch(0.9232 0.0026 48.7171);
-  --input: oklch(0.9232 0.0026 48.7171);
-  --ring: oklch(0.7280 0.1380 89.7263);
-  --chart-1: oklch(0.7280 0.1380 89.7263);
-  --chart-2: oklch(0.6812 0.1309 89.9756);
-  --chart-3: oklch(0.7665 0.1387 91.0594);
-  --chart-4: oklch(0.8178 0.1680 95.3946);
-  --chart-5: oklch(0.8776 0.1069 90.0125);
-  --sidebar: oklch(0.9911 0 0);
-  --sidebar-foreground: oklch(0.3741 0.0087 67.5582);
-  --sidebar-primary: oklch(0.7280 0.1380 89.7263);
-  --sidebar-primary-foreground: oklch(1.0000 0 0);
-  --sidebar-accent: oklch(0.9582 0.0152 90.2357);
-  --sidebar-accent-foreground: oklch(0.6812 0.1309 89.9756);
-  --sidebar-border: oklch(0.9232 0.0026 48.7171);
-  --sidebar-ring: oklch(0.7280 0.1380 89.7263);
-  --font-sans: Playfair Display, serif;
-  --font-serif: Georgia, serif;
-  --font-mono: monospace;
-  --radius: 0.25rem;
-  --shadow-x: 0px;
-  --shadow-y: 4px;
-  --shadow-blur: 10px;
-  --shadow-spread: 0px;
-  --shadow-opacity: 0.1;
-  --shadow-color: #000000;
-  --shadow-2xs: 0px 4px 10px 0px hsl(0 0% 0% / 0.05);
-  --shadow-xs: 0px 4px 10px 0px hsl(0 0% 0% / 0.05);
-  --shadow-sm: 0px 4px 10px 0px hsl(0 0% 0% / 0.10), 0px 1px 2px -1px hsl(0 0% 0% / 0.10);
-  --shadow: 0px 4px 10px 0px hsl(0 0% 0% / 0.10), 0px 1px 2px -1px hsl(0 0% 0% / 0.10);
-  --shadow-md: 0px 4px 10px 0px hsl(0 0% 0% / 0.10), 0px 2px 4px -1px hsl(0 0% 0% / 0.10);
-  --shadow-lg: 0px 4px 10px 0px hsl(0 0% 0% / 0.10), 0px 4px 6px -1px hsl(0 0% 0% / 0.10);
-  --shadow-xl: 0px 4px 10px 0px hsl(0 0% 0% / 0.10), 0px 8px 10px -1px hsl(0 0% 0% / 0.10);
-  --shadow-2xl: 0px 4px 10px 0px hsl(0 0% 0% / 0.25);
-  --tracking-normal: 0.05em;
-  --spacing: 0.25rem;
+	/* --- shadcn semantic tokens --- */
+	--background: oklch(0.9771 0.0074 80.7212); /* ivory  #FAF7F2 */
+	--foreground: oklch(0.2101 0.0318 264.6645); /* ink    #111827 */
+	--card: oklch(1 0 0);
+	--card-foreground: oklch(0.2101 0.0318 264.6645);
+	--popover: oklch(1 0 0);
+	--popover-foreground: oklch(0.2101 0.0318 264.6645);
+
+	--primary: oklch(0.7665 0.1387 91.0594); /* gold   #D4AF37 */
+	--primary-foreground: oklch(0.2277 0.0357 84.4258); /* ink on gold */
+
+	--secondary: oklch(0.9528 0.0127 86.8302);
+	--secondary-foreground: oklch(0.2101 0.0318 264.6645);
+
+	--muted: oklch(0.9528 0.0127 86.8302);
+	--muted-foreground: oklch(0.5061 0.0205 81.2606); /* muted  #6B6458 */
+
+	--accent: oklch(0.9523 0.0315 91.0254); /* gold-soft, flattened */
+	--accent-foreground: oklch(0.6652 0.1229 85.1733); /* gold-dark #B68D28 */
+
+	--destructive: oklch(0.5433 0.174 29.6967); /* #C0392B */
+	--destructive-foreground: oklch(0.9842 0.0034 247.8575);
+
+	--success: oklch(0.5267 0.0936 150.7271); /* #3E7A4E */
+	--success-foreground: oklch(0.9842 0.0034 247.8575);
+
+	--border: oklch(0.9258 0.0116 84.5795);
+	--input: oklch(0.9258 0.0116 84.5795);
+	--ring: oklch(0.7665 0.1387 91.0594);
+
+	--chart-1: oklch(0.7665 0.1387 91.0594);
+	--chart-2: oklch(0.6652 0.1229 85.1733);
+	--chart-3: oklch(0.2393 0.0581 256.6603);
+	--chart-4: oklch(0.5267 0.0936 150.7271);
+	--chart-5: oklch(0.5061 0.0205 81.2606);
+
+	--sidebar: oklch(1 0 0);
+	--sidebar-foreground: oklch(0.2101 0.0318 264.6645);
+	--sidebar-primary: oklch(0.7665 0.1387 91.0594);
+	--sidebar-primary-foreground: oklch(0.2277 0.0357 84.4258);
+	--sidebar-accent: oklch(0.9523 0.0315 91.0254);
+	--sidebar-accent-foreground: oklch(0.6652 0.1229 85.1733);
+	--sidebar-border: oklch(0.9258 0.0116 84.5795);
+	--sidebar-ring: oklch(0.7665 0.1387 91.0594);
+
+	/* PHP sets Plus Jakarta Sans on headings, Inter on body text. */
+	--font-sans: 'Inter Variable', system-ui, sans-serif;
+	--font-display: 'Plus Jakarta Sans Variable', 'Inter Variable', sans-serif;
+	--font-serif: Georgia, serif;
+	--font-mono: ui-monospace, monospace;
+
+	--radius: 0.75rem; /* PHP cards are 16px, buttons 10px */
+
+	--shadow-2xs: 0 1px 2px rgba(17, 24, 39, 0.04);
+	--shadow-xs: 0 1px 2px rgba(17, 24, 39, 0.04);
+	--shadow-sm: 0 1px 2px rgba(17, 24, 39, 0.04), 0 2px 8px -4px rgba(17, 24, 39, 0.08);
+	--shadow: 0 1px 2px rgba(17, 24, 39, 0.04), 0 12px 32px -12px rgba(17, 24, 39, 0.1);
+	--shadow-md: 0 1px 2px rgba(17, 24, 39, 0.04), 0 12px 32px -12px rgba(17, 24, 39, 0.1);
+	--shadow-lg: 0 2px 4px rgba(17, 24, 39, 0.05), 0 18px 44px -16px rgba(17, 24, 39, 0.14);
+	--shadow-xl: 0 2px 4px rgba(17, 24, 39, 0.05), 0 28px 60px -20px rgba(17, 24, 39, 0.18);
+	--shadow-2xl: 0 32px 70px -24px rgba(17, 24, 39, 0.28);
+
+	/* The PHP pages set no global letter-spacing; headings tighten locally. */
+	--tracking-normal: 0em;
+	--spacing: 0.25rem;
 }
 
+/*
+ * Dark mode. The PHP app had no toggle, but it does define a dark surface set
+ * (--royal / --navy / --surface-dark) for its footer and hero panels — those
+ * are the anchors here, so dark mode still reads as the same brand.
+ */
 .dark {
-	--color-leora-gold: #c9a227;
-	--color-leora-gold-dark: #b8941f;
-	--color-leora-ivory: #fff9f0;
-	--color-leora-champagne: #e8dcc3;
-	--color-leora-charcoal: #2b2b2b;
-	--color-leora-cream: #fdf8f3;
-	--color-leora-sage: #9caf88;
-	--color-leora-blush: #f4e7e7;
+	--leora-gold: #d4af37;
+	--leora-gold-dark: #b68d28;
+	--leora-gold-soft: rgba(212, 175, 55, 0.16);
+	--leora-royal: #0b1f3a;
+	--leora-navy: #081626;
+	--leora-ivory: #faf7f2;
+	--leora-ink: #1a1305;
 
-	/* Typography */
-	--font-display: 'Playfair Display', serif;
-	--font-body: 'Inter', sans-serif;
-	--font-alt: 'Lato', sans-serif;
+	--card-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px -12px rgba(0, 0, 0, 0.6);
+	--hero-glow: radial-gradient(circle at 80% 20%, rgba(212, 175, 55, 0.18), transparent 55%);
 
-	/* Shadows */
-	--shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.08);
-	--shadow-gold: 0 4px 20px rgba(201, 162, 39, 0.15);
-	--shadow-elevated: 0 10px 40px rgba(0, 0, 0, 0.12);
-	--background: oklch(0.1469 0.0041 49.2499);
-  --foreground: oklch(0.9848 0.0013 106.4233);
-  --card: oklch(0.2161 0.0061 56.0434);
-  --card-foreground: oklch(0.9848 0.0013 106.4233);
-  --popover: oklch(0.1469 0.0041 49.2499);
-  --popover-foreground: oklch(0.9848 0.0013 106.4233);
-  --primary: oklch(0.7280 0.1380 89.7263);
-  --primary-foreground: oklch(0.1469 0.0041 49.2499);
-  --secondary: oklch(0.2161 0.0061 56.0434);
-  --secondary-foreground: oklch(0.6812 0.1309 89.9756);
-  --muted: oklch(0.2685 0.0063 34.2976);
-  --muted-foreground: oklch(0.7161 0.0091 56.2590);
-  --accent: oklch(0.2685 0.0063 34.2976);
-  --accent-foreground: oklch(0.7280 0.1380 89.7263);
-  --destructive: oklch(0.3958 0.1331 25.7230);
-  --destructive-foreground: oklch(0.9848 0.0013 106.4233);
-  --border: oklch(0.2685 0.0063 34.2976);
-  --input: oklch(0.2685 0.0063 34.2976);
-  --ring: oklch(0.6812 0.1309 89.9756);
-  --chart-1: oklch(0.7280 0.1380 89.7263);
-  --chart-2: oklch(0.6812 0.1309 89.9756);
-  --chart-3: oklch(0.7665 0.1387 91.0594);
-  --chart-4: oklch(0.8178 0.1680 95.3946);
-  --chart-5: oklch(0.8776 0.1069 90.0125);
-  --sidebar: oklch(0.1469 0.0041 49.2499);
-  --sidebar-foreground: oklch(0.9848 0.0013 106.4233);
-  --sidebar-primary: oklch(0.7280 0.1380 89.7263);
-  --sidebar-primary-foreground: oklch(0.1469 0.0041 49.2499);
-  --sidebar-accent: oklch(0.2685 0.0063 34.2976);
-  --sidebar-accent-foreground: oklch(0.7280 0.1380 89.7263);
-  --sidebar-border: oklch(0.2685 0.0063 34.2976);
-  --sidebar-ring: oklch(0.6812 0.1309 89.9756);
-  --font-sans: Playfair Display, serif;
-  --font-serif: Georgia, serif;
-  --font-mono: monospace;
-  --radius: 0.25rem;
-  --shadow-x: 0px;
-  --shadow-y: 10px;
-  --shadow-blur: 20px;
-  --shadow-spread: 0px;
-  --shadow-opacity: 0.5;
-  --shadow-color: #000000;
-  --shadow-2xs: 0px 10px 20px 0px hsl(0 0% 0% / 0.25);
-  --shadow-xs: 0px 10px 20px 0px hsl(0 0% 0% / 0.25);
-  --shadow-sm: 0px 10px 20px 0px hsl(0 0% 0% / 0.50), 0px 1px 2px -1px hsl(0 0% 0% / 0.50);
-  --shadow: 0px 10px 20px 0px hsl(0 0% 0% / 0.50), 0px 1px 2px -1px hsl(0 0% 0% / 0.50);
-  --shadow-md: 0px 10px 20px 0px hsl(0 0% 0% / 0.50), 0px 2px 4px -1px hsl(0 0% 0% / 0.50);
-  --shadow-lg: 0px 10px 20px 0px hsl(0 0% 0% / 0.50), 0px 4px 6px -1px hsl(0 0% 0% / 0.50);
-  --shadow-xl: 0px 10px 20px 0px hsl(0 0% 0% / 0.50), 0px 8px 10px -1px hsl(0 0% 0% / 0.50);
-  --shadow-2xl: 0px 10px 20px 0px hsl(0 0% 0% / 1.25);
+	--background: oklch(0.197 0.038 252.8691); /* navy   #081626 */
+	--foreground: oklch(0.9842 0.0034 247.8575); /* #F8FAFC */
+	--card: oklch(0.2055 0.0367 262.3627); /* surface-dark #0E1728 */
+	--card-foreground: oklch(0.9842 0.0034 247.8575);
+	--popover: oklch(0.2055 0.0367 262.3627);
+	--popover-foreground: oklch(0.9842 0.0034 247.8575);
 
+	--primary: oklch(0.7665 0.1387 91.0594);
+	--primary-foreground: oklch(0.2277 0.0357 84.4258);
+
+	--secondary: oklch(0.2568 0.0473 261.2221);
+	--secondary-foreground: oklch(0.9842 0.0034 247.8575);
+
+	--muted: oklch(0.2568 0.0473 261.2221);
+	--muted-foreground: oklch(0.7183 0.0246 253.1);
+
+	--accent: oklch(0.2833 0.039 259.371);
+	--accent-foreground: oklch(0.7665 0.1387 91.0594);
+
+	--destructive: oklch(0.6368 0.2078 25.3313);
+	--destructive-foreground: oklch(0.9842 0.0034 247.8575);
+
+	--success: oklch(0.6512 0.1104 150.2);
+	--success-foreground: oklch(0.197 0.038 252.8691);
+
+	--border: oklch(0.2833 0.039 259.371);
+	--input: oklch(0.2833 0.039 259.371);
+	--ring: oklch(0.7665 0.1387 91.0594);
+
+	--chart-1: oklch(0.7665 0.1387 91.0594);
+	--chart-2: oklch(0.6652 0.1229 85.1733);
+	--chart-3: oklch(0.8178 0.168 95.3946);
+	--chart-4: oklch(0.6512 0.1104 150.2);
+	--chart-5: oklch(0.7183 0.0246 253.1);
+
+	--sidebar: oklch(0.2055 0.0367 262.3627);
+	--sidebar-foreground: oklch(0.9842 0.0034 247.8575);
+	--sidebar-primary: oklch(0.7665 0.1387 91.0594);
+	--sidebar-primary-foreground: oklch(0.2277 0.0357 84.4258);
+	--sidebar-accent: oklch(0.2833 0.039 259.371);
+	--sidebar-accent-foreground: oklch(0.7665 0.1387 91.0594);
+	--sidebar-border: oklch(0.2833 0.039 259.371);
+	--sidebar-ring: oklch(0.7665 0.1387 91.0594);
 }
 
 @theme inline {
-	--color-leora-gold: #c9a227;
-	--color-leora-gold-dark: #b8941f;
-	--color-leora-ivory: #fff9f0;
-	--color-leora-champagne: #e8dcc3;
-	--color-leora-charcoal: #2b2b2b;
-	--color-leora-cream: #fdf8f3;
-	--color-leora-sage: #9caf88;
-	--color-leora-blush: #f4e7e7;
+	--color-leora-gold: var(--leora-gold);
+	--color-leora-gold-dark: var(--leora-gold-dark);
+	--color-leora-royal: var(--leora-royal);
+	--color-leora-navy: var(--leora-navy);
+	--color-leora-ivory: var(--leora-ivory);
+	--color-leora-ink: var(--leora-ink);
+	--color-success: var(--success);
+	--color-success-foreground: var(--success-foreground);
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
 	--color-card: var(--card);
@@ -191,7 +207,8 @@
 	--color-sidebar-border: var(--sidebar-border);
 	--color-sidebar-ring: var(--sidebar-ring);
 
-	--font-sans: 'Inter Variable', sans-serif;
+	--font-sans: var(--font-sans);
+	--font-display: var(--font-display);
 	--font-mono: var(--font-mono);
 	--font-serif: var(--font-serif);
 
@@ -225,11 +242,20 @@
 		@apply border-border outline-ring/50;
 	}
 	body {
-		@apply selection:bg-primary selection:text-background bg-background text-foreground;
+		@apply selection:bg-primary selection:text-primary-foreground bg-background text-foreground;
 		letter-spacing: var(--tracking-normal);
 	}
 	html {
 		@apply font-sans;
+	}
+	/* PHP sets `font-family:'Plus Jakarta Sans'; letter-spacing:-0.02em` on
+	   every heading — mirrored here so pages don't repeat it. */
+	h1,
+	h2,
+	h3,
+	h4 {
+		font-family: var(--font-display);
+		letter-spacing: -0.02em;
 	}
 }
 

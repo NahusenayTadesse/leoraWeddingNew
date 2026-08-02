@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vendor Portal — Leora Events</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --gold:#D4AF37; --gold-dark:#B68D28; --gold-soft: rgba(212,175,55,0.14);
+    --royal:#0B1F3A; --navy:#081626; --surface-dark:#0E1728;
+    --ivory:#FAF7F2; --white:#FFFFFF; --text-dark:#111827; --text-light:#F8FAFC;
+    --bg: var(--ivory); --bg-elevated: var(--white); --text: var(--text-dark);
+    --text-muted: #6B6458; --border: rgba(17,24,39,0.08);
+    --card-shadow: 0 1px 2px rgba(17,24,39,0.04), 0 12px 32px -12px rgba(17,24,39,0.10);
+    --good:#3E7A4E; --warn:#B4762A;
+  }
+  html[data-theme="dark"]{
+    --bg: var(--navy); --bg-elevated: var(--surface-dark); --text: var(--text-light);
+    --text-muted: #93A0B4; --border: rgba(248,250,252,0.08);
+    --card-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 20px 48px -16px rgba(0,0,0,0.55);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;transition:background .4s ease,color .4s ease;}
+  h1,h2,h3,.display{font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:-0.02em;margin:0;}
+  p{margin:0;color:var(--text-muted);line-height:1.6;}
+  a{color:inherit;text-decoration:none;}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 32px;}
+  header{position:sticky;top:0;z-index:50;background:color-mix(in srgb, var(--bg) 82%, transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);}
+  nav{max-width:1180px;margin:0 auto;padding:14px 32px;display:flex;align-items:center;justify-content:space-between;gap:24px;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand .mono{width:38px;height:38px;border-radius:10px;background:linear-gradient(160deg,var(--royal),var(--navy));display:flex;align-items:center;justify-content:center;color:var(--gold);font-family:'Plus Jakarta Sans';font-weight:800;font-size:18px;flex-shrink:0;}
+  .brand span{font-family:'Plus Jakarta Sans';font-weight:800;font-size:18px;}
+  .brand small{display:block;font-size:9px;letter-spacing:.12em;color:var(--text-muted);font-weight:600;text-transform:uppercase;margin-top:1px;}
+  .navlinks{display:flex;gap:26px;font-size:14.5px;font-weight:500;}
+  .navlinks a{color:var(--text);opacity:.82;}
+  .navlinks a:hover{opacity:1;}
+  .navright{display:flex;align-items:center;gap:14px;}
+  .theme-toggle{width:40px;height:22px;border-radius:20px;background:var(--border);position:relative;cursor:pointer;flex-shrink:0;}
+  .theme-toggle .knob{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--gold);transition:transform .3s ease;}
+  html[data-theme="dark"] .theme-toggle .knob{transform:translateX(18px);}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 16px;border-radius:10px;font-weight:600;font-size:13.5px;cursor:pointer;border:none;transition:all .2s ease;}
+  .btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border);}
+  .btn-ghost:hover{border-color:var(--gold);}
+  .btn-gold{background:var(--gold);color:#1a1204;}
+  .btn-gold:hover{background:var(--gold-dark);}
+  .avatar-chip{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;}
+  .avatar-chip .dot{width:30px;height:30px;border-radius:50%;background:var(--gold-soft);color:var(--gold-dark);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;}
+  @media (max-width:900px){.navlinks{display:none;}}
+
+  main{padding:36px 0 80px;}
+  .page-head{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;margin-bottom:26px;}
+  .page-head h1{font-size:28px;}
+  .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px;}
+  .stat-card{background:var(--bg-elevated);border:1px solid var(--border);border-radius:16px;padding:18px 20px;box-shadow:var(--card-shadow);}
+  .stat-card .num{font-family:'Plus Jakarta Sans';font-weight:800;font-size:24px;}
+  .stat-card .lbl{font-size:12.5px;color:var(--text-muted);margin-top:2px;}
+  @media (max-width:900px){.stat-grid{grid-template-columns:repeat(2,1fr);}}
+
+  .tabs{display:flex;gap:6px;border-bottom:1px solid var(--border);margin-bottom:26px;flex-wrap:wrap;}
+  .tab{padding:10px 16px;font-size:14px;font-weight:600;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;}
+  .tab.active{color:var(--text);border-color:var(--gold);}
+  .tabpanel{display:none;}
+  .tabpanel.active{display:block;}
+
+  .card{background:var(--bg-elevated);border:1px solid var(--border);border-radius:16px;box-shadow:var(--card-shadow);padding:22px 24px;}
+  .booking-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--border);gap:16px;flex-wrap:wrap;}
+  .booking-row:last-child{border-bottom:none;}
+  .booking-info h4{font-size:15px;margin-bottom:3px;}
+  .booking-info p{font-size:13px;}
+  .badge{font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em;}
+  .badge.new{background:var(--gold-soft);color:var(--gold-dark);}
+  .badge.confirmed{background:rgba(62,122,78,0.14);color:var(--good);}
+  .badge.declined{background:rgba(180,40,40,0.1);color:#B42828;}
+  .row-actions{display:flex;gap:8px;}
+  .row-actions button{padding:7px 12px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid var(--border);background:var(--bg);cursor:pointer;color:var(--text);}
+  .row-actions button.accept{background:var(--gold);border-color:var(--gold);color:#1a1204;}
+
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;}
+  .field input, .field select, .field textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:'Inter';font-size:14px;outline:none;}
+  .field textarea{resize:vertical;min-height:90px;}
+  .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--gold);}
+  .field-row{display:flex;gap:14px;flex-wrap:wrap;}
+  .field-row .field{flex:1;min-width:180px;}
+
+  .gallery-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+  .gallery-tile{aspect-ratio:1;border-radius:12px;background:linear-gradient(150deg,var(--gold-soft),var(--border));display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:12px;border:1px dashed var(--border);cursor:pointer;}
+  .gallery-tile.add{border:1px dashed var(--gold);color:var(--gold-dark);font-weight:600;}
+  @media (max-width:700px){.gallery-grid{grid-template-columns:repeat(2,1fr);}}
+
+  .pkg-card{border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;}
+  .pkg-card h4{font-size:15.5px;margin-bottom:4px;}
+  .pkg-card .price{font-family:'Plus Jakarta Sans';font-weight:800;font-size:18px;color:var(--gold-dark);}
+  html[data-theme="dark"] .pkg-card .price{color:var(--gold);}
+</style>
+</head>
+<body>
+
+<header>
+  <nav>
+    <a class="brand" href="leora-events-homepage.html">
+      <div class="mono">L</div>
+      <div><span>Leora Events</span><small>Vendor Portal</small></div>
+    </a>
+    <div class="navlinks">
+      <a href="leora-events-vendor-portal.html">Dashboard</a>
+      <a href="leora-events-messages.html">Messages</a>
+      <a href="leora-events-pricing.html">Upgrade Plan</a>
+      <a href="leora-events-account-settings.html">Settings</a>
+    </div>
+    <div class="navright">
+      <div class="theme-toggle" id="themeToggle"><div class="knob"></div></div>
+      <div class="avatar-chip"><div class="dot">MS</div> Mesk Studio</div>
+      <a class="btn btn-ghost" href="leora-events-login.html">Log Out</a>
+    </div>
+  </nav>
+</header>
+
+<main class="wrap">
+  <div class="page-head">
+    <div>
+      <h1>Welcome back, Mesk Studio</h1>
+      <p style="margin-top:6px;">Here's how your listing is performing this month.</p>
+    </div>
+    <a class="btn btn-gold" href="leora-events-messages.html">View Inquiries</a>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-card"><div class="num">14</div><div class="lbl">Profile Views (7d)</div></div>
+    <div class="stat-card"><div class="num">5</div><div class="lbl">New Booking Requests</div></div>
+    <div class="stat-card"><div class="num">4.9 ★</div><div class="lbl">Average Rating</div></div>
+    <div class="stat-card"><div class="num">Growth</div><div class="lbl">Current Plan · <a href="leora-events-pricing.html" style="color:var(--gold-dark);font-weight:600;">Upgrade</a></div></div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-tab="bookings">Booking Requests</div>
+    <div class="tab" data-tab="profile">Profile</div>
+    <div class="tab" data-tab="photos">Photos</div>
+    <div class="tab" data-tab="packages">Packages</div>
+  </div>
+
+  <div class="tabpanel active" id="panel-bookings">
+    <div class="card">
+      <div class="booking-row">
+        <div class="booking-info">
+          <h4>Selam & Yonas — Wedding, Nov 14 2026</h4>
+          <p>Requested Signature Package · Bole, Addis Ababa</p>
+        </div>
+        <span class="badge new">New</span>
+        <div class="row-actions">
+          <button onclick="alert('This would decline the request.')">Decline</button>
+          <button class="accept" onclick="alert('This would confirm the booking and notify the couple.')">Accept</button>
+        </div>
+      </div>
+      <div class="booking-row">
+        <div class="booking-info">
+          <h4>Bethlehem & Dawit — Engagement, Oct 2 2026</h4>
+          <p>Requested Essential Package · Hawassa</p>
+        </div>
+        <span class="badge new">New</span>
+        <div class="row-actions">
+          <button onclick="alert('This would decline the request.')">Decline</button>
+          <button class="accept" onclick="alert('This would confirm the booking and notify the couple.')">Accept</button>
+        </div>
+      </div>
+      <div class="booking-row">
+        <div class="booking-info">
+          <h4>Ruth & Nathan — Wedding, Sep 6 2026</h4>
+          <p>Confirmed · Luxury Package</p>
+        </div>
+        <span class="badge confirmed">Confirmed</span>
+        <div class="row-actions">
+          <a class="btn btn-ghost" style="padding:7px 12px;font-size:12.5px;" href="leora-events-messages.html">Message</a>
+        </div>
+      </div>
+      <div class="booking-row">
+        <div class="booking-info">
+          <h4>Hana & Michael — Wedding, Aug 21 2026</h4>
+          <p>Declined · scheduling conflict</p>
+        </div>
+        <span class="badge declined">Declined</span>
+        <div class="row-actions"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabpanel" id="panel-profile">
+    <div class="card">
+      <h3 style="margin-bottom:18px;">Business Profile</h3>
+      <div class="field-row">
+        <div class="field"><label>Business name</label><input type="text" value="Mesk Studio Photography"></div>
+        <div class="field"><label>Category</label>
+          <select><option>Photo & Video</option><option>Venue</option><option>Decor</option><option>Catering</option><option>Entertainment</option></select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>City</label><input type="text" value="Addis Ababa"></div>
+        <div class="field"><label>Phone</label><input type="text" value="+251 9__ ___ ___"></div>
+      </div>
+      <div class="field"><label>About your business</label><textarea>Award-winning wedding photography and cinematic film, capturing Ethiopian weddings with a documentary style.</textarea></div>
+      <button class="btn btn-gold" onclick="alert('Profile changes would be saved.')">Save Changes</button>
+    </div>
+  </div>
+
+  <div class="tabpanel" id="panel-photos">
+    <div class="card">
+      <h3 style="margin-bottom:18px;">Portfolio Photos</h3>
+      <div class="gallery-grid">
+        <div class="gallery-tile">Photo 1</div>
+        <div class="gallery-tile">Photo 2</div>
+        <div class="gallery-tile">Photo 3</div>
+        <div class="gallery-tile">Photo 4</div>
+        <div class="gallery-tile">Photo 5</div>
+        <div class="gallery-tile">Photo 6</div>
+        <div class="gallery-tile">Photo 7</div>
+        <div class="gallery-tile add" onclick="alert('This would open a file upload dialog.')">+ Add Photo</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabpanel" id="panel-packages">
+    <div class="card">
+      <h3 style="margin-bottom:18px;">Your Packages</h3>
+      <div class="pkg-card">
+        <div><h4>Essential</h4><p>Half-day coverage, 200 edited photos</p></div>
+        <div class="price">ETB 45,000</div>
+        <button class="btn btn-ghost" onclick="alert('This would open the package editor.')">Edit</button>
+      </div>
+      <div class="pkg-card">
+        <div><h4>Signature</h4><p>Full-day coverage, film + photo, 500 edited photos</p></div>
+        <div class="price">ETB 95,000</div>
+        <button class="btn btn-ghost" onclick="alert('This would open the package editor.')">Edit</button>
+      </div>
+      <div class="pkg-card">
+        <div><h4>Luxury</h4><p>Multi-day coverage, drone film, album included</p></div>
+        <div class="price">ETB 180,000</div>
+        <button class="btn btn-ghost" onclick="alert('This would open the package editor.')">Edit</button>
+      </div>
+      <button class="btn btn-gold" onclick="alert('This would open a form to add a new package.')">+ Add Package</button>
+    </div>
+  </div>
+</main>
+
+<script>
+  const toggle = document.getElementById('themeToggle');
+  const root = document.documentElement;
+  let dark = false;
+  toggle.addEventListener('click', ()=>{ dark = !dark; root.setAttribute('data-theme', dark?'dark':'light'); });
+
+  document.querySelectorAll('.tab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.tabpanel').forEach(p=>p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('panel-'+tab.dataset.tab).classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

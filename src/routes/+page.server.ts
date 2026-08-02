@@ -1,94 +1,89 @@
-
-
 import { db } from '$lib/server/db';
-import {
-    vendors,
-    vendorCategories,
-    prices,
-    vendorServices,
-    testimonials
-} from '$lib/server/db/schema';
-import { eq, sql, desc, min } from 'drizzle-orm';
-import type { PageServerLoad } from './$types';
-
-export const load: PageServerLoad = async () => {
-    // 1. Fetch categories along with total count of verified vendors per category
-    const categoriesQuery = await db
-        .select({
-            id: vendorCategories.id,
-            name: vendorCategories.name,
-            count: sql<number>`COUNT(DISTINCT ${vendors.id})`
-        })
-        .from(vendorCategories)
-        .leftJoin(vendors, eq(vendors.vendorCategory, vendorCategories.id))
-        .where(eq(vendorCategories.listable, true))
-        .groupBy(vendorCategories.id, vendorCategories.name);
-
-    // 2. Fetch featured/verified vendors with starting price and category name
-    const featuredVendorsRaw = await db
-        .select({
-            id: vendors.id,
-            businessName: vendors.businessName,
-            description: vendors.description,
-            city: vendors.city,
-            priceRange: vendors.priceRange,
-            categoryName: vendorCategories.name,
-            minPrice: min(prices.price)
-        })
-        .from(vendors)
-        .leftJoin(vendorCategories, eq(vendorCategories.id, vendors.vendorCategory))
-        .leftJoin(vendorServices, eq(vendorServices.vendorId, vendors.id))
-        .leftJoin(prices, eq(prices.serviceId, vendorServices.id))
-        .where(eq(vendors.isVerified, true))
-        .groupBy(
-            vendors.id,
-            vendors.businessName,
-            vendors.description,
-            vendors.city,
-            vendors.priceRange,
-            vendorCategories.name
-        )
-        .limit(6);
-
-    // Formatted featured vendors structure for UI consumption
-    const featuredVendors = featuredVendorsRaw.map((vendor) => ({
-        id: vendor.id,
-        name: vendor.businessName,
-        category: vendor.categoryName ?? 'Wedding Service',
-        city: vendor.city ?? 'Addis Ababa',
-        priceRange: vendor.priceRange ?? (vendor.minPrice ? `${Number(vendor.minPrice).toLocaleString()} ETB` : 'Contact for Price'),
-        description: vendor.description ?? ''
-    }));
-
-    // 3. Fetch public testimonials
-    const dynamicTestimonials = await db
-        .select({
-            id: testimonials.id,
-            name: testimonials.name,
-            position: testimonials.position,
-            message: testimonials.message,
-            avatar: testimonials.avatar
-        })
-        .from(testimonials)
-        .orderBy(desc(testimonials.id))
-        .limit(3);
-
-    return {
-        categories: categoriesQuery.map((cat) => ({
-            id: cat.id,
-            name: cat.name,
-            count: Number(cat.count ?? 0)
-        })),
-        vendors: featuredVendors,
-        testimonials: dynamicTestimonials
-    };
-};
-
-
+import { vendors, vendorCategories, testimonials } from '$lib/server/db/schema';
+import { and, count, countDistinct, desc, eq, isNull } from 'drizzle-orm';
 import { auth } from '$lib/server/auth';
 import { redirect } from 'sveltekit-flash-message/server';
+import type { Actions, PageServerLoad } from './$types';
 
-import type { Actions } from './$types';
+/**
+ * Homepage data.
+ *
+ * The PHP homepage hard-coded its numbers ("184 vendors", "1,200+ listed").
+ * They are read from the database here instead, so an empty install honestly
+ * shows zero rather than advertising vendors that do not exist — the same
+ * "no mock data" rule the PHP schema documented.
+ *
+ * Public listings filter on all three lifecycle flags. `isVerified` is a trust
+ * badge, never the gate — see docs/schema-conventions.md.
+ */
+const isPublicVendor = and(
+	eq(vendors.status, 'approved'),
+	eq(vendors.isActive, true),
+	isNull(vendors.deletedAt)
+);
+
+export const load: PageServerLoad = async () => {
+	const [categories, featuredVendors, [totals], regions, dynamicTestimonials] = await Promise.all([
+		db
+			.select({
+				id: vendorCategories.id,
+				name: vendorCategories.name,
+				slug: vendorCategories.slug,
+				icon: vendorCategories.icon,
+				count: count(vendors.id)
+			})
+			.from(vendorCategories)
+			.leftJoin(vendors, and(eq(vendors.categoryId, vendorCategories.id), isPublicVendor))
+			.where(eq(vendorCategories.listable, true))
+			.groupBy(vendorCategories.id, vendorCategories.name, vendorCategories.slug, vendorCategories.icon, vendorCategories.sortOrder)
+			.orderBy(vendorCategories.sortOrder),
+
+		db
+			.select({
+				id: vendors.id,
+				businessName: vendors.businessName,
+				description: vendors.description,
+				city: vendors.city,
+				priceMin: vendors.priceMin,
+				priceMax: vendors.priceMax,
+				ratingAvg: vendors.ratingAvg,
+				reviewCount: vendors.reviewCount,
+				isVerified: vendors.isVerified,
+				categoryName: vendorCategories.name
+			})
+			.from(vendors)
+			.innerJoin(vendorCategories, eq(vendorCategories.id, vendors.categoryId))
+			.where(isPublicVendor)
+			.orderBy(desc(vendors.isFeatured), desc(vendors.ratingAvg))
+			.limit(6),
+
+		db.select({ total: count() }).from(vendors).where(isPublicVendor),
+
+		db.select({ total: countDistinct(vendors.city) }).from(vendors).where(isPublicVendor),
+
+		db
+			.select({
+				id: testimonials.id,
+				name: testimonials.name,
+				position: testimonials.position,
+				message: testimonials.message,
+				avatar: testimonials.avatar
+			})
+			.from(testimonials)
+			.orderBy(desc(testimonials.id))
+			.limit(3)
+	]);
+
+	return {
+		categories,
+		vendors: featuredVendors,
+		testimonials: dynamicTestimonials,
+		stats: {
+			vendorCount: totals?.total ?? 0,
+			regionCount: regions[0]?.total ?? 0
+		}
+	};
+};
 
 export const actions: Actions = {
 	logout: async (event) => {

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { formatPriceRange } from '$lib/price';
 	import { goto } from '$app/navigation';
 	import { page as pageState } from '$app/state';
 	import { enhance as formEnhance } from '$app/forms';
@@ -250,10 +251,10 @@
 							{/if}
 						</div>
 
-						{#if vendor.priceRange}
+						{#if formatPriceRange(vendor.priceMin, vendor.priceMax)}
 							<div>
 								<Separator class="my-3" />
-								<p class="text-sm font-medium">{vendor.priceRange}</p>
+								<p class="text-sm font-medium">{formatPriceRange(vendor.priceMin, vendor.priceMax)}</p>
 							</div>
 						{/if}
 					</div>

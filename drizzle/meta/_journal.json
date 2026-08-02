@@ -5,85 +5,8 @@
     {
       "idx": 0,
       "version": "5",
-      "when": 1774947321714,
-      "tag": "0000_stormy_sauron",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "5",
-      "when": 1774949790715,
-      "tag": "0001_windy_rocket_raccoon",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "5",
-      "when": 1776189748457,
-      "tag": "0002_funny_martin_li",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "5",
-      "when": 1776195028054,
-      "tag": "0003_early_greymalkin",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "5",
-      "when": 1776203842247,
-      "tag": "0004_hesitant_odin",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "5",
-      "when": 1776209432370,
-      "tag": "0005_wise_demogoblin",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "5",
-      "when": 1776209560950,
-      "tag": "0006_workable_raider",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "5",
-      "when": 1776589861797,
-      "tag": "0007_normal_ultron",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "5",
-      "when": 1776608331647,
-      "tag": "0008_cool_daimon_hellstrom",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "5",
-      "when": 1776933130709,
-      "tag": "0009_sad_doctor_doom",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "5",
-      "when": 1785061834421,
-      "tag": "0010_eager_rafael_vega",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "5",
-      "when": 1785063064105,
-      "tag": "0011_clean_annihilus",
+      "when": 1785665541925,
+      "tag": "0000_lively_silk_fever",
       "breakpoints": true
     }
   ]

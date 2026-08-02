@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Become a Vendor — Leora Events</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --gold:#D4AF37; --gold-dark:#B68D28; --gold-soft: rgba(212,175,55,0.14);
+    --royal:#0B1F3A; --navy:#081626; --surface-dark:#0E1728;
+    --ivory:#FAF7F2; --white:#FFFFFF; --text-dark:#111827; --text-light:#F8FAFC;
+    --bg: var(--ivory); --bg-elevated: var(--white); --text: var(--text-dark);
+    --text-muted: #6B6458; --border: rgba(17,24,39,0.08);
+    --card-shadow: 0 1px 2px rgba(17,24,39,0.04), 0 12px 32px -12px rgba(17,24,39,0.10);
+    --good:#3E7A4E;
+  }
+  html[data-theme="dark"]{
+    --bg: var(--navy); --bg-elevated: var(--surface-dark); --text: var(--text-light);
+    --text-muted: #93A0B4; --border: rgba(248,250,252,0.08);
+    --card-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 20px 48px -16px rgba(0,0,0,0.55);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;transition:background .4s ease,color .4s ease;}
+  h1,h2,h3,.display{font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:-0.02em;margin:0;}
+  p{margin:0;color:var(--text-muted);line-height:1.6;}
+  a{color:inherit;text-decoration:none;}
+  header{position:sticky;top:0;z-index:50;background:color-mix(in srgb, var(--bg) 82%, transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);}
+  nav{max-width:1180px;margin:0 auto;padding:14px 32px;display:flex;align-items:center;justify-content:space-between;gap:24px;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand .mono{width:38px;height:38px;border-radius:10px;background:linear-gradient(160deg,var(--royal),var(--navy));display:flex;align-items:center;justify-content:center;color:var(--gold);font-family:'Plus Jakarta Sans';font-weight:800;font-size:18px;}
+  .brand span{font-family:'Plus Jakarta Sans';font-weight:800;font-size:18px;}
+  .brand small{display:block;font-size:9px;letter-spacing:.12em;color:var(--text-muted);font-weight:600;text-transform:uppercase;margin-top:1px;}
+  .theme-toggle{width:40px;height:22px;border-radius:20px;background:var(--border);position:relative;cursor:pointer;}
+  .theme-toggle .knob{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--gold);transition:transform .3s ease;}
+  html[data-theme="dark"] .theme-toggle .knob{transform:translateX(18px);}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 20px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;border:none;}
+  .btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border);}
+  .btn-ghost:hover{border-color:var(--gold);}
+  .btn-gold{background:var(--gold);color:#1a1204;}
+  .btn-gold:hover{background:var(--gold-dark);}
+
+  main{max-width:660px;margin:0 auto;padding:44px 20px 90px;}
+  .stepper{display:flex;justify-content:space-between;margin-bottom:34px;}
+  .step{flex:1;text-align:center;position:relative;}
+  .step .circle{width:30px;height:30px;border-radius:50%;background:var(--bg-elevated);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-weight:700;font-size:13px;color:var(--text-muted);}
+  .step.active .circle{border-color:var(--gold);color:var(--gold-dark);}
+  html[data-theme="dark"] .step.active .circle{color:var(--gold);}
+  .step.done .circle{background:var(--gold);border-color:var(--gold);color:#1a1204;}
+  .step .lbl{font-size:11.5px;font-weight:600;color:var(--text-muted);}
+  .step.active .lbl{color:var(--text);}
+  .step::after{content:"";position:absolute;top:15px;left:calc(50% + 20px);right:calc(-50% + 20px);height:2px;background:var(--border);z-index:-1;}
+  .step:last-child::after{display:none;}
+  .step.done::after{background:var(--gold);}
+
+  .card{background:var(--bg-elevated);border:1px solid var(--border);border-radius:18px;box-shadow:var(--card-shadow);padding:30px 28px;}
+  .card h2{font-size:21px;margin-bottom:6px;}
+  .card > p.sub{font-size:14px;margin-bottom:24px;}
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;}
+  .field input, .field select, .field textarea{width:100%;padding:11px 13px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:'Inter';font-size:14px;outline:none;}
+  .field textarea{resize:vertical;min-height:90px;}
+  .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--gold);}
+  .field-row{display:flex;gap:14px;}
+  .field-row .field{flex:1;}
+  .cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:8px;}
+  .cat-chip{border:1px solid var(--border);border-radius:12px;padding:14px 8px;text-align:center;font-size:13px;font-weight:600;cursor:pointer;}
+  .cat-chip.selected{border-color:var(--gold);background:var(--gold-soft);color:var(--gold-dark);}
+  html[data-theme="dark"] .cat-chip.selected{color:var(--gold);}
+  .plan-option{border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
+  .plan-option.selected{border-color:var(--gold);background:var(--gold-soft);}
+  .plan-option h4{font-size:15px;}
+  .plan-option .price{font-family:'Plus Jakarta Sans';font-weight:800;color:var(--gold-dark);}
+  html[data-theme="dark"] .plan-option .price{color:var(--gold);}
+  .actions-row{display:flex;justify-content:space-between;margin-top:26px;}
+  .review-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px;}
+  .success{text-align:center;padding:20px 0;}
+  .success .circle-check{width:64px;height:64px;border-radius:50%;background:var(--gold-soft);color:var(--gold-dark);display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 18px;}
+  html[data-theme="dark"] .success .circle-check{color:var(--gold);}
+</style>
+</head>
+<body>
+
+<header>
+  <nav>
+    <a class="brand" href="leora-events-homepage.html">
+      <div class="mono">L</div>
+      <div><span>Leora Events</span><small>Vendor Sign Up</small></div>
+    </a>
+    <div class="theme-toggle" id="themeToggle"><div class="knob"></div></div>
+  </nav>
+</header>
+
+<main>
+  <div class="stepper" id="stepper">
+    <div class="step active" data-step="1"><div class="circle">1</div><div class="lbl">Business Info</div></div>
+    <div class="step" data-step="2"><div class="circle">2</div><div class="lbl">Category</div></div>
+    <div class="step" data-step="3"><div class="circle">3</div><div class="lbl">First Listing</div></div>
+    <div class="step" data-step="4"><div class="circle">4</div><div class="lbl">Plan & Payment</div></div>
+  </div>
+
+  <div class="card">
+    <div class="stepbody active" id="body-1">
+      <h2>Tell us about your business</h2>
+      <p class="sub">This information appears on your public Leora Events profile.</p>
+      <div class="field"><label>Business name</label><input type="text" placeholder="e.g. Mesk Studio Photography"></div>
+      <div class="field-row">
+        <div class="field"><label>City</label><input type="text" placeholder="Addis Ababa"></div>
+        <div class="field"><label>Phone number</label><input type="text" placeholder="+251 9__ ___ ___"></div>
+      </div>
+      <div class="field"><label>Business email</label><input type="email" placeholder="hello@yourbusiness.com"></div>
+      <div class="field"><label>Short description</label><textarea placeholder="Tell couples what makes your business special..."></textarea></div>
+    </div>
+
+    <div class="stepbody" id="body-2">
+      <h2>What category best fits your business?</h2>
+      <p class="sub">You can add more categories later from your Vendor Portal.</p>
+      <div class="cat-grid" id="catGrid">
+        <div class="cat-chip">Venue</div>
+        <div class="cat-chip">Photo & Video</div>
+        <div class="cat-chip">Catering</div>
+        <div class="cat-chip">Decor</div>
+        <div class="cat-chip">Entertainment</div>
+        <div class="cat-chip">Attire</div>
+        <div class="cat-chip">Makeup & Hair</div>
+        <div class="cat-chip">Transport</div>
+        <div class="cat-chip">Other</div>
+      </div>
+    </div>
+
+    <div class="stepbody" id="body-3">
+      <h2>Create your first listing</h2>
+      <p class="sub">Add one package to get started — you can add more anytime.</p>
+      <div class="field"><label>Package name</label><input type="text" placeholder="e.g. Signature Package"></div>
+      <div class="field-row">
+        <div class="field"><label>Starting price (ETB)</label><input type="text" placeholder="95,000"></div>
+        <div class="field"><label>Guest capacity (if applicable)</label><input type="text" placeholder="200"></div>
+      </div>
+      <div class="field"><label>What's included</label><textarea placeholder="Full-day coverage, edited gallery, engagement session..."></textarea></div>
+    </div>
+
+    <div class="stepbody" id="body-4">
+      <h2>Choose your plan</h2>
+      <p class="sub">Start free, upgrade anytime for more visibility.</p>
+      <div class="plan-option selected" data-plan="starter">
+        <div><h4>Starter — Free</h4><p style="font-size:13px;">Basic listing, up to 1 package</p></div>
+        <div class="price">ETB 0</div>
+      </div>
+      <div class="plan-option" data-plan="growth">
+        <div><h4>Growth</h4><p style="font-size:13px;">Priority placement, unlimited packages</p></div>
+        <div class="price">ETB 1,200/mo</div>
+      </div>
+      <div class="plan-option" data-plan="featured">
+        <div><h4>Featured</h4><p style="font-size:13px;">Top-of-search badge, featured homepage slot</p></div>
+        <div class="price">ETB 2,800/mo</div>
+      </div>
+      <p style="font-size:12.5px;margin-top:10px;">Paid plans are billed monthly and can be cancelled anytime from Account Settings.</p>
+    </div>
+
+    <div class="stepbody" id="body-review">
+      <h2>Review & confirm</h2>
+      <p class="sub">Make sure everything looks right before you go live.</p>
+      <div class="review-row"><span>Business</span><span id="rev-name">—</span></div>
+      <div class="review-row"><span>Category</span><span id="rev-cat">—</span></div>
+      <div class="review-row"><span>First package</span><span id="rev-pkg">—</span></div>
+      <div class="review-row"><span>Plan</span><span id="rev-plan">Starter — Free</span></div>
+    </div>
+
+    <div class="stepbody" id="body-success">
+      <div class="success">
+        <div class="circle-check">✓</div>
+        <h2 style="margin-bottom:8px;">You're live on Leora Events!</h2>
+        <p>Couples can now find your listing in the Marketplace. Head to your Vendor Portal to manage bookings and add photos.</p>
+        <a class="btn btn-gold" href="leora-events-vendor-portal.html" style="margin-top:22px;">Go to Vendor Portal</a>
+      </div>
+    </div>
+
+    <div class="actions-row" id="actionsRow">
+      <button class="btn btn-ghost" id="backBtn" onclick="prevStep()">Back</button>
+      <button class="btn btn-gold" id="nextBtn" onclick="nextStep()">Continue</button>
+    </div>
+  </div>
+</main>
+
+<script>
+  const toggle = document.getElementById('themeToggle');
+  const root = document.documentElement;
+  let dark = false;
+  toggle.addEventListener('click', ()=>{ dark = !dark; root.setAttribute('data-theme', dark?'dark':'light'); });
+
+  let step = 1; // 1-4, then 'review', then 'success'
+  const order = [1,2,3,4,'review','success'];
+
+  document.querySelectorAll('.cat-chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      document.querySelectorAll('.cat-chip').forEach(c=>c.classList.remove('selected'));
+      chip.classList.add('selected');
+    });
+  });
+  document.querySelectorAll('.plan-option').forEach(opt=>{
+    opt.addEventListener('click', ()=>{
+      document.querySelectorAll('.plan-option').forEach(o=>o.classList.remove('selected'));
+      opt.classList.add('selected');
+    });
+  });
+
+  function showStep(idx){
+    document.querySelectorAll('.stepbody').forEach(b=>b.classList.remove('active'));
+    const key = order[idx];
+    if(key==='review'){
+      document.getElementById('body-review').classList.add('active');
+      const nameVal = document.querySelector('#body-1 input').value || 'Your Business Name';
+      const cat = document.querySelector('.cat-chip.selected');
+      const pkgName = document.querySelector('#body-3 input').value || 'Signature Package';
+      const plan = document.querySelector('.plan-option.selected h4').textContent;
+      document.getElementById('rev-name').textContent = nameVal;
+      document.getElementById('rev-cat').textContent = cat ? cat.textContent : 'Not selected';
+      document.getElementById('rev-pkg').textContent = pkgName;
+      document.getElementById('rev-plan').textContent = plan;
+      document.getElementById('nextBtn').textContent = 'Confirm & Go Live';
+    } else if(key==='success'){
+      document.getElementById('body-success').classList.add('active');
+      document.getElementById('actionsRow').style.display = 'none';
+    } else {
+      document.getElementById('body-'+key).classList.add('active');
+      document.getElementById('nextBtn').textContent = 'Continue';
+    }
+    document.querySelectorAll('.step').forEach(s=>{
+      const n = parseInt(s.dataset.step);
+      s.classList.toggle('active', n === key);
+      s.classList.toggle('done', typeof key === 'number' ? n < key : true);
+    });
+    document.getElementById('backBtn').style.visibility = idx===0 ? 'hidden' : 'visible';
+  }
+
+  function nextStep(){
+    let idx = order.indexOf(step);
+    if(idx < order.length - 1){
+      idx++;
+      step = order[idx];
+      showStep(idx);
+    }
+  }
+  function prevStep(){
+    let idx = order.indexOf(step);
+    if(idx > 0){
+      idx--;
+      step = order[idx];
+      showStep(idx);
+    }
+  }
+
+  showStep(0);
+</script>
+</body>
+</html>

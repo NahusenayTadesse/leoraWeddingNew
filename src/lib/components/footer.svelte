@@ -1,83 +1,85 @@
 <script lang="ts">
-	import { Heart, Mail, Phone, MapPin } from '@lucide/svelte';
+	// Column structure mirrors the PHP footer.
+	const columns = [
+		{
+			title: 'Platform',
+			links: [
+				['Marketplace', '/vendors'],
+				['Budget Estimator', '/budget-estimator'],
+				['Dashboard', '/dashboard'],
+				['Leora Card', '/card'],
+				['Pricing', '/pricing']
+			]
+		},
+		{
+			// Careers and Press were in the PHP footer but never had pages behind
+			// them — they 404'd there too. Dropped rather than shipped broken.
+			title: 'Company',
+			links: [
+				['About', '/about-us'],
+				['Contact', '/contact-us']
+			]
+		},
+		{
+			title: 'Support',
+			links: [
+				['FAQ', '/#faq'],
+				['Browse Vendors', '/vendors'],
+				['Vendor Sign Up', '/signup?role=vendor'],
+				['Vendor Portal', '/vendor-dashboard']
+			]
+		},
+		{
+			title: 'Legal',
+			links: [
+				['Terms of Service', '/terms'],
+				['Privacy Policy', '/privacy']
+			]
+		}
+	] as const;
 </script>
 
-<footer class="border-t border-leora-gold/10 bg-white pt-16 pb-8">
-	<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-		<div class="mb-12 grid gap-12 md:grid-cols-4">
-			<!-- Brand -->
-			<div class="col-span-2">
-				<a href="/" class="mb-4 flex items-center gap-2">
-					<div
-						class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-leora-gold to-leora-champagne"
+<footer class="bg-card mt-24 border-t">
+	<div class="mx-auto max-w-[1180px] px-5 py-16 sm:px-8">
+		<div class="grid gap-10 md:grid-cols-[1.6fr_repeat(4,1fr)]">
+			<div class="max-w-xs">
+				<div class="mb-3 flex items-center gap-2.5">
+					<span
+						class="from-leora-royal to-leora-navy font-display grid size-9.5 place-items-center rounded-[10px] bg-linear-160 text-lg font-extrabold text-(--leora-gold)"
 					>
-						<Heart class="h-5 w-5 fill-white text-white" />
-					</div>
-					<div class="flex flex-col">
-						<span class="font-display text-2xl font-semibold text-leora-charcoal">Leora</span>
-						<span class="text-xs tracking-widest text-leora-gold uppercase">Events</span>
-					</div>
-				</a>
-				<p class="mb-6 max-w-sm text-gray-600">
-					Ethiopia's premier luxury wedding planning platform. Making dream weddings come true
-					through technology and elegance.
+						L
+					</span>
+					<span class="font-display text-[17px] font-extrabold">Leora Events</span>
+				</div>
+				<p class="text-muted-foreground text-sm leading-relaxed">
+					Ethiopia's first technology-powered wedding platform.
 				</p>
-				<!-- <div class="flex gap-4">
-					{#each [Instagram, Youtube] as Icon}
-						<a
-							href="#"
-							class="flex h-10 w-10 items-center justify-center rounded-full bg-leora-ivory text-leora-charcoal transition-colors hover:bg-leora-gold hover:text-white"
-						>
-							<Icon class="h-5 w-5" />
-						</a>
-					{/each}
-				</div> -->
 			</div>
 
-			<!-- Quick Links -->
-			<div>
-				<h4 class="font-display mb-4 text-lg font-semibold">Quick Links</h4>
-				<ul class="space-y-2">
-					{#each [['Find Vendors', '/vendors'], ['Budget Planner', '/budget'], ['My Wedding', '/dashboard'], ['Vendor Portal', '/vendor-dashboard']] as [label, href]}
-						<li>
-							<a {href} class="text-gray-600 transition-colors hover:text-leora-gold">{label}</a>
-						</li>
-					{/each}
-				</ul>
-			</div>
-
-			<!-- Contact -->
-			<div>
-				<h4 class="font-display mb-4 text-lg font-semibold">Contact</h4>
-				<ul class="space-y-3 text-gray-600">
-					<li class="flex items-center gap-2">
-						<Mail class="h-4 w-4 shrink-0 text-leora-gold" />
-						<a href="mailto:hello@leora.events" class="transition-colors hover:text-leora-gold">
-							hello@leora.events
-						</a>
-					</li>
-					<li class="flex items-center gap-2">
-						<Phone class="h-4 w-4 shrink-0 text-leora-gold" />
-						+251 911 234 567
-					</li>
-					<li class="flex items-center gap-2">
-						<MapPin class="h-4 w-4 shrink-0 text-leora-gold" />
-						Addis Ababa, Ethiopia
-					</li>
-				</ul>
-			</div>
+			{#each columns as column (column.title)}
+				<div>
+					<h4 class="font-display mb-3.5 text-[13px] font-bold">{column.title}</h4>
+					<ul class="space-y-2.5">
+						{#each column.links as [label, href] (href)}
+							<li>
+								<a
+									{href}
+									class="text-muted-foreground hover:text-foreground text-[13.5px] transition-colors"
+								>
+									{label}
+								</a>
+							</li>
+						{/each}
+					</ul>
+				</div>
+			{/each}
 		</div>
 
 		<div
-			class="flex flex-col items-center justify-between gap-4 border-t border-leora-gold/10 pt-8 md:flex-row"
+			class="text-muted-foreground mt-12 flex flex-col items-center justify-between gap-3 border-t pt-7 text-[13px] sm:flex-row"
 		>
-			<p class="text-sm text-gray-500">
-				© {new Date().getFullYear()} Leora Events. All rights reserved.
-			</p>
-			<div class="flex gap-6 text-sm text-gray-500">
-				<a href="#" class="transition-colors hover:text-leora-gold">Privacy Policy</a>
-				<a href="#" class="transition-colors hover:text-leora-gold">Terms of Service</a>
-			</div>
+			<p>© {new Date().getFullYear()} Leora Events. All rights reserved.</p>
+			<p>Made for weddings across Ethiopia 🇪🇹</p>
 		</div>
 	</div>
 </footer>

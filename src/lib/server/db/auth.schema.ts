@@ -1,41 +1,19 @@
 import { relations } from 'drizzle-orm';
-import {
-	mysqlTable,
-	varchar,
-	text,
-	timestamp,
-	boolean,
-	index,
-	int,
-	datetime
-} from 'drizzle-orm/mysql-core';
+import { mysqlTable, varchar, text, timestamp, boolean, index, int, datetime } from 'drizzle-orm/mysql-core';
 import { sql } from 'drizzle-orm';
+import { roles } from './common';
 
-export const secureFields = {
-	isActive: boolean('is_active').default(true).notNull(),
-	createdBy: varchar('created_by', { length: 255 }).references(() => user.id, {
-		onDelete: 'set null'
-	}),
-	updatedBy: varchar('updated_by', { length: 255 }).references(() => user.id, {
-		onDelete: 'set null'
-	}),
-	createdAt: timestamp('created_at').defaultNow().notNull(),
-	updatedAt: timestamp('updated_at')
-		.default(sql`CURRENT_TIMESTAMP(3) on update CURRENT_TIMESTAMP(3)`)
-		.notNull(),
-	deletedAt: datetime('deleted_at'),
-	deletedBy: varchar('deleted_by', { length: 255 }).references(() => user.id, {
-		onDelete: 'set null'
-	})
-};
-export const idMaker = () => int('id').autoincrement().primaryKey();
-
-export const roles = mysqlTable('roles', {
-	id: int('id').autoincrement().primaryKey(),
-	name: varchar('name', { length: 32 }).notNull().unique(),
-	description: varchar('description', { length: 255 }),
-	isActive: boolean('is_active').default(true).notNull()
-});
+/**
+ * ⚠️  GENERATED FILE — `npm run auth:schema` rewrites this wholesale (--yes).
+ *
+ * Only better-auth's own tables belong here. Shared helpers (`secureFields`,
+ * `idMaker`, `userRef`) live in common.ts and role/permission tables in
+ * rbac.ts precisely so a regeneration cannot take the rest of the schema down
+ * with it. The one hand-added column below must be re-applied by hand after
+ * any regeneration:
+ *
+ *   user.roleId — FK to roles.id
+ */
 
 export const user = mysqlTable('user', {
 	id: varchar('id', { length: 36 }).primaryKey(),
@@ -43,6 +21,7 @@ export const user = mysqlTable('user', {
 	email: varchar('email', { length: 255 }).notNull().unique(),
 	emailVerified: boolean('email_verified').default(false).notNull(),
 	image: text('image'),
+	// hand-added — see the note above
 	roleId: int('role_id').references(() => roles.id, {
 		onDelete: 'set null'
 	}),
@@ -51,71 +30,10 @@ export const user = mysqlTable('user', {
 	banReason: text('ban_reason'),
 	banExpires: datetime('ban_expires'),
 	createdAt: timestamp('created_at', { fsp: 3 }).defaultNow().notNull(),
-	updatedAt: timestamp('updated_at')
+	updatedAt: timestamp('updated_at', { fsp: 3 })
 		.default(sql`CURRENT_TIMESTAMP(3) on update CURRENT_TIMESTAMP(3)`)
 		.notNull()
 });
-
-export const permissions = mysqlTable('permissions', {
-	id: int('id').autoincrement().primaryKey(),
-	name: varchar('name', { length: 50 }).notNull().unique(),
-	description: varchar('description', { length: 255 })
-});
-
-// 2. A join table to link roles to their permissions
-export const rolePermissions = mysqlTable('role_permissions', {
-	id: int('id').autoincrement().primaryKey(),
-	roleId: int('role_id')
-		.notNull()
-		.references(() => roles.id, { onDelete: 'cascade' }),
-	permissionId: int('permission_id')
-		.notNull()
-		.references(() => permissions.id, { onDelete: 'cascade' }),
-	...secureFields
-});
-
-export const specialPermissions = mysqlTable('special_permissions', {
-	id: int('id').autoincrement().primaryKey(),
-	userId: varchar('user_id', { length: 255 })
-		.notNull()
-		.references(() => user.id, { onDelete: 'cascade' }),
-	permissionId: int('permission_id')
-		.notNull()
-		.references(() => permissions.id, { onDelete: 'cascade' }),
-	...secureFields
-});
-
-export const rolesRelations = relations(roles, ({ many }) => ({
-	rolePermissions: many(rolePermissions)
-}));
-
-// 4. Define relations for the new tables
-export const permissionsRelations = relations(permissions, ({ many }) => ({
-	rolePermissions: many(rolePermissions),
-	specialPermissions: many(specialPermissions)
-}));
-
-export const specialPermissionsRelations = relations(specialPermissions, ({ one }) => ({
-	user: one(user, {
-		fields: [specialPermissions.userId],
-		references: [user.id]
-	}),
-	permission: one(permissions, {
-		fields: [specialPermissions.permissionId],
-		references: [permissions.id]
-	})
-}));
-
-export const rolePermissionsRelations = relations(rolePermissions, ({ one }) => ({
-	role: one(roles, {
-		fields: [rolePermissions.roleId],
-		references: [roles.id]
-	}),
-	permission: one(permissions, {
-		fields: [rolePermissions.permissionId],
-		references: [permissions.id]
-	})
-}));
 
 export const session = mysqlTable(
 	'session',
@@ -124,7 +42,7 @@ export const session = mysqlTable(
 		expiresAt: datetime('expires_at').notNull(),
 		token: varchar('token', { length: 255 }).notNull().unique(),
 		createdAt: timestamp('created_at', { fsp: 3 }).defaultNow().notNull(),
-		updatedAt: timestamp('updated_at')
+		updatedAt: timestamp('updated_at', { fsp: 3 })
 			.default(sql`CURRENT_TIMESTAMP(3) on update CURRENT_TIMESTAMP(3)`)
 			.notNull(),
 		ipAddress: text('ip_address'),
@@ -154,7 +72,7 @@ export const account = mysqlTable(
 		scope: text('scope'),
 		password: text('password'),
 		createdAt: timestamp('created_at', { fsp: 3 }).defaultNow().notNull(),
-		updatedAt: timestamp('updated_at')
+		updatedAt: timestamp('updated_at', { fsp: 3 })
 			.default(sql`CURRENT_TIMESTAMP(3) on update CURRENT_TIMESTAMP(3)`)
 			.notNull()
 	},
@@ -169,7 +87,7 @@ export const verification = mysqlTable(
 		value: text('value').notNull(),
 		expiresAt: datetime('expires_at').notNull(),
 		createdAt: timestamp('created_at', { fsp: 3 }).defaultNow().notNull(),
-		updatedAt: timestamp('updated_at')
+		updatedAt: timestamp('updated_at', { fsp: 3 })
 			.default(sql`CURRENT_TIMESTAMP(3) on update CURRENT_TIMESTAMP(3)`)
 			.notNull()
 	},

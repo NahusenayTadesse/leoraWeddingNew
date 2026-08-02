@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { formatPriceRange } from '$lib/price';
 	import { superForm } from 'sveltekit-superforms';
 	import { zod4Client } from 'sveltekit-superforms/adapters';
 	import { enhance as formEnhance } from '$app/forms';
@@ -210,11 +211,11 @@
 							</p>
 						{/if}
 
-						{#if data.vendor.priceRange}
+						{#if formatPriceRange(data.vendor.priceMin, data.vendor.priceMax)}
 							<Separator class="my-6" />
 							<div>
 								<p class="text-muted-foreground text-xs">Typical price range</p>
-								<p class="mt-1 font-medium">{data.vendor.priceRange}</p>
+								<p class="mt-1 font-medium">{formatPriceRange(data.vendor.priceMin, data.vendor.priceMax)}</p>
 							</div>
 						{/if}
 					</Card.Root>

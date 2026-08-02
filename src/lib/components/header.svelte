@@ -13,6 +13,7 @@
 	// Same five links as the PHP header, pointed at routes that exist.
 	const navLinks = [
 		{ label: 'Marketplace', href: '/vendors' },
+		{ label: 'Services', href: '/shop' },
 		{ label: 'Budget', href: '/budget-estimator' },
 		{ label: 'Planning', href: '/dashboard' },
 		{ label: 'Leora Card', href: '/card' },

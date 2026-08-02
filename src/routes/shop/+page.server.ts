@@ -163,6 +163,7 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 				ceiling: sql<string | null>`max(${priceAgg.maxPrice})`
 			})
 			.from(vendorServices)
+			.leftJoin(vendors, eq(vendors.id, vendorServices.vendorId))
 			.leftJoin(priceAgg, eq(priceAgg.serviceId, vendorServices.id))
 			.where(isListable)
 			.then((r) => r[0])

@@ -1,33 +1,52 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
-	import { ShareIcon, PlusIcon, CheckIcon, StoreIcon } from '@lucide/svelte';
+	import { enhance as formEnhance } from '$app/forms';
+	import {
+		ShareIcon,
+		CalendarPlusIcon,
+		StoreIcon,
+		BadgeCheckIcon,
+		StarIcon,
+		MapPinIcon,
+		HeartIcon,
+		MessageSquareIcon
+	} from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
-	import { useCart } from '$lib/hooks/cart.svelte.js';
 	import { assetUrl } from '$lib/assetUrl';
 
-	type PriceOption = { price: number | string; amount: number | string };
+	type PackageOption = { price: number | string; amount: number | string };
 	type SubCategory = { id: number; name: string; description?: string | null };
 
 	type Props = {
-		productId: number;
-		productName: string;
+		serviceId: number;
+		serviceName: string;
 		vendorId: number;
 		vendor: string;
+		vendorVerified?: boolean | null;
+		vendorRating?: number | null;
+		vendorReviewCount?: number;
+		vendorCity?: string | null;
+		isFavorite?: boolean;
 		price: number | string;
-		description: string;
+		description?: string | null;
 		image?: string | null;
 		category?: string | null;
 		images?: string[];
-		priceList?: PriceOption[];
+		priceList?: PackageOption[];
 		subs?: SubCategory[];
 	};
 
 	const {
-		productId,
-		productName,
+		serviceId,
+		serviceName,
 		vendorId,
 		vendor,
+		vendorVerified,
+		vendorRating,
+		vendorReviewCount = 0,
+		vendorCity,
+		isFavorite = false,
 		price,
 		description,
 		image,
@@ -37,11 +56,7 @@
 		subs = []
 	}: Props = $props();
 
-	const cart = useCart();
-
-	let justAdded = $state(false);
 	let displayImage = $state(image);
-	let quantity = $state(1);
 
 	let currentPrice = $state(typeof price === 'string' ? parseFloat(price) : price);
 	let currentAmount = $state<number | string>(priceList?.[0]?.amount ?? 1);
@@ -52,33 +67,10 @@
 		typeof currentPrice === 'string' ? parseFloat(currentPrice) : currentPrice
 	);
 	const formattedPrice = $derived(formatter.format(numericPrice));
-	const quantityInCart = $derived(cart.items.find((i) => i.productId === productId)?.quantity ?? 0);
 
-	function changePrice(product: PriceOption) {
-		currentPrice = typeof product.price === 'string' ? parseFloat(product.price) : product.price;
-		currentAmount = product.amount;
-	}
-
-	function addToCart() {
-		if (justAdded) return;
-		cart.addItem(
-			{
-				productId,
-				productName,
-				vendorId,
-				vendor,
-				price: numericPrice,
-				amount: typeof currentAmount === 'string' ? parseFloat(currentAmount) : currentAmount,
-				image,
-				category
-			},
-			quantity
-		);
-		justAdded = true;
-		toast.success(`${productName} added to cart`, {
-			description: `Sold by ${vendor} · ${quantityInCart + quantity} in cart`
-		});
-		setTimeout(() => (justAdded = false), 1500);
+	function selectPackage(pkg: PackageOption) {
+		currentPrice = typeof pkg.price === 'string' ? parseFloat(pkg.price) : pkg.price;
+		currentAmount = pkg.amount;
 	}
 
 	const handleShare = () => {
@@ -89,6 +81,54 @@
 
 <div class="min-h-dvh bg-linear-to-b from-background via-background to-muted/20">
 	<div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+		<!-- Vendor details -->
+		<div
+			class="bg-card mb-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-4 shadow-sm"
+		>
+			<a href="/vendors/{vendorId}" class="group flex min-w-0 items-center gap-3">
+				<div
+					class="bg-muted text-muted-foreground flex size-12 shrink-0 items-center justify-center rounded-full"
+				>
+					<StoreIcon class="size-6" />
+				</div>
+				<div class="min-w-0">
+					<div class="flex items-center gap-1.5 font-semibold group-hover:underline">
+						<span class="truncate">{vendor}</span>
+						{#if vendorVerified}
+							<BadgeCheckIcon class="text-primary size-4 shrink-0" />
+						{/if}
+					</div>
+					<div class="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+						{#if vendorReviewCount > 0}
+							<span class="flex items-center gap-1">
+								<StarIcon class="size-3.5 fill-amber-400 text-amber-400" />
+								{vendorRating?.toFixed(1)} ({vendorReviewCount})
+							</span>
+						{/if}
+						{#if vendorCity}
+							<span class="flex items-center gap-1">
+								<MapPinIcon class="size-3.5" />{vendorCity}
+							</span>
+						{/if}
+					</div>
+				</div>
+			</a>
+
+			<div class="flex shrink-0 gap-2">
+				<form method="POST" action="?/favorite" use:formEnhance>
+					<input type="hidden" name="vendorId" value={vendorId} />
+					<Button type="submit" variant="outline">
+						<HeartIcon class="mr-2 size-4 {isFavorite ? 'fill-red-500 text-red-500' : ''}" />
+						{isFavorite ? 'Saved' : 'Save'}
+					</Button>
+				</form>
+
+				<Button href="/wedding/messages?vendor={vendorId}" variant="outline">
+					<MessageSquareIcon class="mr-2 size-4" /> Message
+				</Button>
+			</div>
+		</div>
+
 		<div class="grid gap-8 lg:grid-cols-2 lg:gap-12">
 			<!-- Image Section -->
 			<div class="flex flex-col gap-4">
@@ -96,7 +136,7 @@
 					{#if displayImage}
 						<img
 							src={assetUrl(displayImage)}
-							alt={productName}
+							alt={serviceName}
 							class="aspect-square w-full object-cover transition-transform duration-300 hover:scale-105"
 						/>
 					{:else}
@@ -139,27 +179,21 @@
 				<!-- Title + vendor + price -->
 				<div class="space-y-3">
 					<div class="flex items-start justify-between gap-2">
-						<h1 class="text-4xl font-bold tracking-tight text-foreground">{productName}</h1>
+						<h1 class="text-4xl font-bold tracking-tight text-foreground">{serviceName}</h1>
 					</div>
-
-					<a
-						href="/shop/vendor/{vendorId}"
-						class="flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-primary"
-					>
-						<StoreIcon class="size-4" />
-						<span>{vendor}</span>
-					</a>
 
 					<div class="flex items-baseline gap-2">
 						<span class="text-3xl font-bold text-primary">{formattedPrice}</span>
 						{#if currentAmount && currentAmount !== 1}
-							<span class="text-sm text-muted-foreground">/ {currentAmount} units</span>
+							<span class="text-sm text-muted-foreground">/ {currentAmount}</span>
 						{/if}
 					</div>
 				</div>
 
 				<!-- Description -->
-				<p class="text-base leading-relaxed text-muted-foreground">{description}</p>
+				{#if description}
+					<p class="text-base leading-relaxed text-muted-foreground">{description}</p>
+				{/if}
 
 				<!-- Subcategories -->
 				{#if subs.length > 0}
@@ -184,22 +218,21 @@
 				{#if priceList.length > 0}
 					<div class="space-y-3">
 						<h3 class="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
-							Select Package
+							Select package
 						</h3>
 						<div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-							{#each priceList as product (product)}
-								{@const np =
-									typeof product.price === 'string' ? parseFloat(product.price) : product.price}
+							{#each priceList as pkg (pkg)}
+								{@const np = typeof pkg.price === 'string' ? parseFloat(pkg.price) : pkg.price}
 								{@const isActive = currentPrice === np}
 								<button
-									onclick={() => changePrice(product)}
+									onclick={() => selectPackage(pkg)}
 									class="group relative flex flex-col items-center justify-center rounded-2xl border-2 p-5 transition-all duration-200 ease-out
 										{isActive
 										? 'scale-[1.02] border-primary shadow-md'
 										: 'border-foreground/20 hover:border-primary/50 hover:shadow-sm'}"
 								>
 									<span class="text-xl font-black tracking-tight">
-										{product.amount}
+										{pkg.amount}
 									</span>
 									<span class="text-xs font-medium tracking-wider text-muted-foreground uppercase">
 										{formatter.format(np)}
@@ -217,46 +250,19 @@
 					</div>
 				{/if}
 
-				<!-- Quantity + actions -->
+				<!-- Actions -->
 				<div class="mt-auto flex flex-col gap-4">
-					<div class="flex items-center gap-4">
-						<span class="text-sm font-medium text-muted-foreground">Quantity</span>
-						<div class="flex items-center gap-2 rounded-lg border border-input bg-background p-1">
-							<button
-								onclick={() => quantity > 1 && quantity--}
-								class="flex size-8 items-center justify-center rounded transition-colors hover:bg-muted"
-								aria-label="Decrease quantity">−</button
-							>
-							<span class="w-8 text-center font-semibold">{quantity}</span>
-							<button
-								onclick={() => quantity++}
-								class="flex size-8 items-center justify-center rounded transition-colors hover:bg-muted"
-								aria-label="Increase quantity">+</button
-							>
-						</div>
-						{#if quantityInCart > 0}
-							<Badge variant="secondary">{quantityInCart} already in cart</Badge>
-						{/if}
-					</div>
-
 					<Button
+						href="/wedding/bookings?vendor={vendorId}&service={serviceId}"
 						class="w-full transition-all active:scale-95"
-						onclick={addToCart}
-						variant={justAdded ? 'outline' : 'default'}
-						disabled={justAdded}
 					>
-						{#if justAdded}
-							<CheckIcon class="mr-2 size-4 text-green-500" />
-							Added to Cart
-						{:else}
-							<PlusIcon class="mr-2 size-4" />
-							Add to Cart
-						{/if}
+						<CalendarPlusIcon class="mr-2 size-4" />
+						Book this service
 					</Button>
 
 					<Button variant="outline" class="w-full gap-2" onclick={handleShare}>
 						<ShareIcon size={18} />
-						Share Product
+						Share
 					</Button>
 				</div>
 			</div>

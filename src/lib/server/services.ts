@@ -35,11 +35,21 @@ export const priceAgg = db
 	.as('price_agg');
 
 /**
- * A service is publicly listable when it's active AND not soft-deleted.
+ * A service is publicly listable when it's active, not soft-deleted, AND its
+ * vendor is publicly visible too — the same `status = 'approved'` gate the
+ * `/vendors` directory uses (see `publicVendor` in vendorDirectory.ts). A
+ * vendor that's pending, suspended, rejected, deactivated or deleted must not
+ * leak into the shop just because their services are still active rows.
  * `secureFields` gives you `deletedAt` but nothing enforces it — every public
  * query needs this, so it lives in one place.
  */
-export const isListable = and(eq(vendorServices.isActive, true), isNull(vendorServices.deletedAt));
+export const isListable = and(
+	eq(vendorServices.isActive, true),
+	isNull(vendorServices.deletedAt),
+	eq(vendors.status, 'approved'),
+	eq(vendors.isActive, true),
+	isNull(vendors.deletedAt)
+);
 
 /** The column shape both the carousel and the shop grid render from. */
 export const serviceCardColumns = {

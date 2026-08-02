@@ -2,6 +2,27 @@ import { db } from '$lib/server/db';
 import { vendorBookings, vendors, vendorServices, bookingPayments } from '$lib/server/db/schema';
 import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 
+/** Vendor's contact user + display name, for the auto-generated booking-request message. */
+export async function getVendorForMessage(vendorId: number) {
+	const [row] = await db
+		.select({ userId: vendors.userId, businessName: vendors.businessName })
+		.from(vendors)
+		.where(eq(vendors.id, vendorId))
+		.limit(1);
+
+	return row ?? null;
+}
+
+export async function getServiceTitle(serviceId: number) {
+	const [row] = await db
+		.select({ title: vendorServices.title })
+		.from(vendorServices)
+		.where(eq(vendorServices.id, serviceId))
+		.limit(1);
+
+	return row?.title ?? null;
+}
+
 export async function listBookings(weddingPlanId: number) {
 	const rows = await db
 		.select({

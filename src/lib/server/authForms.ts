@@ -22,7 +22,7 @@ import { couples, roles, user, vendors } from '$lib/server/db/schema';
 
 /** Where each role lands after signing in, mirroring PHP's `dest` map. */
 const HOME_FOR_ROLE: Record<string, string> = {
-	Admin: '/dashboard',
+	Admin: '/admin',
 	Vendor: '/vendor-dashboard'
 };
 const DEFAULT_HOME = '/dashboard';

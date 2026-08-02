@@ -9,6 +9,7 @@
 	import * as Card from '$lib/components/ui/card';
 	import * as Tabs from '$lib/components/ui/tabs';
 	import * as Avatar from '$lib/components/ui/avatar';
+	import * as Select from '$lib/components/ui/select';
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Separator } from '$lib/components/ui/separator';
@@ -28,6 +29,17 @@
 	} from '@lucide/svelte';
 
 	let { data } = $props();
+
+	let selectedPackage = $state<Record<number, string>>({});
+
+	function packageFor(service: (typeof data.services)[number]) {
+		return selectedPackage[service.id] ?? service.prices[0]?.amount ?? '';
+	}
+
+	function priceFor(service: (typeof data.services)[number]) {
+		const amount = packageFor(service);
+		return service.prices.find((p) => p.amount === amount) ?? service.prices[0] ?? null;
+	}
 
 	let tab = $state('services');
 
@@ -132,6 +144,10 @@
 					{data.isFavorite ? 'Saved' : 'Save'}
 				</Button>
 			</form>
+
+			<Button href="/wedding/messages?vendor={data.vendor.id}" variant="outline">
+				<MessageSquare class="mr-2 size-4" /> Message
+			</Button>
 
 			<Button href="/wedding/bookings?vendor={data.vendor.id}">
 				<CalendarPlus class="mr-2 size-4" /> Request booking
@@ -416,4 +432,81 @@
 			</Card.Root>
 		</aside>
 	</div>
+
+	<!-- Services & packages -->
+	{#if data.services.length > 0}
+		<Separator class="my-10" />
+
+		<div>
+			<h2 class="text-2xl font-semibold tracking-tight">Services &amp; packages</h2>
+			<p class="text-muted-foreground mt-1 text-sm">
+				Pick a package and request a booking — the vendor confirms the date and price with you
+				directly.
+			</p>
+
+			<div class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+				{#each data.services as service (service.id)}
+					{@const cover = service.featuredImage || service.images[0]}
+					{@const chosen = priceFor(service)}
+					<Card.Root class="flex flex-col overflow-hidden p-0">
+						<div class="bg-muted aspect-video">
+							{#if cover}
+								<img
+									src={assetUrl(cover)}
+									alt={service.title}
+									loading="lazy"
+									class="size-full object-cover"
+								/>
+							{:else}
+								<div class="text-muted-foreground flex size-full items-center justify-center">
+									<Store class="size-8" />
+								</div>
+							{/if}
+						</div>
+
+						<div class="flex flex-1 flex-col p-4">
+							<h3 class="font-medium">{service.title}</h3>
+							{#if service.description}
+								<p class="text-muted-foreground mt-1 line-clamp-2 text-sm">
+									{service.description}
+								</p>
+							{/if}
+
+							{#if service.prices.length > 1}
+								<Select.Root
+									type="single"
+									value={packageFor(service)}
+									onValueChange={(v) => (selectedPackage[service.id] = v)}
+								>
+									<Select.Trigger class="mt-3 w-full">
+										{chosen ? `${chosen.amount} — ${etb(chosen.price)} ${service.currency}` : 'Choose a package'}
+									</Select.Trigger>
+									<Select.Content>
+										{#each service.prices as p (p.amount)}
+											<Select.Item value={p.amount}>
+												{p.amount} — {etb(p.price)} {service.currency}
+											</Select.Item>
+										{/each}
+									</Select.Content>
+								</Select.Root>
+							{:else if chosen}
+								<p class="mt-3 font-semibold">{etb(chosen.price)} {service.currency}</p>
+							{:else}
+								<p class="text-muted-foreground mt-3 text-sm">Contact for pricing</p>
+							{/if}
+
+							<div class="mt-auto pt-4">
+								<Button
+									class="w-full"
+									href="/wedding/bookings?vendor={data.vendor.id}&service={service.id}"
+								>
+									<CalendarPlus class="mr-1.5 size-4" /> Book
+								</Button>
+							</div>
+						</div>
+					</Card.Root>
+				{/each}
+			</div>
+		</div>
+	{/if}
 </div>

@@ -1,52 +1,34 @@
 <script lang="ts">
-	import {
-		LayoutDashboard,
-		Building2,
-		Sparkles,
-		PackageOpen,
-		CalendarClock,
-		CalendarCheck,
-		Heart,
-		MessageSquare
-	} from '@lucide/svelte';
+	import { LayoutDashboard, Building2, CreditCard, Heart } from '@lucide/svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import type { ComponentProps } from 'svelte';
 	import { page } from '$app/state';
 	import { bgGradient, selectItem } from '$lib/global.svelte';
 	import { fade } from 'svelte/transition';
 	import { useSidebar } from '$lib/components/ui/sidebar/index.js';
-	import { ScrollArea } from './ui/scroll-area/index';
 
 	let restProps: ComponentProps<typeof Sidebar.Root> = $props();
 
 	const navigation = [
-		{ title: 'Dashboard', url: '/vendor-dashboard', icon: LayoutDashboard },
-		{ title: 'Business Profile', url: '/vendor-dashboard/profile', icon: Building2 },
-		{ title: 'Services', url: '/vendor-dashboard/services', icon: Sparkles },
-		{ title: 'Packages', url: '/vendor-dashboard/packages', icon: PackageOpen },
-		{ title: 'Bookings', url: '/vendor-dashboard/bookings', icon: CalendarCheck },
-		{ title: 'Availability', url: '/vendor-dashboard/availability', icon: CalendarClock },
-		{ title: 'Messages', url: '/vendor-dashboard/messages', icon: MessageSquare }
+		{ title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
+		{ title: 'Vendors', url: '/admin/vendors', icon: Building2 },
+		{ title: 'Subscriptions', url: '/admin/subscriptions', icon: CreditCard }
 	];
-
-	// const navigation = filteredNavigation(originalNavigation, permList);
 
 	const on = 'bg-sidebar-primary text-sidebar-primary-foreground';
 	const off = 'text-sidebar-foreground';
 	/**
-	 * "Dashboard" is `/vendor-dashboard` itself, which is a prefix of every
-	 * other item's url — `startsWith` alone would light it up on every page.
-	 * It only matches exactly; every other item matches its own subtree.
+	 * "Dashboard" is `/admin` itself, which is a prefix of every other item's
+	 * url — `startsWith` alone would light it up on every page. It only
+	 * matches exactly; every other item matches its own subtree.
 	 */
 	function blacken(url: string) {
 		const currentPath = page.url.pathname;
-		if (url === '/vendor-dashboard') {
+		if (url === '/admin') {
 			return currentPath === url ? on : off;
 		}
 		return currentPath.startsWith(url) ? on : off;
 	}
-
-	let open = $state(false);
 
 	const sidebar = useSidebar();
 
@@ -78,7 +60,7 @@
 					</div>
 					<div class="flex flex-col">
 						<span class="font-display text-2xl font-semibold text-leora-charcoal">Leora</span>
-						<span class="text-xs tracking-widest text-leora-gold uppercase">Events</span>
+						<span class="text-xs tracking-widest text-leora-gold uppercase">Admin</span>
 					</div>
 				</a></Sidebar.GroupLabel
 			>

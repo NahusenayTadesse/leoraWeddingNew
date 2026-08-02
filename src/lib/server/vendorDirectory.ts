@@ -56,14 +56,16 @@ export async function featuredVendorIds() {
 
 type ListArgs = {
 	q?: string;
-	categoryId?: number;
+	categoryIds?: number[];
 	city?: string;
+	minRating?: number;
 	sort?: VendorSort;
 	page?: number;
 };
 
-export async function listVendors(args: ListArgs) {
-	const { q, categoryId, city, sort = 'recommended', page = 1 } = args;
+/** Shared WHERE builder so listVendors and listCategoryCounts stay in sync. */
+function directoryFilters(args: { q?: string; city?: string; minRating?: number }) {
+	const { q, city, minRating } = args;
 	const filters = [publicVendor];
 
 	if (q) {
@@ -72,8 +74,17 @@ export async function listVendors(args: ListArgs) {
 			or(like(vendors.businessName, needle), like(vendors.description, needle))!
 		);
 	}
-	if (categoryId) filters.push(eq(vendors.categoryId, categoryId));
 	if (city) filters.push(eq(vendors.city, city));
+	if (minRating) filters.push(gte(vendors.ratingAvg, minRating.toFixed(2)));
+
+	return filters;
+}
+
+export async function listVendors(args: ListArgs) {
+	const { q, categoryIds, city, minRating, sort = 'recommended', page = 1 } = args;
+	const filters = directoryFilters({ q, city, minRating });
+
+	if (categoryIds?.length) filters.push(inArray(vendors.categoryId, categoryIds));
 
 	const where = and(...filters);
 
@@ -118,6 +129,7 @@ export async function listVendors(args: ListArgs) {
 			isVerified: vendors.isVerified,
 			categoryId: vendors.categoryId,
 			categoryName: vendorCategories.name,
+			categoryIcon: vendorCategories.icon,
 			avgRating: vendors.ratingAvg,
 			reviewCount: vendors.reviewCount
 		})
@@ -176,7 +188,7 @@ async function coverImages(vendorIds: number[]) {
 export async function listDirectoryFilters() {
 	const [categories, cities] = await Promise.all([
 		db
-			.select({ id: vendorCategories.id, name: vendorCategories.name })
+			.select({ id: vendorCategories.id, name: vendorCategories.name, icon: vendorCategories.icon })
 			.from(vendorCategories)
 			.where(eq(vendorCategories.listable, true))
 			.orderBy(asc(vendorCategories.name)),
@@ -191,6 +203,23 @@ export async function listDirectoryFilters() {
 		categories,
 		cities: cities.map((c) => c.city).filter((c): c is string => !!c)
 	};
+}
+
+/**
+ * Per-category vendor counts for the current search/city/rating filters
+ * (everything except the category filter itself, so checking one category
+ * doesn't hide the counts for the others).
+ */
+export async function listCategoryCounts(args: { q?: string; city?: string; minRating?: number }) {
+	const filters = directoryFilters(args);
+
+	const rows = await db
+		.select({ categoryId: vendors.categoryId, total: count() })
+		.from(vendors)
+		.where(and(...filters))
+		.groupBy(vendors.categoryId);
+
+	return new Map(rows.map((r) => [r.categoryId, Number(r.total)]));
 }
 
 export async function getVendor(vendorId: number) {

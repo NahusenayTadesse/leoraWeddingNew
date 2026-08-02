@@ -9,11 +9,8 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input';
 	import { Save, ArrowRight, RotateCcw, Scale, TriangleAlert } from '@lucide/svelte';
-	import { useCart } from '$lib/hooks/cart.svelte.js';
 
 	let { data } = $props();
-
-	const cart = useCart();
 
 	// dataType: 'json' is required for the `allocations` array to survive the
 	// round trip. It makes the form JS-only, which is fine for a planner behind
@@ -74,16 +71,10 @@
 	const unassigned = $derived(Math.max(0, totalBudget - allocated));
 	const overAllocated = $derived(allocatedPercent > 100.001);
 
-	const committed = $derived(cart.totalPrice ?? 0);
-	const remaining = $derived(totalBudget - committed);
-	// Guarded: the old version divided by totalBudget and rendered NaN% before
-	// anything was typed.
-	const committedPct = $derived(totalBudget > 0 ? Math.min(100, (committed / totalBudget) * 100) : 0);
-
 	const perGuest = $derived(guestCount > 0 ? Math.round(totalBudget / guestCount) : 0);
 
 	const shopAllHref = $derived(
-		remaining > 0 ? `/shop?max=${Math.round(remaining)}&sort=price_desc` : '/shop'
+		unassigned > 0 ? `/shop?max=${Math.round(unassigned)}&sort=price_desc` : '/shop'
 	);
 
 	const etb = (n: number) => 'ETB ' + Math.round(n).toLocaleString();
@@ -221,41 +212,36 @@
 
 					<!-- Money summary. "Allocated" used to be a percentage of the budget
 					     compared against the budget, so it always read ~100%. These are
-					     three genuinely different numbers. -->
+					     two genuinely different numbers. -->
 					<dl class="space-y-3 border-t pt-5 text-sm">
 						<div class="flex items-baseline justify-between gap-2">
 							<dt class="text-muted-foreground">Planned across categories</dt>
 							<dd class="font-semibold tabular-nums">{etb(allocated)}</dd>
 						</div>
 						<div class="flex items-baseline justify-between gap-2">
-							<dt class="text-muted-foreground">In your cart</dt>
-							<dd class="font-semibold tabular-nums">{etb(committed)}</dd>
-						</div>
-						<div class="flex items-baseline justify-between gap-2">
 							<dt class="text-muted-foreground">Left to spend</dt>
 							<dd
-								class="font-semibold tabular-nums {remaining >= 0
-									? 'text-foreground'
-									: 'text-destructive'}"
+								class="font-semibold tabular-nums {overAllocated
+									? 'text-destructive'
+									: 'text-foreground'}"
 							>
-								{etb(Math.abs(remaining))}{remaining < 0 ? ' over' : ''}
+								{overAllocated ? `${etb(allocated - totalBudget)} over` : etb(unassigned)}
 							</dd>
 						</div>
 
 						<div
 							class="h-2 overflow-hidden rounded-full bg-muted"
 							role="progressbar"
-							aria-valuenow={Math.round(committedPct)}
+							aria-valuenow={Math.round(Math.min(100, allocatedPercent))}
 							aria-valuemin={0}
 							aria-valuemax={100}
-							aria-label="Share of budget already in your cart"
+							aria-label="Share of budget planned across categories"
 						>
 							<div
-								class="h-full rounded-full transition-[width] duration-500 motion-reduce:transition-none {remaining <
-								0
+								class="h-full rounded-full transition-[width] duration-500 motion-reduce:transition-none {overAllocated
 									? 'bg-destructive'
 									: 'bg-primary'}"
-								style="width: {committedPct}%"
+								style="width: {Math.min(100, allocatedPercent)}%"
 							></div>
 						</div>
 
@@ -420,7 +406,7 @@
 						<h2 class="font-display text-lg font-semibold">Ready to find vendors?</h2>
 						<p class="text-sm text-muted-foreground">
 							{#if totalBudget > 0}
-								We'll show listings priced under {etb(remaining > 0 ? remaining : totalBudget)}.
+								We'll show listings priced under {etb(unassigned > 0 ? unassigned : totalBudget)}.
 							{:else}
 								Set a budget above and we'll filter the marketplace to match.
 							{/if}

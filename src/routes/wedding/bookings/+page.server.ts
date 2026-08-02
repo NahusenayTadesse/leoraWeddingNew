@@ -2,18 +2,32 @@ import { fail, redirect } from '@sveltejs/kit';
 import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { db } from '$lib/server/db';
-import { vendorBookings, bookingPayments } from '$lib/server/db/schema';
+import { vendorBookings, bookingPayments, messages } from '$lib/server/db/schema';
 import { bookingSchema, bookingIdSchema, paymentSchema } from '$lib/schemas/booking';
 import {
 	listBookings,
 	listBookableVendors,
 	getBookingForWedding,
 	serviceBelongsToVendor,
+	getVendorForMessage,
+	getServiceTitle,
 	toDateInput
 } from '$lib/server/bookings';
 import { requireCoupleAndWedding } from '$lib/server/weddings';
+import { formatETB } from '$lib/money';
 import { and, eq, isNull } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
+
+/** Formats a `YYYY-MM-DD` date input as a calendar date, without UTC-shift. */
+function formatEventDate(dateStr: string) {
+	const [y, m, d] = dateStr.split('-').map(Number);
+	return new Date(y, m - 1, d).toLocaleDateString('en-US', {
+		weekday: 'long',
+		year: 'numeric',
+		month: 'long',
+		day: 'numeric'
+	});
+}
 
 export const load: PageServerLoad = async ({ parent }) => {
 	const { wedding } = await parent();
@@ -39,7 +53,7 @@ export const load: PageServerLoad = async ({ parent }) => {
 
 export const actions: Actions = {
 	request: async ({ request, locals }) => {
-		const { wedding } = await requireCoupleAndWedding(locals);
+		const { couple, wedding } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(bookingSchema), { id: 'booking' });
 		if (!form.valid) return fail(400, { form });
@@ -59,6 +73,21 @@ export const actions: Actions = {
 			createdBy: locals.user!.id,
 			updatedBy: locals.user!.id
 		});
+
+		// Drops a message in the shared thread so both sides have a written
+		// record of what was requested — visible in both inboxes since threads
+		// are keyed on (coupleId, vendorId), not on sender/receiver.
+		const vendor = await getVendorForMessage(form.data.vendorId);
+		if (vendor?.userId) {
+			const serviceTitle = form.data.serviceId ? await getServiceTitle(form.data.serviceId) : null;
+			await db.insert(messages).values({
+				senderId: locals.user!.id,
+				receiverId: vendor.userId,
+				coupleId: couple.id,
+				vendorId: form.data.vendorId,
+				body: `Booking requested: ${serviceTitle ?? 'General inquiry'} for ${formatEventDate(form.data.eventDate)}. Proposed price: ${formatETB(form.data.agreedPrice)}.`
+			});
+		}
 
 		return message(form, 'Booking request sent. The vendor will confirm shortly.');
 	},

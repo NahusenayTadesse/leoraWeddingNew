@@ -1,14 +1,16 @@
 import { db } from '$lib/server/db';
 import {
-	serviceCategories as productCategories,
-	vendorServices as products,
+	serviceCategories,
+	vendorServices,
+	vendors,
 	subCategories,
 	discounts,
 	prices,
-	serviceImages as productImages,
+	serviceImages,
 	categoryServices
 } from '$lib/server/db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
+import { isListable } from '$lib/server/services';
 import type { LayoutServerLoad } from './$types';
 
 import { error } from '@sveltejs/kit';
@@ -18,30 +20,34 @@ export const load: LayoutServerLoad = async ({ params }) => {
 
 	const result = await db
 		.select({
-			url: productImages.imageUrl
+			url: serviceImages.imageUrl
 		})
-		.from(productImages)
-		.where(eq(productImages.productId, Number(id)));
+		.from(serviceImages)
+		.where(eq(serviceImages.productId, Number(id)));
 
 	const images = result.map((img) => img.url);
 
-	const product = await db
+	const service = await db
 		.select({
-			productId: products.id,
-			productName: products.title,
+			serviceId: vendorServices.id,
+			serviceName: vendorServices.title,
+			vendorId: vendors.id,
+			vendor: vendors.businessName,
+			vendorVerified: vendors.isVerified,
 			price: sql<number>`MIN(${prices.price}) * (1 - COALESCE(${discounts.amount}, 0) / 100)`,
-			description: products.description,
-			category: productCategories.name,
-			image: products.featuredImage,
+			description: vendorServices.description,
+			category: serviceCategories.name,
+			image: vendorServices.featuredImage,
 			discountPercentage: discounts.amount,
 			discountName: discounts.name,
 			discountDescription: discounts.description
 		})
-		.from(products)
-		.leftJoin(productCategories, eq(productCategories.id, products.categoryId))
-		.leftJoin(prices, eq(prices.serviceId, products.id))
-		.leftJoin(discounts, eq(discounts.productId, products.id))
-		.where(eq(products.id, Number(id)))
+		.from(vendorServices)
+		.innerJoin(vendors, eq(vendors.id, vendorServices.vendorId))
+		.leftJoin(serviceCategories, eq(serviceCategories.id, vendorServices.categoryId))
+		.leftJoin(prices, eq(prices.serviceId, vendorServices.id))
+		.leftJoin(discounts, eq(discounts.productId, vendorServices.id))
+		.where(and(eq(vendorServices.id, Number(id)), isListable))
 		.then((rows) => rows[0]);
 
 	const currentSubs = await db
@@ -59,8 +65,11 @@ export const load: LayoutServerLoad = async ({ params }) => {
 			eq(categoryServices.serviceId, Number(id)) // This filters for your specific service
 		);
 
-	if (!product) {
-		error(404, 'Product not found');
+	// `price` is a bare MIN() with no GROUP BY, so a WHERE that matches zero
+	// rows still comes back as one row of nulls (standard SQL aggregate
+	// behaviour) rather than an empty result — check the id, not truthiness.
+	if (!service?.serviceId) {
+		error(404, 'Service not found');
 	}
 
 	const priceList = await db
@@ -73,7 +82,7 @@ export const load: LayoutServerLoad = async ({ params }) => {
 		.where(eq(prices.serviceId, Number(id)));
 
 	return {
-		product,
+		service,
 		priceList,
 		images,
 		result,

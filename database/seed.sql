@@ -450,6 +450,57 @@ INSERT IGNORE INTO vendor_packages (id, vendor_id, name, price, description, inc
   (10, 10, 'Leora Card Standard', 3000.00, 'Digital invitation with RSVP.',
        JSON_ARRAY('Custom design', 'Live countdown', 'RSVP tracking', 'Guest list export'));
 
+-- ============================================================================
+-- 8b. VENDOR SERVICES + PRICES — bookable listings shown in the shop grid and
+-- on each vendor's profile. `category_id` points at service_categories, not
+-- vendor_categories — see docs/schema-conventions.md. Every service uses the
+-- same placeholder image (files/service.webp) until vendors upload their own.
+-- ============================================================================
+
+INSERT IGNORE INTO vendor_services (id, vendor_id, category_id, title, featured_image, description, currency) VALUES
+  (1,  1, 1, 'Garden Ceremony Package',        'service.webp', 'Outdoor ceremony space for up to 300 guests, with seating and sound.', 'ETB'),
+  (2,  1, 1, 'Grand Ballroom Reception',       'service.webp', 'Indoor reception for up to 800 guests, with stage and lighting.', 'ETB'),
+  (3,  2, 1, 'Lakeside Garden Ceremony',       'service.webp', 'Outdoor ceremony lawn overlooking Lake Hawassa.', 'ETB'),
+  (4,  2, 1, 'Full Resort Buyout',             'service.webp', 'Exclusive use of the resort grounds for ceremony and reception.', 'ETB'),
+  (5,  3, 3, 'Half-Day Photography Coverage',  'service.webp', 'One photographer, six hours, ceremony only.', 'ETB'),
+  (6,  3, 3, 'Full-Day Photo & Video Package', 'service.webp', 'Two photographers and a videographer, ceremony through reception.', 'ETB'),
+  (7,  4, 3, 'Same-Day Edit Film',             'service.webp', 'Highlight film ready to screen at the reception.', 'ETB'),
+  (8,  4, 3, 'Cinematic Multi-Event Package',  'service.webp', 'Drone coverage across engagement, Melse and Kilikil.', 'ETB'),
+  (9,  5, 4, 'Classic Stage Decor',            'service.webp', 'Stage build, fabric draping and fresh florals.', 'ETB'),
+  (10, 5, 4, 'Full Venue Transformation',      'service.webp', 'Stage, aisle, guest tables and lounge decor.', 'ETB'),
+  (11, 6, 2, 'Traditional Buffet Menu',        'service.webp', 'Injera and five wots, salad station, soft drinks.', 'ETB'),
+  (12, 6, 2, 'Premium Mixed Menu',             'service.webp', 'Traditional and continental mains with full bar service.', 'ETB'),
+  (13, 7, 5, 'Bridal Habesha Kemis Rental',    'service.webp', 'Traditional bridal kemis with hand embroidery, made to measure.', 'ETB'),
+  (14, 7, 5, 'Full Bridal Party Package',      'service.webp', 'Bride, groom and full wedding party outfits.', 'ETB'),
+  (15, 8, 6, 'Traditional Azmari Evening',     'service.webp', 'Live azmari performers and eskista dancers, three hours.', 'ETB'),
+  (16, 8, 6, 'Full Band & Dancers Package',    'service.webp', 'Live band, azmari set and dancers for the full evening.', 'ETB'),
+  (17, 9, 7, 'Decorated Bridal Car',           'service.webp', 'One decorated bridal car with driver for the day.', 'ETB'),
+  (18, 10, 8, 'Digital Invitation Package',    'service.webp', 'Digital invitation with live countdown and RSVP tracking.', 'ETB'),
+  (19, 14, 3, 'Engagement Shoot Package',      'service.webp', 'One-hour engagement photo session, edited gallery included.', 'ETB'),
+  (20, 14, 3, 'Wedding Day Photography',       'service.webp', 'Full wedding day coverage, ceremony through reception.', 'ETB');
+
+INSERT IGNORE INTO prices (id, service_id, price, amount) VALUES
+  (1,  1, 350000.00,  'Garden Ceremony'),
+  (2,  2, 900000.00,  'Grand Ballroom'),
+  (3,  3, 180000.00,  'Lakeside Ceremony'),
+  (4,  4, 600000.00,  'Full Buyout'),
+  (5,  5, 40000.00,   'Half-Day Coverage'),
+  (6,  6, 150000.00,  'Full-Day Coverage'),
+  (7,  7, 35000.00,   'Same-Day Edit'),
+  (8,  8, 110000.00,  'Multi-Event Package'),
+  (9,  9, 25000.00,   'Classic Stage'),
+  (10, 10, 220000.00, 'Full Transformation'),
+  (11, 11, 450.00,    'Per Guest'),
+  (12, 12, 1400.00,   'Per Guest'),
+  (13, 13, 15000.00,  'Kemis Rental'),
+  (14, 14, 95000.00,  'Full Party Package'),
+  (15, 15, 20000.00,  'Azmari Evening'),
+  (16, 16, 85000.00,  'Full Evening Package'),
+  (17, 17, 8000.00,   'Bridal Car'),
+  (18, 18, 3000.00,   'Digital Invitation'),
+  (19, 19, 3000.00,   'Engagement Session'),
+  (20, 20, 25000.00,  'Wedding Day Coverage');
+
 INSERT IGNORE INTO testimonials (id, name, position, message) VALUES
   (1, 'Hana & Biniam', 'Married in Bahir Dar',
       'We booked our photographer, venue and decorator in one week — all through Leora. It felt like using a real product, not a directory.'),

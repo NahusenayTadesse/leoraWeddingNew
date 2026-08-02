@@ -45,6 +45,8 @@
 	let serviceItems = $state<{ value: string; name: string }[]>([]);
 	let loadingServices = $state(false);
 	let statusTab = $state('active');
+	/** Set by the `?service=` preselect; applied once that service's options finish loading. */
+	let pendingServiceId = $state<number | null>(null);
 
 	const sf = superForm(data.form, {
 		id: 'booking',
@@ -97,6 +99,11 @@
 			.then((items) => {
 				if (cancelled) return;
 				serviceItems = items;
+
+				if (pendingServiceId && items.some((i: { value: string }) => i.value === String(pendingServiceId))) {
+					$form.serviceId = pendingServiceId;
+				}
+				pendingServiceId = null;
 			})
 			.catch(() => {
 				if (!cancelled) serviceItems = [];
@@ -197,6 +204,7 @@ let preselectApplied = false; // plain let — not $state, so it's never a depen
 
 $effect(() => {
 	const preselect = Number(pageState.url.searchParams.get('vendor'));
+	const preselectService = Number(pageState.url.searchParams.get('service'));
 	if (!preselect || preselectApplied) return;
 	if (!data.vendorItems.some((v) => v.value === String(preselect))) return;
 
@@ -205,11 +213,13 @@ $effect(() => {
 	untrack(() => {
 		openBooking();
 		$form.vendorId = preselect;
+		if (preselectService) pendingServiceId = preselectService;
 	});
 
-	// drop the param so a refresh doesn't reopen the dialog
+	// drop the params so a refresh doesn't reopen the dialog
 	const url = new URL(pageState.url);
 	url.searchParams.delete('vendor');
+	url.searchParams.delete('service');
 	replaceState(url, pageState.state);
 });
 </script>

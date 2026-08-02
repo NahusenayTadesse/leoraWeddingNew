@@ -5,6 +5,7 @@ import { favoriteSchema } from '$lib/schemas/reviews';
 import {
 	listVendors,
 	listDirectoryFilters,
+	listCategoryCounts,
 	getFavoriteVendorIds,
 	toggleFavorite,
 	type VendorSort
@@ -15,17 +16,22 @@ const SORTS: VendorSort[] = ['recommended', 'rating', 'newest', 'name'];
 
 export const load: PageServerLoad = async ({ url, locals }) => {
 	const q = url.searchParams.get('q')?.trim() || undefined;
-	const categoryParam = Number(url.searchParams.get('category'));
-	const categoryId = Number.isInteger(categoryParam) && categoryParam > 0 ? categoryParam : undefined;
+	const categoryIds = (url.searchParams.get('category') ?? '')
+		.split(',')
+		.map(Number)
+		.filter((n) => Number.isInteger(n) && n > 0);
 	const city = url.searchParams.get('city')?.trim() || undefined;
+	const minRatingParam = Number(url.searchParams.get('minRating'));
+	const minRating = Number.isFinite(minRatingParam) && minRatingParam > 0 ? minRatingParam : 0;
 	const sortParam = url.searchParams.get('sort') as VendorSort;
 	const sort = SORTS.includes(sortParam) ? sortParam : 'recommended';
 	const pageParam = Number(url.searchParams.get('page'));
 	const page = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1;
 
-	const [result, filters, favoriteIds, favoriteForm] = await Promise.all([
-		listVendors({ q, categoryId, city, sort, page }),
+	const [result, filters, categoryCounts, favoriteIds, favoriteForm] = await Promise.all([
+		listVendors({ q, categoryIds, city, minRating, sort, page }),
 		listDirectoryFilters(),
+		listCategoryCounts({ q, city, minRating }),
 		locals.user ? getFavoriteVendorIds(locals.user.id) : Promise.resolve([]),
 		superValidate(zod4(favoriteSchema), { id: 'favorite' })
 	]);
@@ -34,10 +40,14 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		...result,
 		page,
 		filters: {
-			categoryItems: filters.categories.map((c) => ({ value: String(c.id), name: c.name })),
+			categoryItems: filters.categories.map((c) => ({
+				value: String(c.id),
+				name: c.name,
+				count: categoryCounts.get(c.id) ?? 0
+			})),
 			cityItems: filters.cities.map((c) => ({ value: c, name: c }))
 		},
-		applied: { q: q ?? '', categoryId: categoryId ?? null, city: city ?? '', sort },
+		applied: { q: q ?? '', categoryIds, city: city ?? '', sort, minRating },
 		favoriteIds,
 		isLoggedIn: !!locals.user,
 		favoriteForm

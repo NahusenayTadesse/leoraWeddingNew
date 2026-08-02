@@ -42,20 +42,25 @@
 <footer class="bg-card mt-24 border-t">
 	<div class="mx-auto max-w-[1180px] px-5 py-16 sm:px-8">
 		<div class="grid gap-10 md:grid-cols-[1.6fr_repeat(4,1fr)]">
-			<div class="max-w-xs">
-				<div class="mb-3 flex items-center gap-2.5">
-					<span
-						class="from-leora-royal to-leora-navy font-display grid size-9.5 place-items-center rounded-[10px] bg-linear-160 text-lg font-extrabold text-(--leora-gold)"
-					>
-						L
-					</span>
-					<span class="font-display text-[17px] font-extrabold">Leora Events</span>
-				</div>
-				<p class="text-muted-foreground text-sm leading-relaxed">
-					Ethiopia's first technology-powered wedding platform.
-				</p>
-			</div>
-
+		<a href="/" class="flex shrink-0 items-center gap-2.5">
+			<img
+				src="/leora-logo.jpg"
+				alt=""
+				width="38"
+				height="38"
+				class="size-9.5 rounded-[10px] object-cover"
+			/>
+			<span class="leading-tight">
+				<span class="font-display block text-[18px] font-extrabold tracking-[-0.01em]">
+					Leora Events
+				</span>
+				<small
+					class="text-muted-foreground mt-px hidden text-[9px] font-semibold tracking-[0.12em] uppercase sm:block"
+				>
+					Ethiopia's First Wedding Platform
+				</small>
+			</span>
+		</a>
 			{#each columns as column (column.title)}
 				<div>
 					<h4 class="font-display mb-3.5 text-[13px] font-bold">{column.title}</h4>

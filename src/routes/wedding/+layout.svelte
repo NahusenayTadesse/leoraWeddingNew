@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Heart, User, CalendarHeart, Wallet, Users, ListChecks, Store } from '@lucide/svelte';
+	import { Heart, User, CalendarHeart, Wallet, Users, ListChecks, Store, MessageSquare } from '@lucide/svelte';
 	import { cn } from '$lib/utils';
 	import * as Avatar from '$lib/components/ui/avatar';
 	import { Separator } from '$lib/components/ui/separator';
@@ -15,7 +15,8 @@
 		{ href: '/wedding/budget', label: 'Budget', icon: Wallet },
 		{ href: '/wedding/guests', label: 'Guests', icon: Users },
 		{ href: '/wedding/tasks', label: 'Tasks', icon: ListChecks },
-		{ href: '/wedding/bookings', label: 'Bookings', icon: Store }
+		{ href: '/wedding/bookings', label: 'Bookings', icon: Store },
+		{ href: '/wedding/messages', label: 'Messages', icon: MessageSquare }
 	];
 
 	const isActive = (href: string, exact = false) =>

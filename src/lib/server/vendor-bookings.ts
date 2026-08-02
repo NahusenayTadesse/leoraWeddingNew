@@ -214,6 +214,65 @@ export async function listCouplesForBooking() {
 	}));
 }
 
+export type VendorMessageThread = {
+	coupleId: number;
+	coupleName: string;
+	lastMessage: string;
+	lastAt: Date;
+	unread: number;
+};
+
+/** One thread per couple this vendor has exchanged messages with, newest first. */
+export async function listThreadsForVendor(
+	vendorId: number,
+	vendorUserId: string
+): Promise<VendorMessageThread[]> {
+	const rows = await db
+		.select({
+			coupleId: messages.coupleId,
+			receiverId: messages.receiverId,
+			body: messages.body,
+			isRead: messages.isRead,
+			createdAt: messages.createdAt
+		})
+		.from(messages)
+		.where(eq(messages.vendorId, vendorId))
+		.orderBy(asc(messages.createdAt));
+
+	const byCouple = new Map<number, typeof rows>();
+	for (const row of rows) {
+		if (!row.coupleId) continue;
+		const list = byCouple.get(row.coupleId) ?? [];
+		list.push(row);
+		byCouple.set(row.coupleId, list);
+	}
+
+	const coupleIds = [...byCouple.keys()];
+	if (coupleIds.length === 0) return [];
+
+	const coupleRows = await db
+		.select({ id: couples.id, brideName: couples.brideName, groomName: couples.groomName })
+		.from(couples)
+		.where(inArray(couples.id, coupleIds));
+	const coupleMap = new Map(coupleRows.map((c) => [c.id, c]));
+
+	return coupleIds
+		.map((coupleId) => {
+			const msgs = byCouple.get(coupleId)!;
+			const last = msgs[msgs.length - 1];
+			const couple = coupleMap.get(coupleId);
+			return {
+				coupleId,
+				coupleName:
+					[couple?.groomName, couple?.brideName].filter(Boolean).join(' & ') || 'Couple',
+				lastMessage: last.body,
+				lastAt: last.createdAt,
+				unread: msgs.filter((m) => m.receiverId === vendorUserId && !m.isRead).length
+			};
+		})
+		.sort((a, b) => b.lastAt.getTime() - a.lastAt.getTime());
+}
+
 /** The message thread between this vendor and one couple. */
 export async function listConversation(vendorId: number, coupleId: number) {
 	return db

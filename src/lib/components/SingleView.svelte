@@ -1,4 +1,6 @@
 <script>
+	import { assetUrl } from '$lib/assetUrl';
+
 	let { title, children, class: className = '', photo = '' } = $props();
 </script>
 
@@ -10,7 +12,7 @@
 		class="from-dark flex w-full flex-col items-center justify-start rounded-lg bg-linear-to-r from-gray-200 to-black px-8 py-6 text-white dark:from-gray-600"
 	>
 		{#if photo !== ''}
-			<img src="/files/{photo}" loading="lazy" class="h-48 w-48 rounded-full" alt="{title} photo" />
+			<img src={assetUrl(photo)} loading="lazy" class="h-48 w-48 rounded-full" alt="{title} photo" />
 		{/if}
 		<h1 class="text-center">{title}</h1>
 	</div>

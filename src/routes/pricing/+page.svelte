@@ -3,10 +3,22 @@
 	import * as Card from '$lib/components/ui/card';
 	import * as Accordion from '$lib/components/ui/accordion';
 	import { Badge } from '$lib/components/ui/badge';
-	import { Check } from '@lucide/svelte';
+	import { Check, Loader2 } from '@lucide/svelte';
 	import { toMoney } from '$lib/money';
+	import { superForm } from 'sveltekit-superforms/client';
+	import { toast } from 'svelte-sonner';
 
 	let { data } = $props();
+
+	const { enhance, delayed } = superForm(data.subscribeForm, {
+		onUpdated: ({ form: f }) => {
+			if (f.message?.type === 'success' && f.message.checkoutUrl) {
+				window.location.href = f.message.checkoutUrl;
+			} else if (f.message?.type === 'error') {
+				toast.error(f.message.text);
+			}
+		}
+	});
 
 	/** Golden is the recommended tier in the PHP pricing page. */
 	const HIGHLIGHTED = 'golden';
@@ -104,16 +116,29 @@
 							<Button variant="outline" class="w-full" disabled>Your current plan</Button>
 						{:else if toMoney(plan.price) === 0}
 							<Button href="/signup" variant="outline" class="w-full">Get started free</Button>
-						{:else}
-							<!-- Links carry a slug that exists in the catalog, so checkout
-							     can never silently fall back to a different plan. -->
-							<Button
-								href="/checkout?plan={plan.slug}"
-								variant={highlighted ? 'default' : 'outline'}
-								class="w-full"
-							>
-								Upgrade to {plan.name}
+						{:else if !data.hasUser}
+							<Button href="/login?redirectTo=/pricing" variant="outline" class="w-full">
+								Log in to upgrade
 							</Button>
+						{:else if !data.hasCouple}
+							<Button href="/wedding/profile" variant="outline" class="w-full">
+								Complete your profile to upgrade
+							</Button>
+						{:else}
+							<form method="POST" action="?/subscribe" use:enhance class="w-full">
+								<input type="hidden" name="planId" value={plan.id} />
+								<Button
+									type="submit"
+									variant={highlighted ? 'default' : 'outline'}
+									class="w-full"
+									disabled={$delayed}
+								>
+									{#if $delayed}
+										<Loader2 class="mr-2 size-4 animate-spin" />
+									{/if}
+									Upgrade to {plan.name}
+								</Button>
+							</form>
 						{/if}
 					</Card.Footer>
 				</Card.Root>

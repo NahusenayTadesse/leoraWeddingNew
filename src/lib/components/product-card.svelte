@@ -5,6 +5,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { PlusIcon, CheckIcon, ShoppingCartIcon, StoreIcon, PackageIcon } from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
+	import { assetUrl } from '$lib/assetUrl';
 
 	type Props = {
 		productId: number;
@@ -73,7 +74,7 @@
 		<a href="/shop/single/{productId}">
 			{#if image}
 				<img
-					src="/files/{image}"
+					src={assetUrl(image)}
 					alt={productName}
 					loading="lazy"
 					class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"

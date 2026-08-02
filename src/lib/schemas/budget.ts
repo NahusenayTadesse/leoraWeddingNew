@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const budgetItemSchema = z.object({
 	id: z.coerce.number().int().positive().optional(),
+	name: z.string().trim().min(2, 'Give this line item a name').max(150),
 	categoryId: z.coerce.number({ message: 'Choose a category' }).int().positive('Choose a category'),
 	plannedAmount: z.coerce
 		.number({ message: 'Enter an amount' })

@@ -6,6 +6,7 @@
 	import { fade } from 'svelte/transition';
 	import { filesProxy } from 'sveltekit-superforms';
 	import { CloudUpload } from '@lucide/svelte';
+	import { assetUrl } from '$lib/assetUrl';
 
 	let { form, name, errors, title = 'Upload Image', images = $bindable() } = $props();
 
@@ -146,7 +147,7 @@
 					>
 						<div class="relative aspect-square w-full overflow-hidden rounded-lg bg-muted">
 							<img
-								src="/files/{i}"
+								src={assetUrl(i)}
 								class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
 								alt="Product Gallery"
 								transition:fade

@@ -21,7 +21,8 @@
 
 	const SIDE_ITEMS = [
 		{ value: 'bride', name: "Bride's side" },
-		{ value: 'groom', name: "Groom's side" }
+		{ value: 'groom', name: "Groom's side" },
+		{ value: 'both', name: 'Both sides' }
 	];
 
 	let dialogOpen = $state(false);

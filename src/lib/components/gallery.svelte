@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Lightbox from './lightbox.svelte';
+	import { assetUrl } from '$lib/assetUrl';
 
 	/* 1.  each image has thumb + full -------------------------------------- */
 
@@ -27,7 +28,7 @@
 			onkeydown={(e) => e.key === 'Enter' && openLightbox(index)}
 		>
 			<img
-				src="/files/{image}"
+				src={assetUrl(image)}
 				alt="{title} gallery image"
 				loading="lazy"
 				class="h-64 w-full object-cover transition-transform duration-300 group-hover:scale-110"

@@ -8,7 +8,7 @@ import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ parent }) => {
 	const { couple, wedding } = await parent();
-	if (!couple) throw redirect(302, '/dashboard/profile');
+	if (!couple) throw redirect(302, '/wedding/profile');
 
 	// No wedding yet — show the setup path instead of empty widgets.
 	if (!wedding) {
@@ -19,9 +19,9 @@ export const load: PageServerLoad = async ({ parent }) => {
 	}
 
 	const [budgetItems, guests, tasks, bookings, recommended] = await Promise.all([
-		listBudgetItems(wedding.id),
-		listGuests(wedding.id),
-		listTasks(wedding.id),
+		listBudgetItems(couple.id),
+		listGuests(couple.id),
+		listTasks(couple.id),
 		listBookings(wedding.id),
 		listVendors({ sort: 'recommended', page: 1 })
 	]);
@@ -59,7 +59,7 @@ export const load: PageServerLoad = async ({ parent }) => {
 			daysAway: dayDiff(wedding.weddingDate),
 			city: wedding.city,
 			style: wedding.weddingStyle,
-			expectedGuests: wedding.expectedGuests ?? 0,
+			expectedGuests: wedding.guestCountEstimate ?? 0,
 			totalBudget: Number(wedding.totalBudget ?? 0)
 		},
 

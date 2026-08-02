@@ -19,28 +19,75 @@ export const addUser = z.object({
 });
 export type SignupSchema = typeof addUser;
 
+/**
+ * The vendor role tab on the combined auth card (leora-events-login.html)
+ * only ever collects a business name, email and password before handing off
+ * to the onboarding wizard — see `vendorOnboardingSchema` below for the rest.
+ */
 export const addVendor = z.object({
-	businessName: z.string('Name is Required').min(2).max(100),
-	phone: z.string('Phone is Required').min(10).max(15),
-	email: z.email('Email is Required'),
-	description: z.string().optional(),
-	city: z.number('City is Required').positive(),
-	subcity: z.number('City is Required').positive(),
-	vendorCategory: z.number('Vendor Category is Required').positive(),
-	street: z.string().optional(),
-	kebele: z.string().optional(),
-	buildingNumber: z.string().optional(),
-	houseNumber: z.number().optional(),
-	floor: z.number().optional(),
-	googleMapsUrl: z.url().optional(),
-
-	password: z.string('Password is required!')
+	businessName: z.string('Business name is required').min(2).max(100),
+	email: z.email('Email is required'),
+	password: z.string().min(8, { error: 'Password must be at least 8 characters' })
 });
 export type VendorSchema = typeof addVendor;
 
+/**
+ * superforms fills in an unset *required* number with `0`, which then shows
+ * up sitting in the input instead of the placeholder — so `categoryId` and
+ * `packagePrice` are `.optional()` here and enforced by the `.superRefine`
+ * below instead, keeping the wizard's steps visually empty until touched.
+ */
+const positiveNumber = z.coerce.number().positive().optional();
+
+/**
+ * The 4-step "Become a Vendor" wizard (leora-events-vendor-onboarding.html):
+ * Business Info -> Category -> First Listing -> Plan. Submitted once, at the
+ * end, from the review step — there is no server round-trip between steps.
+ */
+export const vendorOnboardingSchema = z
+	.object({
+		// Step 1 — Business Info. PHP collects a free-text city, not a
+		// structured address; the vendor can add a precise one later.
+		businessName: z.string('Business name is required').min(2).max(150),
+		city: z.string('City is required').min(2).max(100),
+		phone: z.string('Phone number is required').min(10).max(15),
+		email: z.email('Business email is required'),
+		description: z.string().max(1000).optional(),
+
+		// Step 2 — Category.
+		categoryId: positiveNumber,
+
+		// Step 3 — First Listing.
+		packageName: z.string('Package name is required').min(2).max(150),
+		packagePrice: positiveNumber,
+		packageCapacity: positiveNumber,
+		packageIncludes: z.string().max(1000).optional(),
+
+		// Step 4 — Plan. Absent/undefined means the free Starter tier.
+		planId: positiveNumber
+	})
+	.superRefine((data, ctx) => {
+		if (!data.categoryId) {
+			ctx.addIssue({ code: 'custom', message: 'Choose a category', path: ['categoryId'] });
+		}
+		if (!data.packagePrice) {
+			ctx.addIssue({
+				code: 'custom',
+				message: 'Starting price is required',
+				path: ['packagePrice']
+			});
+		}
+	});
+export type VendorOnboardingSchema = typeof vendorOnboardingSchema;
+
 export const loginSchema = z.object({
 	email: z.email({ error: 'Invalid email address' }),
-	password: z.string().min(8, { error: 'Password must be at least 8 characters' })
+	password: z.string().min(8, { error: 'Password must be at least 8 characters' }),
+	// "Remember me" on the login card — passed straight to better-auth, which
+	// uses it to decide between a persistent and a session-lifetime cookie.
+	// Defaulted rather than optional: the card binds a Checkbox to it, and
+	// `bind:checked={undefined}` is a hard runtime error in Svelte 5.
+	rememberMe: z.boolean().default(false)
 });
 export type LoginSchema = typeof loginSchema;
 

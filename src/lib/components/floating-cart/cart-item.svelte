@@ -3,6 +3,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { MinusIcon, PlusIcon, TrashIcon } from '@lucide/svelte';
 	import type { CartItem } from '$lib/hooks/cart.svelte.js';
+	import { assetUrl } from '$lib/assetUrl';
 
 	const { item }: { item: CartItem } = $props();
 	const cart = useCart();
@@ -20,7 +21,7 @@
 	<div class="flex items-start gap-3">
 		{#if item.image}
 			<img
-				src="/files/{item.image}"
+				src={assetUrl(item.image)}
 				alt={item.productName}
 				class="size-14 shrink-0 rounded-md border border-border/50 object-cover"
 			/>

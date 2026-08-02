@@ -2,7 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { db } from '$lib/server/db';
-import { vendorBookings, payments } from '$lib/server/db/schema';
+import { vendorBookings, bookingPayments } from '$lib/server/db/schema';
 import { bookingSchema, bookingIdSchema, paymentSchema } from '$lib/schemas/booking';
 import {
 	listBookings,
@@ -11,12 +11,13 @@ import {
 	serviceBelongsToVendor,
 	toDateInput
 } from '$lib/server/bookings';
+import { requireCoupleAndWedding } from '$lib/server/weddings';
 import { and, eq, isNull } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ parent }) => {
 	const { wedding } = await parent();
-	if (!wedding) throw redirect(302, '/dashboard/wedding');
+	if (!wedding) throw redirect(302, '/wedding/wedding');
 
 	const [bookings, vendorList, form, cancelForm, paymentForm] = await Promise.all([
 		listBookings(wedding.id),
@@ -38,8 +39,7 @@ export const load: PageServerLoad = async ({ parent }) => {
 
 export const actions: Actions = {
 	request: async ({ request, locals }) => {
-		const { wedding } = await parent();
-		if (!wedding) throw redirect(302, '/wedding/wedding');
+		const { wedding } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(bookingSchema), { id: 'booking' });
 		if (!form.valid) return fail(400, { form });
@@ -50,10 +50,10 @@ export const actions: Actions = {
 		}
 
 		await db.insert(vendorBookings).values({
-			weddingId: wedding.id,
+			weddingPlanId: wedding.id,
 			vendorId: form.data.vendorId,
 			serviceId: form.data.serviceId || null,
-			eventDate: new Date(`${form.data.eventDate}T00:00:00`),
+			eventDate: form.data.eventDate,
 			agreedPrice: form.data.agreedPrice.toFixed(2),
 			status: 'pending',
 			createdBy: locals.user!.id,
@@ -63,9 +63,8 @@ export const actions: Actions = {
 		return message(form, 'Booking request sent. The vendor will confirm shortly.');
 	},
 
-	cancel: async ({ request, locals, parent }) => {
-		const { wedding } = await parent();
-		if (!wedding) throw redirect(302, '/dashboard/wedding');
+	cancel: async ({ request, locals }) => {
+		const { wedding } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(bookingIdSchema), { id: 'cancel' });
 		if (!form.valid) return fail(400, { form });
@@ -83,7 +82,7 @@ export const actions: Actions = {
 			.where(
 				and(
 					eq(vendorBookings.id, form.data.id),
-					eq(vendorBookings.weddingId, wedding.id),
+					eq(vendorBookings.weddingPlanId, wedding.id),
 					isNull(vendorBookings.deletedAt)
 				)
 			);
@@ -91,9 +90,8 @@ export const actions: Actions = {
 		return message(form, 'Booking cancelled.');
 	},
 
-	pay: async ({ request, locals, parent }) => {
-		const { wedding } = await parent();
-		if (!wedding) throw redirect(302, '/dashboard/wedding');
+	pay: async ({ request, locals }) => {
+		const { wedding } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(paymentSchema), { id: 'payment' });
 		if (!form.valid) return fail(400, { form });
@@ -105,8 +103,8 @@ export const actions: Actions = {
 			return message(form, "You can't record a payment on a cancelled booking.", { status: 400 });
 		}
 
-		await db.insert(payments).values({
-			weddingId: wedding.id,
+		await db.insert(bookingPayments).values({
+			weddingPlanId: wedding.id,
 			bookingId: booking.id,
 			payerId: locals.user!.id,
 			payeeVendorId: booking.vendorId,

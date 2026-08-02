@@ -14,8 +14,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const form = await superValidate(
 		couple
 			? {
-					groomName: couple.groomName,
-					brideName: couple.brideName,
+					groomName: couple.groomName ?? '',
+					brideName: couple.brideName ?? '',
 					phone: couple.phone ?? '',
 					phone2: couple.phone2 ?? '',
 					email: couple.email ?? '',
@@ -59,7 +59,8 @@ export const actions: Actions = {
 			} else {
 				await db.insert(couples).values({
 					...values,
-					userId,
+					partner1UserId: userId,
+					inviteCode: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
 					createdBy: userId,
 					updatedBy: userId
 				});

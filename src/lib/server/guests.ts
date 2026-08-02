@@ -1,20 +1,27 @@
 import { db } from '$lib/server/db';
-import { weddingGuests } from '$lib/server/db/schema';
+import { guestLists } from '$lib/server/db/schema';
 import { and, asc, eq } from 'drizzle-orm';
 
-export async function listGuests(weddingId: number) {
-	return db
+/**
+ * `isConfirmed` is a derived convenience for the UI, which predates the
+ * three-state `rsvpStatus` column. "Confirmed" maps to rsvpStatus ===
+ * 'confirmed'; both 'pending' and 'declined' read as unconfirmed.
+ */
+export async function listGuests(coupleId: number) {
+	const rows = await db
 		.select()
-		.from(weddingGuests)
-		.where(eq(weddingGuests.weddingId, weddingId))
-		.orderBy(asc(weddingGuests.fullName));
+		.from(guestLists)
+		.where(eq(guestLists.coupleId, coupleId))
+		.orderBy(asc(guestLists.fullName));
+
+	return rows.map((g) => ({ ...g, isConfirmed: g.rsvpStatus === 'confirmed' }));
 }
 
-export async function assertGuestOwnership(guestId: number, weddingId: number) {
+export async function assertGuestOwnership(guestId: number, coupleId: number) {
 	const [row] = await db
-		.select({ id: weddingGuests.id })
-		.from(weddingGuests)
-		.where(and(eq(weddingGuests.id, guestId), eq(weddingGuests.weddingId, weddingId)))
+		.select({ id: guestLists.id })
+		.from(guestLists)
+		.where(and(eq(guestLists.id, guestId), eq(guestLists.coupleId, coupleId)))
 		.limit(1);
 
 	return !!row;

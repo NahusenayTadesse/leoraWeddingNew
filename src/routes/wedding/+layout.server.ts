@@ -8,16 +8,16 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 
 	const couple = await getCoupleByUserId(locals.user.id);
 
-	if (!couple && !url.pathname.startsWith('/dashboard/profile')) {
-		throw redirect(302, '/dashboard/profile');
+	if (!couple && !url.pathname.startsWith('/wedding/profile')) {
+		throw redirect(302, '/wedding/profile');
 	}
 
 	const wedding = couple ? await getWeddingByCoupleId(couple.id) : null;
 
 	// Pages that can't function without a wedding record.
-	const needsWedding = ['/dashboard/budget', '/dashboard/guests', '/dashboard/tasks', '/dashboard/bookings'];
+	const needsWedding = ['/wedding/budget', '/wedding/guests', '/wedding/tasks', '/wedding/bookings'];
 	if (!wedding && needsWedding.some((p) => url.pathname.startsWith(p))) {
-		throw redirect(302, '/dashboard/wedding');
+		throw redirect(302, '/wedding/wedding');
 	}
 
 	return {

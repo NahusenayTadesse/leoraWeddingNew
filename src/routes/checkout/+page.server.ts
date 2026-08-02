@@ -4,23 +4,30 @@ import { zod4 } from 'sveltekit-superforms/adapters';
 import { checkoutSchema } from '$lib/schemas/checkout';
 import { priceCart, createOrder } from '$lib/server/checkout';
 import { getCoupleByUserId } from '$lib/server/couples';
+import { chapa, encodeCheckoutToken, normalizeEthiopianPhone } from '$lib/server/chapa';
+import { addUser, loginSchema } from '$lib/ZodSchema';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const couple = locals.user ? await getCoupleByUserId(locals.user.id) : null;
 
-	const form = await superValidate(zod4(checkoutSchema));
+	const [form, signupForm, loginForm] = await Promise.all([
+		superValidate(zod4(checkoutSchema)),
+		superValidate(zod4(addUser)),
+		superValidate(zod4(loginSchema))
+	]);
 
-	// Keep your existing signupForm / loginForm lines here.
 	return {
 		form,
+		signupForm,
+		loginForm,
 		user: locals.user ?? null,
 		hasCouple: !!couple
 	};
 };
 
 export const actions: Actions = {
-	add: async ({ request, locals }) => {
+	add: async ({ request, locals, url }) => {
 		const form = await superValidate(request, zod4(checkoutSchema));
 
 		if (!locals.user) {
@@ -57,10 +64,49 @@ export const actions: Actions = {
 
 		const orderId = await createOrder(couple.id, locals.user.id, priced.lines);
 
-		return message(form, {
-			type: 'success',
-			text: 'Order placed. The vendors will confirm shortly.',
-			orderId
-		});
+		// The order is saved as 'pending' regardless of what happens next — a
+		// failed payment must never look like a lost order.
+		try {
+			const tx_ref = chapa.genTxRef();
+			const token = encodeCheckoutToken(tx_ref, orderId);
+			const [firstName, ...rest] = (locals.user.name || 'Guest Customer').trim().split(/\s+/);
+
+			const init = await chapa.initialize({
+				amount: priced.total.toFixed(2),
+				currency: 'ETB',
+				email: locals.user.email,
+				first_name: firstName,
+				last_name: rest.join(' ') || 'Customer',
+				phone_number: normalizeEthiopianPhone(couple.phone),
+				tx_ref,
+				return_url: `${url.origin}/checkout/confirm/${token}`,
+				customization: {
+					title: 'Leora Events',
+					// Chapa only accepts letters, numbers, hyphens, underscores, spaces
+					// and dots here — no '#' or em dash.
+					description: `Order ${orderId} - ${priced.lines.length} item${priced.lines.length === 1 ? '' : 's'}`
+				}
+			});
+
+			if (!init?.data?.checkout_url) {
+				throw new Error(init?.message || 'Payment initialization failed');
+			}
+
+			return message(form, {
+				type: 'success',
+				text: 'Redirecting you to Chapa to complete payment…',
+				checkoutUrl: init.data.checkout_url
+			});
+		} catch (err) {
+			console.error('Chapa initialize error:', err);
+			return message(
+				form,
+				{
+					type: 'error',
+					text: `Your order #${orderId} was saved, but payment could not be started. Please try again or contact support.`
+				},
+				{ status: 502 }
+			);
+		}
 	}
 };

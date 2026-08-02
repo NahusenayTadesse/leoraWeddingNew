@@ -20,7 +20,7 @@
 
 	const { form, errors, enhance, submitting } = sf;
 
-	const styleItems = WEDDING_STYLES.map((s) => ({ value: s, label: s }));
+	const styleItems = WEDDING_STYLES.map((s) => ({ value: s, name: s }));
 
 	const daysAway = $derived.by(() => {
 		if (!$form.weddingDate) return null;
@@ -104,7 +104,6 @@
 					name="weddingDate"
 					type="date"
 					oldDays={false}
-					futureDays={true}
 					year={true}
 				/>
 

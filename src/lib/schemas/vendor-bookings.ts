@@ -63,3 +63,31 @@ export const rescheduleSchema = z.object({
 
 export type ConfirmInput = z.infer<typeof confirmSchema>;
 export type CancelInput = z.infer<typeof cancelSchema>;
+
+/* ---------- full CRUD (direct add/edit/delete of a booking row) ---------- */
+
+export const vendorBookingStatus = z.enum(['pending', 'confirmed', 'cancelled']);
+
+export const vendorBookingAddSchema = z.object({
+	weddingPlanId: z.coerce.number().int().positive('Choose a couple'),
+	serviceId: z.preprocess(blankToUndefined, z.coerce.number().int().positive().optional()),
+	status: vendorBookingStatus.default('pending'),
+	agreedPrice: z.preprocess(blankToUndefined, money.optional()),
+	eventDate: z.preprocess(blankToUndefined, isoDate.optional())
+});
+
+export const vendorBookingEditSchema = vendorBookingAddSchema.extend({
+	id: bookingId
+});
+
+export type VendorBookingAddSchema = typeof vendorBookingAddSchema;
+export type VendorBookingEditSchema = typeof vendorBookingEditSchema;
+
+/* ---------- reply system ---------- */
+
+export const replySchema = z.object({
+	coupleId: z.coerce.number().int().positive(),
+	body: z.string().trim().min(1, 'Write a reply').max(2000, 'Keep it under 2000 characters')
+});
+
+export type ReplyInput = z.infer<typeof replySchema>;

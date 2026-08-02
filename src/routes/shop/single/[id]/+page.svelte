@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ProductDetail from '$lib/components/product-detail.svelte';
 	import Gallery from '$lib/components/gallery.svelte';
+	import { assetUrl } from '$lib/assetUrl';
 
 	// Set app hook
 
@@ -32,13 +33,13 @@
 	<meta property="og:type" content="product" />
 	<meta property="og:title" content="{data?.product.productName} - Amy Bakes" />
 	<meta property="og:description" content={data?.product.description} />
-	<meta property="og:image" content="/files/{data?.product.image}" />
+	<meta property="og:image" content={assetUrl(data?.product.image)} />
 	<meta property="product:price:amount" content={data?.product.price} />
 	<meta property="product:price:currency" content="ETB" />
 
 	<meta property="twitter:card" content="summary_large_image" />
 	<meta property="twitter:title" content={data?.product.productName} />
-	<meta property="twitter:image" content="/files/{data?.product.image}" />
+	<meta property="twitter:image" content={assetUrl(data?.product.image)} />
 
 	<!-- {@html `<script type="application/ld+json">${JSON.stringify(jsonLd)}<\/script>`} -->
 </svelte:head>

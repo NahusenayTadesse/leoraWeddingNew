@@ -2,19 +2,20 @@ import { fail, redirect } from '@sveltejs/kit';
 import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { db } from '$lib/server/db';
-import { weddingBudgetItems } from '$lib/server/db/schema';
+import { budgetItems } from '$lib/server/db/schema';
 import { budgetItemSchema, deleteItemSchema } from '$lib/schemas/budget';
 import { listBudgetItems, listBudgetCategories, assertItemOwnership } from '$lib/server/budget';
+import { requireCoupleAndWedding } from '$lib/server/weddings';
 import { and, eq } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ parent }) => {
-	const { wedding } = await parent();
-	if (!wedding) throw redirect(302, '/dashboard/wedding');
+	const { couple, wedding } = await parent();
+	if (!wedding) throw redirect(302, '/wedding/wedding');
 
 	const [items, categories, form, deleteForm] = await Promise.all([
-		listBudgetItems(wedding.id),
-		listBudgetCategories(),
+		listBudgetItems(couple!.id),
+		listBudgetCategories(couple!.id),
 		superValidate(zod4(budgetItemSchema), { id: 'item' }),
 		superValidate(zod4(deleteItemSchema), { id: 'delete' })
 	]);
@@ -29,56 +30,48 @@ export const load: PageServerLoad = async ({ parent }) => {
 };
 
 export const actions: Actions = {
-	save: async ({ request, parent }) => {
-		const { wedding } = await parent();
-		if (!wedding) throw redirect(302, '/dashboard/wedding');
+	save: async ({ request, locals }) => {
+		const { couple } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(budgetItemSchema), { id: 'item' });
 		if (!form.valid) return fail(400, { form });
 
 		const values = {
-			categoryId: form.data.categoryId,
-			plannedAmount: form.data.plannedAmount.toFixed(2),
-			actualAmount: form.data.actualAmount.toFixed(2),
+			name: form.data.name,
+			budgetCategoryId: form.data.categoryId,
+			estimatedCost: form.data.plannedAmount.toFixed(2),
+			actualCost: form.data.actualAmount.toFixed(2),
 			notes: form.data.notes || null
 		};
 
 		if (form.data.id) {
-			if (!(await assertItemOwnership(form.data.id, wedding.id))) {
+			if (!(await assertItemOwnership(form.data.id, couple!.id))) {
 				return fail(403, { form });
 			}
 			await db
-				.update(weddingBudgetItems)
+				.update(budgetItems)
 				.set(values)
-				.where(
-					and(
-						eq(weddingBudgetItems.id, form.data.id),
-						eq(weddingBudgetItems.weddingId, wedding.id)
-					)
-				);
+				.where(and(eq(budgetItems.id, form.data.id), eq(budgetItems.coupleId, couple!.id)));
 		} else {
-			await db.insert(weddingBudgetItems).values({ ...values, weddingId: wedding.id });
+			await db.insert(budgetItems).values({ ...values, coupleId: couple!.id });
 		}
 
 		return message(form, form.data.id ? 'Line item updated.' : 'Line item added.');
 	},
 
-	delete: async ({ request, parent }) => {
-		const { wedding } = await parent();
-		if (!wedding) throw redirect(302, '/dashboard/wedding');
+	delete: async ({ request, locals }) => {
+		const { couple } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(deleteItemSchema), { id: 'delete' });
 		if (!form.valid) return fail(400, { form });
 
-		if (!(await assertItemOwnership(form.data.id, wedding.id))) {
+		if (!(await assertItemOwnership(form.data.id, couple!.id))) {
 			return fail(403, { form });
 		}
 
 		await db
-			.delete(weddingBudgetItems)
-			.where(
-				and(eq(weddingBudgetItems.id, form.data.id), eq(weddingBudgetItems.weddingId, wedding.id))
-			);
+			.delete(budgetItems)
+			.where(and(eq(budgetItems.id, form.data.id), eq(budgetItems.coupleId, couple!.id)));
 
 		return message(form, 'Line item removed.');
 	}

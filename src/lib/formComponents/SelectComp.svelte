@@ -4,7 +4,7 @@
 
 	let { value = $bindable(), items, name } = $props();
 	function getItemNameById(items: any, value: any) {
-		const item = items.find((i) => i.value === value);
+		const item = items.find((i: Item) => i.value === value);
 		return item ? item.name : null; // returns null if not found
 	}
 

@@ -1,20 +1,21 @@
 import { db } from '$lib/server/db';
-import { weddingBudgetItems, budgetCategories } from '$lib/server/db/schema';
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { budgetItems, budgetCategories } from '$lib/server/db/schema';
+import { and, asc, eq, isNull, or } from 'drizzle-orm';
 
-export async function listBudgetItems(weddingId: number) {
+export async function listBudgetItems(coupleId: number) {
 	const rows = await db
 		.select({
-			id: weddingBudgetItems.id,
-			categoryId: weddingBudgetItems.categoryId,
+			id: budgetItems.id,
+			name: budgetItems.name,
+			categoryId: budgetItems.budgetCategoryId,
 			categoryName: budgetCategories.name,
-			plannedAmount: weddingBudgetItems.plannedAmount,
-			actualAmount: weddingBudgetItems.actualAmount,
-			notes: weddingBudgetItems.notes
+			plannedAmount: budgetItems.estimatedCost,
+			actualAmount: budgetItems.actualCost,
+			notes: budgetItems.notes
 		})
-		.from(weddingBudgetItems)
-		.innerJoin(budgetCategories, eq(weddingBudgetItems.categoryId, budgetCategories.id))
-		.where(eq(weddingBudgetItems.weddingId, weddingId))
+		.from(budgetItems)
+		.innerJoin(budgetCategories, eq(budgetItems.budgetCategoryId, budgetCategories.id))
+		.where(eq(budgetItems.coupleId, coupleId))
 		.orderBy(asc(budgetCategories.name));
 
 	// MySQL decimals arrive as strings.
@@ -25,20 +26,27 @@ export async function listBudgetItems(weddingId: number) {
 	}));
 }
 
-export async function listBudgetCategories() {
+/** System categories every couple sees, plus any this couple added themselves. */
+export async function listBudgetCategories(coupleId: number) {
 	return db
 		.select({ id: budgetCategories.id, name: budgetCategories.name })
 		.from(budgetCategories)
-		.where(and(eq(budgetCategories.isActive, true), isNull(budgetCategories.deletedAt)))
+		.where(
+			and(
+				or(eq(budgetCategories.isSystem, true), eq(budgetCategories.coupleId, coupleId)),
+				eq(budgetCategories.isActive, true),
+				isNull(budgetCategories.deletedAt)
+			)
+		)
 		.orderBy(asc(budgetCategories.name));
 }
 
-/** Confirms an item belongs to this wedding before mutating it. */
-export async function assertItemOwnership(itemId: number, weddingId: number) {
+/** Confirms an item belongs to this couple before mutating it. */
+export async function assertItemOwnership(itemId: number, coupleId: number) {
 	const [row] = await db
-		.select({ id: weddingBudgetItems.id })
-		.from(weddingBudgetItems)
-		.where(and(eq(weddingBudgetItems.id, itemId), eq(weddingBudgetItems.weddingId, weddingId)))
+		.select({ id: budgetItems.id })
+		.from(budgetItems)
+		.where(and(eq(budgetItems.id, itemId), eq(budgetItems.coupleId, coupleId)))
 		.limit(1);
 
 	return !!row;

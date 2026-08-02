@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Dialog, DialogContent, DialogTrigger } from '$lib/components/ui/dialog';
 	import { ImageIcon } from '@lucide/svelte';
+	import { assetUrl } from '$lib/assetUrl';
 
 	interface Props {
 		src: string;
@@ -30,7 +31,7 @@
 					</div>
 				{:else}
 					<img
-						src="/files/{src}"
+						src={assetUrl(src)}
 						{alt}
 						class="size-full object-cover transition-transform group-hover:scale-110"
 						onerror={handleError}
@@ -49,7 +50,7 @@
 					</div>
 				</div>
 			{:else}
-				<img src="/files/{src}" {alt} class="size-full object-contain" onerror={handleError} />
+				<img src={assetUrl(src)} {alt} class="size-full object-contain" onerror={handleError} />
 			{/if}
 		</div>
 		{#if alt && alt !== 'Image'}

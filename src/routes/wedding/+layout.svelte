@@ -4,6 +4,7 @@
 	import { cn } from '$lib/utils';
 	import * as Avatar from '$lib/components/ui/avatar';
 	import { Separator } from '$lib/components/ui/separator';
+	import { assetUrl } from '$lib/assetUrl';
 
 	let { data, children } = $props();
 
@@ -34,7 +35,7 @@
 			<div class="bg-card sticky top-6 rounded-xl border p-3">
 				<div class="flex items-center gap-3 px-2 py-3">
 					<Avatar.Root class="size-9">
-						<Avatar.Image src={data.user.image} alt={data.user.name} />
+						<Avatar.Image src={assetUrl(data.user.image)} alt={data.user.name} />
 						<Avatar.Fallback>{initials}</Avatar.Fallback>
 					</Avatar.Root>
 					<div class="min-w-0">

@@ -1,23 +1,12 @@
 <script lang="ts">
 	import {
-		User,
-		Users,
-		UserRoundCog,
-		ChartArea,
-		Calendar,
-		SquareChartGantt,
-		IdCardLanyard,
 		LayoutDashboard,
-		ShoppingBasket,
-		ListOrdered,
-		Banknote,
-		Heart,
-		BanknoteArrowUp,
-		ScanLine,
-		Clock,
-
-		Book
-
+		Building2,
+		Sparkles,
+		PackageOpen,
+		CalendarClock,
+		CalendarCheck,
+		Heart
 	} from '@lucide/svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import type { ComponentProps } from 'svelte';
@@ -27,38 +16,32 @@
 	import { useSidebar } from '$lib/components/ui/sidebar/index.js';
 	import { ScrollArea } from './ui/scroll-area/index';
 
-	let { ...restProps }: { restProps: ComponentProps<typeof Sidebar.Root> } = $props();
+	let restProps: ComponentProps<typeof Sidebar.Root> = $props();
 
 	const navigation = [
 		{ title: 'Dashboard', url: '/vendor-dashboard', icon: LayoutDashboard },
-		{ title: 'Sales', url: '/vendor-dashboard/sales', icon: BanknoteArrowUp },
-		{ title: 'Products', url: '/vendor-dashboard/products', icon: ShoppingBasket },
-		{
-			title: 'Orders',
-			url: '/vendor-dashboard/orders',
-			icon: ListOrdered
-		},
-
-		{ title: 'Availability', url: '/vendor-dashboard/calendar', icon: Clock },
-		{ title: 'Bookings', url: '/vendor-dashboard/bookings', icon: Book },
-
-		{ title: 'Transactions', url: '/vendor-dashboard/transactions', icon: ScanLine }
+		{ title: 'Business Profile', url: '/vendor-dashboard/profile', icon: Building2 },
+		{ title: 'Services', url: '/vendor-dashboard/services', icon: Sparkles },
+		{ title: 'Packages', url: '/vendor-dashboard/packages', icon: PackageOpen },
+		{ title: 'Bookings', url: '/vendor-dashboard/bookings', icon: CalendarCheck },
+		{ title: 'Availability', url: '/vendor-dashboard/availability', icon: CalendarClock }
 	];
 
 	// const navigation = filteredNavigation(originalNavigation, permList);
 
 	const on = 'bg-sidebar-primary text-sidebar-primary-foreground';
 	const off = 'text-sidebar-foreground';
+	/**
+	 * "Dashboard" is `/vendor-dashboard` itself, which is a prefix of every
+	 * other item's url — `startsWith` alone would light it up on every page.
+	 * It only matches exactly; every other item matches its own subtree.
+	 */
 	function blacken(url: string) {
 		const currentPath = page.url.pathname;
-
-		// Special case for root dashboard
-		if (url === '/dashboard') {
-			return currentPath === '/dashboard' ? on : off;
+		if (url === '/vendor-dashboard') {
+			return currentPath === url ? on : off;
 		}
-
-		// For other items, check if current path starts with their URL but is not just /dashboard
-		return currentPath.startsWith(url) && currentPath !== '/dashboard' ? on : off;
+		return currentPath.startsWith(url) ? on : off;
 	}
 
 	let open = $state(false);

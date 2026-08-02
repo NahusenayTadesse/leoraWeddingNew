@@ -6,9 +6,9 @@ import {
 	roles,
 	vendors,
 	couples,
-	weddings
+	weddingPlans
 } from '$lib/server/db/schema';
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull, or } from 'drizzle-orm';
 import { serviceCardQuery, isListable } from '$lib/server/services';
 import type { LayoutServerLoad } from './$types';
 
@@ -72,7 +72,15 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		db
 			.select({ id: couples.id, slug: couples.slug, verified: couples.verified })
 			.from(couples)
-			.where(and(eq(couples.userId, currentUser.id), isNull(couples.deletedAt)))
+			.where(
+				and(
+					or(
+						eq(couples.partner1UserId, currentUser.id),
+						eq(couples.partner2UserId, currentUser.id)
+					),
+					isNull(couples.deletedAt)
+				)
+			)
 			.limit(1)
 			.then((r) => r[0])
 	]);
@@ -80,8 +88,8 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 	const budget = couple
 		? await db
 				.select()
-				.from(weddings)
-				.where(eq(weddings.coupleId, couple.id))
+				.from(weddingPlans)
+				.where(and(eq(weddingPlans.coupleId, couple.id), isNull(weddingPlans.deletedAt)))
 				.limit(1)
 				.then((r) => r[0] ?? null)
 		: null;

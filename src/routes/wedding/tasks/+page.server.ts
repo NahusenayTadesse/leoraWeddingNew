@@ -2,7 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { db } from '$lib/server/db';
-import { weddingTasks } from '$lib/server/db/schema';
+import { tasks as tasksTable } from '$lib/server/db/schema';
 import { taskSchema, taskIdSchema, generateSchema } from '$lib/schemas/task';
 import {
 	listTasks,
@@ -11,15 +11,16 @@ import {
 	dueDateFor,
 	toDateInput
 } from '$lib/server/tasks';
-import { and, eq, not } from 'drizzle-orm';
+import { requireCoupleAndWedding } from '$lib/server/weddings';
+import { and, eq } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ parent }) => {
-	const { wedding } = await parent();
-	if (!wedding) throw redirect(302, '/dashboard/wedding');
+	const { couple, wedding } = await parent();
+	if (!wedding) throw redirect(302, '/wedding/wedding');
 
 	const [rows, templates, form, deleteForm, generateForm] = await Promise.all([
-		listTasks(wedding.id),
+		listTasks(couple!.id),
 		listTaskTemplates(),
 		superValidate(zod4(taskSchema), { id: 'task' }),
 		superValidate(zod4(taskIdSchema), { id: 'delete' }),
@@ -37,9 +38,8 @@ export const load: PageServerLoad = async ({ parent }) => {
 };
 
 export const actions: Actions = {
-	save: async ({ request, parent }) => {
-		const { wedding } = await parent();
-		if (!wedding) throw redirect(302, '/dashboard/wedding');
+	save: async ({ request, locals }) => {
+		const { couple } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(taskSchema), { id: 'task' });
 		if (!form.valid) return fail(400, { form });
@@ -47,59 +47,61 @@ export const actions: Actions = {
 		const values = {
 			title: form.data.title,
 			dueDate: form.data.dueDate ? new Date(`${form.data.dueDate}T00:00:00`) : null,
-			isConfirmed: form.data.isConfirmed
+			status: form.data.isConfirmed ? ('done' as const) : ('todo' as const)
 		};
 
 		if (form.data.id) {
-			if (!(await assertTaskOwnership(form.data.id, wedding.id))) return fail(403, { form });
+			if (!(await assertTaskOwnership(form.data.id, couple!.id))) return fail(403, { form });
 
 			await db
-				.update(weddingTasks)
+				.update(tasksTable)
 				.set(values)
-				.where(and(eq(weddingTasks.id, form.data.id), eq(weddingTasks.weddingId, wedding.id)));
+				.where(and(eq(tasksTable.id, form.data.id), eq(tasksTable.coupleId, couple!.id)));
 		} else {
-			await db.insert(weddingTasks).values({ ...values, weddingId: wedding.id });
+			await db.insert(tasksTable).values({ ...values, coupleId: couple!.id });
 		}
 
 		return message(form, form.data.id ? 'Task updated.' : 'Task added.');
 	},
 
-	toggle: async ({ request, parent }) => {
-		const { wedding } = await parent();
-		if (!wedding) throw redirect(302, '/dashboard/wedding');
+	toggle: async ({ request, locals }) => {
+		const { couple } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(taskIdSchema), { id: 'toggle' });
 		if (!form.valid) return fail(400, { form });
 
-		if (!(await assertTaskOwnership(form.data.id, wedding.id))) return fail(403, { form });
+		const [current] = await db
+			.select({ status: tasksTable.status })
+			.from(tasksTable)
+			.where(and(eq(tasksTable.id, form.data.id), eq(tasksTable.coupleId, couple!.id)))
+			.limit(1);
+		if (!current) return fail(403, { form });
 
 		await db
-			.update(weddingTasks)
-			.set({ isConfirmed: not(weddingTasks.isConfirmed) })
-			.where(and(eq(weddingTasks.id, form.data.id), eq(weddingTasks.weddingId, wedding.id)));
+			.update(tasksTable)
+			.set({ status: current.status === 'done' ? 'todo' : 'done' })
+			.where(and(eq(tasksTable.id, form.data.id), eq(tasksTable.coupleId, couple!.id)));
 
 		return { success: true };
 	},
 
-	delete: async ({ request, parent }) => {
-		const { wedding } = await parent();
-		if (!wedding) throw redirect(302, '/dashboard/wedding');
+	delete: async ({ request, locals }) => {
+		const { couple } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(taskIdSchema), { id: 'delete' });
 		if (!form.valid) return fail(400, { form });
 
-		if (!(await assertTaskOwnership(form.data.id, wedding.id))) return fail(403, { form });
+		if (!(await assertTaskOwnership(form.data.id, couple!.id))) return fail(403, { form });
 
 		await db
-			.delete(weddingTasks)
-			.where(and(eq(weddingTasks.id, form.data.id), eq(weddingTasks.weddingId, wedding.id)));
+			.delete(tasksTable)
+			.where(and(eq(tasksTable.id, form.data.id), eq(tasksTable.coupleId, couple!.id)));
 
 		return message(form, 'Task removed.');
 	},
 
-	generate: async ({ request, parent }) => {
-		const { wedding } = await parent();
-		if (!wedding) throw redirect(302, '/dashboard/wedding');
+	generate: async ({ request, locals }) => {
+		const { couple, wedding } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(generateSchema), { id: 'generate' });
 		if (!form.valid) return fail(400, { form });
@@ -108,10 +110,7 @@ export const actions: Actions = {
 			return message(form, 'Set your wedding date first.', { status: 400 });
 		}
 
-		const [templates, existing] = await Promise.all([
-			listTaskTemplates(),
-			listTasks(wedding.id)
-		]);
+		const [templates, existing] = await Promise.all([listTaskTemplates(), listTasks(couple!.id)]);
 
 		const taken = new Set(existing.map((t) => (t.title ?? '').trim().toLowerCase()));
 		const weddingDate = new Date(wedding.weddingDate);
@@ -119,17 +118,20 @@ export const actions: Actions = {
 		const toInsert = templates
 			.filter((t) => t.title && !taken.has(t.title.trim().toLowerCase()))
 			.map((t) => ({
-				weddingId: wedding.id,
+				coupleId: couple!.id,
+				taskCategoryId: t.taskCategoryId,
 				title: t.title!,
+				description: t.description,
 				dueDate: dueDateFor(weddingDate, t.daysBeforeWedding),
-				isConfirmed: false
+				priority: t.priority,
+				status: 'todo' as const
 			}));
 
 		if (toInsert.length === 0) {
 			return message(form, 'Your checklist already has every suggested task.');
 		}
 
-		await db.insert(weddingTasks).values(toInsert);
+		await db.insert(tasksTable).values(toInsert);
 
 		return message(form, `Added ${toInsert.length} task${toInsert.length === 1 ? '' : 's'}.`);
 	}

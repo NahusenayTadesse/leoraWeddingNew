@@ -1,46 +1,95 @@
-import { auth } from '$lib/server/auth';
-import { redirect } from 'sveltekit-flash-message/server';
-
-import type { Actions, PageServerLoad } from './$types';
+import { and, count, desc, eq, gte, isNull } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { vendorServices as products, orders, orderItems } from '$lib/server/db/schema';
-import { lte, and, sql, eq } from 'drizzle-orm';
-export const load: PageServerLoad = async () => {
-	const dailyStats = await db
-		.select({
-			totalOrders: sql<number>`count(distinct ${orders.id})`,
-			totalItemsSold: sql<number>`coalesce(sum(${orderItems.quantity}), 0)`,
-			totalRevenue: sql<number>`coalesce(sum(${orderItems.price} * ${orderItems.quantity}), 0)`,
-			averageOrderValue: sql<number>`
-              coalesce(
-                  sum(${orderItems.price} * ${orderItems.quantity})
-                  / nullif(count(distinct ${orders.id}), 0),
-                  0
-              )
-          `,
-			// Replaced sum() with sql equivalent
-			totalPaymentsCollected: sql<number>`coalesce(sum(${orderItems.price} * ${orderItems.quantity}), 0)`
-		})
-		.from(orders)
-		.leftJoin(orderItems, eq(orders.id, orderItems.orderId))
+import {
+	vendorBookings,
+	vendorPackages,
+	vendorServices,
+	vendorWallets,
+	weddingPlans,
+	couples
+} from '$lib/server/db/schema';
+import type { PageServerLoad } from './$types';
+
+const todayISO = () => new Date().toISOString().slice(0, 10);
+
+export const load: PageServerLoad = async ({ parent }) => {
+	const { vendor } = await parent();
+	const today = todayISO();
+
+	const [
+		statusRows,
+		[wallet],
+		[{ serviceCount }],
+		[{ packageCount }],
+		recentBookings
+	] = await Promise.all([
+		db
+			.select({ status: vendorBookings.status, c: count() })
+			.from(vendorBookings)
+			.where(and(eq(vendorBookings.vendorId, vendor.id), isNull(vendorBookings.deletedAt)))
+			.groupBy(vendorBookings.status),
+
+		db
+			.select({ balance: vendorWallets.balance })
+			.from(vendorWallets)
+			.where(eq(vendorWallets.vendorId, vendor.id))
+			.limit(1),
+
+		db
+			.select({ serviceCount: count() })
+			.from(vendorServices)
+			.where(and(eq(vendorServices.vendorId, vendor.id), isNull(vendorServices.deletedAt))),
+
+		db
+			.select({ packageCount: count() })
+			.from(vendorPackages)
+			.where(and(eq(vendorPackages.vendorId, vendor.id), isNull(vendorPackages.deletedAt))),
+
+		db
+			.select({
+				id: vendorBookings.id,
+				status: vendorBookings.status,
+				eventDate: vendorBookings.eventDate,
+				agreedPrice: vendorBookings.agreedPrice,
+				createdAt: vendorBookings.createdAt,
+				groomName: couples.groomName,
+				brideName: couples.brideName
+			})
+			.from(vendorBookings)
+			.leftJoin(weddingPlans, eq(weddingPlans.id, vendorBookings.weddingPlanId))
+			.leftJoin(couples, eq(couples.id, weddingPlans.coupleId))
+			.where(and(eq(vendorBookings.vendorId, vendor.id), isNull(vendorBookings.deletedAt)))
+			.orderBy(desc(vendorBookings.createdAt))
+			.limit(5)
+	]);
+
+	const byStatus = Object.fromEntries(statusRows.map((s) => [s.status, s.c]));
+	const upcomingConfirmed = await db
+		.select({ c: count() })
+		.from(vendorBookings)
 		.where(
 			and(
-				eq(orders.status, 'delivered'),
-				sql`${orders.createdAt} >= CURRENT_DATE()`,
-				sql`${orders.createdAt} < CURRENT_DATE() + INTERVAL 1 DAY`
+				eq(vendorBookings.vendorId, vendor.id),
+				eq(vendorBookings.status, 'confirmed'),
+				gte(vendorBookings.eventDate, today),
+				isNull(vendorBookings.deletedAt)
 			)
 		)
-		.then((rows) => rows[0]);
-	return {
-		dailyStats
-	};
-};
+		.then((r) => r[0]?.c ?? 0);
 
-export const actions: Actions = {
-	logout: async (event) => {
-		await auth.api.signOut({
-			headers: event.request.headers
-		});
-		redirect('/login', { type: 'success', message: 'Logout Successful' }, event.cookies);
-	}
+	return {
+		stats: {
+			pending: byStatus.pending ?? 0,
+			confirmedUpcoming: upcomingConfirmed,
+			totalBookings: (byStatus.pending ?? 0) + (byStatus.confirmed ?? 0) + (byStatus.cancelled ?? 0),
+			walletBalance: Number(wallet?.balance ?? 0),
+			serviceCount,
+			packageCount
+		},
+		recentBookings: recentBookings.map((b) => ({
+			...b,
+			agreedPrice: b.agreedPrice ? Number(b.agreedPrice) : null,
+			coupleNames: [b.groomName, b.brideName].filter(Boolean).join(' & ') || 'Couple'
+		}))
+	};
 };

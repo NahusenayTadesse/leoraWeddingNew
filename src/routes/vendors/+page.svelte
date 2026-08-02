@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { formatPriceRange } from '$lib/price';
+	import { assetUrl } from '$lib/assetUrl';
 	import { goto } from '$app/navigation';
 	import { page as pageState } from '$app/state';
 	import { enhance as formEnhance } from '$app/forms';
@@ -167,7 +168,7 @@
 						<div class="bg-muted relative aspect-4/3 overflow-hidden">
 							{#if vendor.cover}
 								<img
-									src="/files/{vendor.cover}"
+									src={assetUrl(vendor.cover)}
 									alt={vendor.businessName}
 									loading="lazy"
 									class="size-full object-cover transition-transform duration-300 group-hover:scale-105"

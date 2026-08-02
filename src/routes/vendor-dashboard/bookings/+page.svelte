@@ -1,675 +1,667 @@
 <script lang="ts">
 	import { superForm } from 'sveltekit-superforms';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import InputComp from '$lib/formComponents/InputComp.svelte';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
+	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
-	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import * as Tabs from '$lib/components/ui/tabs/index.js';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { Separator } from '$lib/components/ui/separator/index.js';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Textarea } from '$lib/components/ui/textarea/index.js';
+	import InputComp from '$lib/formComponents/InputComp.svelte';
+	import Errors from '$lib/formComponents/Errors.svelte';
+	import { toast } from 'svelte-sonner';
 	import {
-		Search,
-		Phone,
-		Mail,
-		Users,
-		MapPin,
-		CalendarDays,
-		CircleAlert,
-		CircleCheck,
-		TriangleAlert,
-		FileText,
+		Plus,
+		Pencil,
+		Trash2,
+		Loader2,
+		CalendarClock,
+		MoreVertical,
 		Check,
 		X,
-		Clock,
-		ChevronLeft,
-		ChevronRight
+		Send,
+		MessageCircle,
+		CalendarSearch
 	} from '@lucide/svelte';
 
 	let { data } = $props();
 
-	/* ---------- formatting ---------- */
-
-	const gregorian = new Intl.DateTimeFormat('en-GB', {
-		day: 'numeric',
-		month: 'short',
-		year: 'numeric'
-	});
-
-	function ethiopic(iso: string | null) {
-		if (!iso) return '';
-		try {
-			return new Intl.DateTimeFormat('am-ET-u-ca-ethiopic', {
-				day: 'numeric',
-				month: 'long',
-				year: 'numeric'
-			}).format(new Date(`${iso}T00:00:00`));
-		} catch {
-			return '';
-		}
-	}
-
-	function fmtDate(iso: string | null) {
-		if (!iso) return 'No date set';
-		return gregorian.format(new Date(`${iso}T00:00:00`));
-	}
-
-	const birr = (n: number) =>
-		`${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)} ETB`;
-
-	function daysAway(iso: string | null) {
-		if (!iso) return null;
-		const diff = Math.round((Date.parse(iso) - Date.parse(data.today)) / 86_400_000);
-		if (diff === 0) return 'Today';
-		if (diff === 1) return 'Tomorrow';
-		if (diff < 0) return `${Math.abs(diff)}d ago`;
-		return `in ${diff}d`;
-	}
-
-	const coupleName = (b: { groomName: string | null; brideName: string | null }) =>
-		[b.groomName, b.brideName].filter(Boolean).join(' & ') || 'Unnamed couple';
-
-	const statusStyle: Record<string, string> = {
-		pending: 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400',
-		confirmed: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
-		cancelled: 'border-destructive/40 bg-destructive/10 text-destructive'
-	};
-
-	/* ---------- filter links ---------- */
-
-	const tabs = [
-		{ key: 'upcoming', label: 'Upcoming' },
-		{ key: 'pending', label: 'Pending' },
-		{ key: 'confirmed', label: 'Confirmed' },
-		{ key: 'past', label: 'Past' },
-		{ key: 'cancelled', label: 'Cancelled' },
-		{ key: 'all', label: 'All' }
+	const statusItems = [
+		{ value: 'pending', name: 'Pending' },
+		{ value: 'confirmed', name: 'Confirmed' },
+		{ value: 'cancelled', name: 'Cancelled' }
 	];
 
-	function qs(overrides: Record<string, string | number | undefined>) {
-		const p = new URLSearchParams(page.url.searchParams);
-		for (const [k, v] of Object.entries(overrides)) {
-			if (v === undefined || v === '') p.delete(k);
-			else p.set(k, String(v));
-		}
-		if (!('page' in overrides)) p.delete('page');
-		const s = p.toString();
-		return s ? `?${s}` : '?';
+	function statusVariant(status: string) {
+		if (status === 'confirmed') return 'default';
+		if (status === 'cancelled') return 'destructive';
+		return 'secondary';
 	}
 
-	/* ---------- dialog ---------- */
+	function formatPrice(v: number | null) {
+		if (v == null) return '—';
+		return new Intl.NumberFormat('en-ET', { style: 'currency', currency: 'ETB', currencyDisplay: 'code' }).format(v);
+	}
 
-	type Booking = (typeof data.bookings)[number];
-	type Mode = 'view' | 'confirm' | 'cancel' | 'quote' | 'reschedule';
+	/* ---------------- filters (GET, reruns load) ---------------- */
 
-	let open = $state(false);
-	let selectedId = $state<number | null>(null);
-	let mode = $state<Mode>('view');
+	let q = $state(data.filters.q);
+	let serviceId = $state(data.filters.serviceId ? String(data.filters.serviceId) : '');
+	let sort = $state(data.filters.sort);
 
-	const selected = $derived(data.bookings.find((b) => b.id === selectedId) ?? null);
+	function applyFilters(overrides: Record<string, string> = {}) {
+		const params = new URLSearchParams(page.url.searchParams);
+		const next = { tab: data.filters.tab, q, serviceId, sort, page: '1', ...overrides };
+		for (const [key, value] of Object.entries(next)) {
+			if (value) params.set(key, value);
+			else params.delete(key);
+		}
+		goto(`?${params.toString()}`, { keepFocus: true, noScroll: true });
+	}
 
-	const confirm = superForm(data.confirmForm, {
+	function changeTab(tab: string) {
+		applyFilters({ tab });
+	}
+
+	function changePage(delta: number) {
+		const params = new URLSearchParams(page.url.searchParams);
+		params.set('page', String(Math.max(1, data.filters.page + delta)));
+		goto(`?${params.toString()}`, { keepFocus: true, noScroll: true });
+	}
+
+	/* ---------------- add / edit ---------------- */
+
+	let dialogOpen = $state(false);
+	let editingId = $state<number | null>(null);
+	let pendingDelete = $state<{ id: number; label: string } | null>(null);
+
+	const addSf = superForm(data.addForm, {
+		id: 'add',
+		resetForm: true,
+		onUpdated: ({ form }) => {
+			if (form.valid && form.message?.type === 'success') {
+				toast.success(form.message.text);
+				dialogOpen = false;
+			} else if (form.message?.type === 'error') {
+				toast.error(form.message.text);
+			}
+		}
+	});
+	const { form: addForm, errors: addErrors, enhance: addEnhance, delayed: addDelayed, allErrors: addAllErrors } = addSf;
+
+	const editSf = superForm(data.editForm, {
+		id: 'edit',
+		resetForm: false,
+		onUpdated: ({ form }) => {
+			if (form.valid && form.message?.type === 'success') {
+				toast.success(form.message.text);
+				dialogOpen = false;
+				editingId = null;
+			} else if (form.message?.type === 'error') {
+				toast.error(form.message.text);
+			}
+		}
+	});
+	const { form: editForm, errors: editErrors, enhance: editEnhance, delayed: editDelayed, allErrors: editAllErrors } = editSf;
+
+	const deleteSf = superForm(data.deleteForm, {
+		id: 'delete',
+		onUpdated: ({ form }) => {
+			if (form.message) toast[form.message.type === 'error' ? 'error' : 'success'](form.message.text);
+			pendingDelete = null;
+		}
+	});
+	const { form: deleteForm, enhance: deleteEnhance, delayed: deleting } = deleteSf;
+
+	function openCreate() {
+		editingId = null;
+		$addForm.weddingPlanId = 0;
+		$addForm.serviceId = undefined;
+		$addForm.status = 'pending';
+		$addForm.agreedPrice = undefined;
+		$addForm.eventDate = '';
+		dialogOpen = true;
+	}
+
+	function openEdit(booking: (typeof data.bookings)[number]) {
+		editingId = booking.id;
+		$editForm.id = booking.id;
+		$editForm.weddingPlanId = booking.weddingPlanId;
+		$editForm.serviceId = booking.serviceId ?? undefined;
+		$editForm.status = booking.status;
+		$editForm.agreedPrice = booking.agreedPrice ?? undefined;
+		$editForm.eventDate = booking.eventDate ?? '';
+		dialogOpen = true;
+	}
+
+	function confirmDelete(booking: (typeof data.bookings)[number]) {
+		pendingDelete = { id: booking.id, label: booking.coupleNames };
+		$deleteForm.id = booking.id;
+	}
+
+	/* ---------------- confirm / cancel / quote / reschedule ---------------- */
+
+	let confirmOpen = $state<number | null>(null);
+	const confirmSf = superForm(data.confirmForm, {
 		id: 'confirm',
 		resetForm: false,
-		onUpdated: ({ form }) => form.message?.type === 'success' && close()
+		onUpdated: ({ form }) => {
+			if (form.message) toast[form.message.type === 'error' ? 'error' : 'success'](form.message.text);
+			if (form.valid && form.message?.type === 'success') confirmOpen = null;
+		}
 	});
-	const {
-		form: confirmData,
-		errors: confirmErrors,
-		enhance: confirmEnhance,
-		submitting: confirmBusy,
-		message: confirmMsg
-	} = confirm;
+	const { form: confirmForm, enhance: confirmEnhance, delayed: confirming } = confirmSf;
 
-	const cancel = superForm(data.cancelForm, {
+	let cancelOpen = $state<number | null>(null);
+	const cancelSf = superForm(data.cancelForm, {
 		id: 'cancel',
 		resetForm: false,
-		onUpdated: ({ form }) => form.message?.type === 'success' && close()
+		onUpdated: ({ form }) => {
+			if (form.message) toast[form.message.type === 'error' ? 'error' : 'success'](form.message.text);
+			if (form.valid && form.message?.type === 'success') cancelOpen = null;
+		}
 	});
-	const {
-		form: cancelData,
-		errors: cancelErrors,
-		enhance: cancelEnhance,
-		submitting: cancelBusy,
-		message: cancelMsg
-	} = cancel;
+	const { form: cancelForm, errors: cancelErrors, enhance: cancelEnhance, delayed: cancelling } = cancelSf;
 
-	const quote = superForm(data.quoteForm, {
+	let quoteOpen = $state<number | null>(null);
+	const quoteSf = superForm(data.quoteForm, {
 		id: 'quote',
 		resetForm: false,
-		onUpdated: ({ form }) => form.message?.type === 'success' && close()
+		onUpdated: ({ form }) => {
+			if (form.message) toast[form.message.type === 'error' ? 'error' : 'success'](form.message.text);
+			if (form.valid && form.message?.type === 'success') quoteOpen = null;
+		}
 	});
-	const {
-		form: quoteData,
-		errors: quoteErrors,
-		enhance: quoteEnhance,
-		submitting: quoteBusy,
-		message: quoteMsg
-	} = quote;
+	const { form: quoteForm, errors: quoteErrors, enhance: quoteEnhance, delayed: quoting } = quoteSf;
 
-	const resched = superForm(data.rescheduleForm, {
+	let rescheduleOpen = $state<number | null>(null);
+	const rescheduleSf = superForm(data.rescheduleForm, {
 		id: 'reschedule',
 		resetForm: false,
-		onUpdated: ({ form }) => form.message?.type === 'success' && close()
+		onUpdated: ({ form }) => {
+			if (form.message) toast[form.message.type === 'error' ? 'error' : 'success'](form.message.text);
+			if (form.valid && form.message?.type === 'success') rescheduleOpen = null;
+		}
 	});
 	const {
-		form: reschedData,
-		errors: reschedErrors,
-		enhance: reschedEnhance,
-		submitting: reschedBusy,
-		message: reschedMsg
-	} = resched;
+		form: rescheduleForm,
+		errors: rescheduleErrors,
+		enhance: rescheduleEnhance,
+		delayed: rescheduling
+	} = rescheduleSf;
 
-	function openBooking(b: Booking) {
-		selectedId = b.id;
-		mode = 'view';
-		open = true;
+	function openConfirm(booking: (typeof data.bookings)[number]) {
+		$confirmForm.id = booking.id;
+		$confirmForm.agreedPrice = booking.agreedPrice ?? undefined;
+		$confirmForm.allowOverlap = false;
+		confirmOpen = booking.id;
+	}
+	function openCancel(booking: (typeof data.bookings)[number]) {
+		$cancelForm.id = booking.id;
+		$cancelForm.reason = '';
+		cancelOpen = booking.id;
+	}
+	function openQuote(booking: (typeof data.bookings)[number]) {
+		$quoteForm.id = booking.id;
+		$quoteForm.proposedPrice = booking.agreedPrice ?? 0;
+		$quoteForm.notes = '';
+		quoteOpen = booking.id;
+	}
+	function openReschedule(booking: (typeof data.bookings)[number]) {
+		$rescheduleForm.id = booking.id;
+		$rescheduleForm.eventDate = booking.eventDate || '';
+		$rescheduleForm.allowOverlap = false;
+		rescheduleOpen = booking.id;
 	}
 
-	function close() {
-		open = false;
-		mode = 'view';
+	/* ---------------- reply thread ---------------- */
+
+	let threadOpen = $state<{ coupleId: number; label: string } | null>(null);
+	let thread = $state<
+		{ id: number; senderId: string; body: string; createdAt: string }[]
+	>([]);
+	let threadLoading = $state(false);
+
+	const replySf = superForm(data.replyForm, {
+		id: 'reply',
+		resetForm: false,
+		onUpdated: ({ form }) => {
+			if (form.message) toast[form.message.type === 'error' ? 'error' : 'success'](form.message.text);
+			if (form.valid && form.message?.type === 'success') {
+				$replyForm.body = '';
+				if (threadOpen) loadThread(threadOpen.coupleId);
+			}
+		}
+	});
+	const { form: replyForm, errors: replyErrors, enhance: replyEnhance, delayed: replying } = replySf;
+
+	async function loadThread(coupleId: number) {
+		threadLoading = true;
+		try {
+			const res = await fetch(`/vendor-dashboard/bookings/conversation?coupleId=${coupleId}`);
+			thread = res.ok ? await res.json() : [];
+		} finally {
+			threadLoading = false;
+		}
 	}
 
-	/** Every action form carries the booking id in a hidden field. */
-	function startMode(m: Mode) {
-		if (!selected) return;
-		mode = m;
-		if (m === 'confirm') {
-			$confirmData.id = selected.id;
-			$confirmData.agreedPrice = selected.agreedPrice || undefined;
-			$confirmData.allowOverlap = false;
-		}
-		if (m === 'cancel') {
-			$cancelData.id = selected.id;
-			$cancelData.reason = '';
-		}
-		if (m === 'quote') {
-			$quoteData.id = selected.id;
-			$quoteData.proposedPrice = selected.agreedPrice || undefined;
-			$quoteData.notes = '';
-		}
-		if (m === 'reschedule') {
-			$reschedData.id = selected.id;
-			$reschedData.eventDate = selected.eventDate ?? data.today;
-			$reschedData.allowOverlap = false;
-		}
+	function openThread(booking: (typeof data.bookings)[number]) {
+		threadOpen = { coupleId: booking.coupleId, label: booking.coupleNames };
+		$replyForm.coupleId = booking.coupleId;
+		$replyForm.body = '';
+		loadThread(booking.coupleId);
 	}
 
-	const activeMsg = $derived(
-		mode === 'confirm'
-			? $confirmMsg
-			: mode === 'cancel'
-				? $cancelMsg
-				: mode === 'quote'
-					? $quoteMsg
-					: mode === 'reschedule'
-						? $reschedMsg
-						: null
-	);
+	const totalPages = $derived(Math.max(1, Math.ceil(data.total / data.pageSize)));
 </script>
 
-<div class="flex w-full flex-col gap-6 p-4 md:p-6">
-	<div>
-		<h1 class="text-2xl font-semibold tracking-tight">Bookings</h1>
-		<p class="text-sm text-muted-foreground">
-			Service requests and confirmed work for {data.vendor.businessName}.
-		</p>
-	</div>
+<svelte:head>
+	<title>Bookings — Vendor Portal</title>
+</svelte:head>
 
-	<!-- Stats -->
-	<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-		{#each [{ label: 'Awaiting your reply', value: data.stats.pending, tone: 'text-amber-600' }, { label: 'Confirmed', value: data.stats.confirmed, tone: 'text-emerald-600' }, { label: 'Cancelled', value: data.stats.cancelled, tone: 'text-destructive' }, { label: 'Total', value: data.stats.total, tone: '' }] as s (s.label)}
-			<Card.Root>
-				<Card.Content class="p-4">
-					<p class="text-xs text-muted-foreground">{s.label}</p>
-					<p class="text-2xl font-semibold {s.tone}">{s.value}</p>
-				</Card.Content>
-			</Card.Root>
-		{/each}
-	</div>
-
-	<!-- Tabs -->
-	<div class="flex flex-wrap gap-2 border-b pb-2">
-		{#each tabs as t (t.key)}
-			<a
-				href={qs({ tab: t.key })}
-				data-sveltekit-noscroll
-				class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors
-					{data.filters.tab === t.key
-					? 'bg-primary text-primary-foreground'
-					: 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'}"
-			>
-				{t.label}
-			</a>
-		{/each}
-	</div>
-
-	<!-- Filters: plain GET, so the view is shareable and back-button friendly -->
-	<form
-		method="GET"
-		data-sveltekit-keepfocus
-		data-sveltekit-replacestate
-		class="flex flex-wrap items-end gap-3"
-	>
-		<input type="hidden" name="tab" value={data.filters.tab} />
-
-		<div class="relative min-w-56 flex-1">
-			<Search class="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-			<Input
-				name="q"
-				value={data.filters.q}
-				placeholder="Couple, phone, service, city…"
-				class="pl-9"
-			/>
+<div class="space-y-6">
+	<div class="flex flex-wrap items-start justify-between gap-4">
+		<div>
+			<h1 class="text-2xl font-semibold tracking-tight">Bookings</h1>
+			<p class="text-muted-foreground text-sm">Couples who've requested or booked your services.</p>
 		</div>
+		<Button onclick={openCreate}>
+			<Plus class="mr-2 size-4" /> Add booking
+		</Button>
+	</div>
 
+	<Tabs.Root value={data.filters.tab} onValueChange={(v) => changeTab(v as string)}>
+		<Tabs.List>
+			<Tabs.Trigger value="upcoming">Upcoming</Tabs.Trigger>
+			<Tabs.Trigger value="pending">Pending</Tabs.Trigger>
+			<Tabs.Trigger value="confirmed">Confirmed</Tabs.Trigger>
+			<Tabs.Trigger value="past">Past</Tabs.Trigger>
+			<Tabs.Trigger value="cancelled">Cancelled</Tabs.Trigger>
+			<Tabs.Trigger value="all">All</Tabs.Trigger>
+		</Tabs.List>
+	</Tabs.Root>
+
+	<div class="flex flex-wrap items-center gap-2">
+		<Input
+			placeholder="Search couple or service…"
+			class="w-56"
+			bind:value={q}
+			onkeydown={(e) => e.key === 'Enter' && applyFilters()}
+		/>
 		<select
-			name="serviceId"
-			class="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-xs"
+			class="border-input h-9 rounded-md border bg-transparent px-2 text-sm"
+			bind:value={serviceId}
+			onchange={() => applyFilters()}
 		>
 			<option value="">All services</option>
 			{#each data.services as s (s.value)}
-				<option value={s.value} selected={data.filters.serviceId === s.value}>{s.label}</option>
+				<option value={String(s.value)}>{s.name}</option>
 			{/each}
 		</select>
-
 		<select
-			name="sort"
-			class="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-xs"
+			class="border-input h-9 rounded-md border bg-transparent px-2 text-sm"
+			bind:value={sort}
+			onchange={() => applyFilters()}
 		>
-			{#each [{ v: 'date_asc', l: 'Event date ↑' }, { v: 'date_desc', l: 'Event date ↓' }, { v: 'created_desc', l: 'Newest request' }, { v: 'price_desc', l: 'Highest value' }] as o (o.v)}
-				<option value={o.v} selected={data.filters.sort === o.v}>{o.l}</option>
-			{/each}
+			<option value="date_asc">Event date ↑</option>
+			<option value="date_desc">Event date ↓</option>
+			<option value="created_desc">Newest first</option>
+			<option value="price_desc">Highest price</option>
 		</select>
+		<Button variant="outline" size="sm" onclick={() => applyFilters()}>Apply</Button>
+	</div>
 
-		<Button type="submit" variant="secondary">Filter</Button>
-		{#if data.filters.q || data.filters.serviceId}
-			<Button variant="ghost" href={qs({ q: undefined, serviceId: undefined })}>Reset</Button>
-		{/if}
-	</form>
-
-	<!-- List -->
-	{#if !data.bookings.length}
+	{#if data.bookings.length === 0}
 		<Card.Root>
-			<Card.Content class="flex flex-col items-center gap-2 py-16 text-center">
-				<CalendarDays class="size-8 text-muted-foreground" />
-				<p class="font-medium">No bookings here yet</p>
-				<p class="max-w-sm text-sm text-muted-foreground">
-					{data.filters.q || data.filters.serviceId
-						? 'Nothing matches those filters. Try widening the search.'
-						: 'When a couple books one of your services it will land in this list.'}
-				</p>
+			<Card.Content class="py-16 text-center">
+				<CalendarSearch class="text-muted-foreground mx-auto size-8" />
+				<p class="text-muted-foreground mt-3 text-sm">No bookings match these filters.</p>
 			</Card.Content>
 		</Card.Root>
 	{:else}
-		<!-- Desktop -->
-		<Card.Root class="hidden md:block">
-			<Table.Root>
-				<Table.Header>
-					<Table.Row>
-						<Table.Head>Couple</Table.Head>
-						<Table.Head>Service</Table.Head>
-						<Table.Head>Event date</Table.Head>
-						<Table.Head class="text-right">Value</Table.Head>
-						<Table.Head>Status</Table.Head>
-						<Table.Head class="w-24"></Table.Head>
-					</Table.Row>
-				</Table.Header>
-				<Table.Body>
-					{#each data.bookings as b (b.id)}
-						<Table.Row class="cursor-pointer" onclick={() => openBooking(b)}>
-							<Table.Cell>
-								<div class="flex flex-col">
-									<span class="font-medium">{coupleName(b)}</span>
-									<span class="text-xs text-muted-foreground">{b.phone ?? b.email ?? '—'}</span>
-								</div>
-							</Table.Cell>
-							<Table.Cell class="text-sm">{b.serviceTitle ?? 'General enquiry'}</Table.Cell>
-							<Table.Cell>
-								<div class="flex flex-col">
-									<span class="text-sm">{fmtDate(b.eventDate)}</span>
-									<span class="text-xs text-muted-foreground">
-										{ethiopic(b.eventDate)}{#if daysAway(b.eventDate)} · {daysAway(b.eventDate)}{/if}
-									</span>
-								</div>
-							</Table.Cell>
-							<Table.Cell class="text-right">
-								<div class="flex flex-col items-end">
-									<span class="text-sm">{b.agreedPrice ? birr(b.agreedPrice) : '—'}</span>
-									{#if b.outstanding > 0 && b.agreedPrice}
-										<span class="text-xs text-amber-600">{birr(b.outstanding)} due</span>
-									{:else if b.agreedPrice}
-										<span class="text-xs text-emerald-600">Paid</span>
-									{/if}
-								</div>
-							</Table.Cell>
-							<Table.Cell>
-								<div class="flex items-center gap-1">
-									<Badge variant="outline" class="capitalize {statusStyle[b.status]}">
-										{b.status}
-									</Badge>
-									{#if b.hasDispute}
-										<TriangleAlert class="size-4 text-destructive" aria-label="Open dispute" />
-									{/if}
-								</div>
-							</Table.Cell>
-							<Table.Cell>
-								<Button variant="ghost" size="sm" onclick={(e) => { e.stopPropagation(); openBooking(b); }}>
-									View
-								</Button>
-							</Table.Cell>
+		<Card.Root class="overflow-hidden">
+			<div class="overflow-x-auto">
+				<Table.Root>
+					<Table.Header>
+						<Table.Row>
+							<Table.Head>Couple</Table.Head>
+							<Table.Head>Service</Table.Head>
+							<Table.Head>Event date</Table.Head>
+							<Table.Head>Status</Table.Head>
+							<Table.Head>Price</Table.Head>
+							<Table.Head>Latest quote</Table.Head>
+							<Table.Head class="text-right">Actions</Table.Head>
 						</Table.Row>
-					{/each}
-				</Table.Body>
-			</Table.Root>
+					</Table.Header>
+					<Table.Body>
+						{#each data.bookings as booking (booking.id)}
+							<Table.Row>
+								<Table.Cell>
+									<div class="flex items-center gap-2">
+										<span class="font-medium">{booking.coupleNames}</span>
+										{#if booking.unread > 0}
+											<Badge variant="destructive">{booking.unread}</Badge>
+										{/if}
+									</div>
+									{#if booking.coupleEmail || booking.couplePhone}
+										<p class="text-muted-foreground text-xs">
+											{[booking.coupleEmail, booking.couplePhone].filter(Boolean).join(' · ')}
+										</p>
+									{/if}
+								</Table.Cell>
+								<Table.Cell>{booking.serviceTitle ?? '—'}</Table.Cell>
+								<Table.Cell>{booking.eventDate || '—'}</Table.Cell>
+								<Table.Cell>
+									<Badge variant={statusVariant(booking.status)}>{booking.status}</Badge>
+									{#if booking.status === 'cancelled' && booking.cancellationReason}
+										<p class="text-muted-foreground mt-1 max-w-48 text-xs">{booking.cancellationReason}</p>
+									{/if}
+								</Table.Cell>
+								<Table.Cell>{formatPrice(booking.agreedPrice)}</Table.Cell>
+								<Table.Cell>
+									{#if booking.quote}
+										<span>{formatPrice(booking.quote.proposedPrice)}</span>
+										<span class="text-muted-foreground text-xs">({booking.quote.status})</span>
+									{:else}
+										—
+									{/if}
+								</Table.Cell>
+								<Table.Cell class="text-right">
+									<div class="flex justify-end gap-1">
+										<Button variant="ghost" size="icon" onclick={() => openThread(booking)} title="Message thread">
+											<MessageCircle class="size-4" />
+										</Button>
+										<DropdownMenu.Root>
+											<DropdownMenu.Trigger>
+												{#snippet child({ props })}
+													<Button variant="ghost" size="icon" {...props}>
+														<MoreVertical class="size-4" />
+													</Button>
+												{/snippet}
+											</DropdownMenu.Trigger>
+											<DropdownMenu.Content align="end">
+												{#if booking.status === 'pending'}
+													<DropdownMenu.Item onclick={() => openConfirm(booking)}>
+														<Check class="size-4" /> Confirm
+													</DropdownMenu.Item>
+												{/if}
+												<DropdownMenu.Item onclick={() => openQuote(booking)}>
+													<Send class="size-4" /> Send quote
+												</DropdownMenu.Item>
+												<DropdownMenu.Item onclick={() => openReschedule(booking)}>
+													<CalendarClock class="size-4" /> Reschedule
+												</DropdownMenu.Item>
+												{#if booking.status !== 'cancelled'}
+													<DropdownMenu.Item onclick={() => openCancel(booking)}>
+														<X class="size-4" /> Cancel
+													</DropdownMenu.Item>
+												{/if}
+												<DropdownMenu.Separator />
+												<DropdownMenu.Item onclick={() => openEdit(booking)}>
+													<Pencil class="size-4" /> Edit
+												</DropdownMenu.Item>
+												<DropdownMenu.Item class="text-destructive" onclick={() => confirmDelete(booking)}>
+													<Trash2 class="size-4" /> Delete
+												</DropdownMenu.Item>
+											</DropdownMenu.Content>
+										</DropdownMenu.Root>
+									</div>
+								</Table.Cell>
+							</Table.Row>
+						{/each}
+					</Table.Body>
+				</Table.Root>
+			</div>
 		</Card.Root>
 
-		<!-- Mobile -->
-		<div class="flex flex-col gap-3 md:hidden">
-			{#each data.bookings as b (b.id)}
-				<Card.Root>
-					<button type="button" class="w-full p-4 text-left" onclick={() => openBooking(b)}>
-						<div class="flex items-start justify-between gap-2">
-							<div>
-								<p class="font-medium">{coupleName(b)}</p>
-								<p class="text-xs text-muted-foreground">{b.serviceTitle ?? 'General enquiry'}</p>
-							</div>
-							<Badge variant="outline" class="capitalize {statusStyle[b.status]}">{b.status}</Badge>
-						</div>
-						<div class="mt-3 flex items-center justify-between text-sm">
-							<span class="flex items-center gap-1.5 text-muted-foreground">
-								<CalendarDays class="size-3.5" />
-								{fmtDate(b.eventDate)}
-							</span>
-							<span class="font-medium">{b.agreedPrice ? birr(b.agreedPrice) : '—'}</span>
-						</div>
-					</button>
-				</Card.Root>
-			{/each}
-		</div>
-
-		<!-- Pagination -->
-		{#if data.pagination.pages > 1}
-			<div class="flex items-center justify-between">
-				<p class="text-sm text-muted-foreground">
-					Page {data.pagination.page} of {data.pagination.pages} · {data.pagination.total} bookings
-				</p>
-				<div class="flex gap-2">
-					<Button
-						variant="outline"
-						size="sm"
-						disabled={data.pagination.page <= 1}
-						href={qs({ page: data.pagination.page - 1 })}
-					>
-						<ChevronLeft class="size-4" /> Prev
-					</Button>
-					<Button
-						variant="outline"
-						size="sm"
-						disabled={data.pagination.page >= data.pagination.pages}
-						href={qs({ page: data.pagination.page + 1 })}
-					>
-						Next <ChevronRight class="size-4" />
-					</Button>
-				</div>
+		{#if totalPages > 1}
+			<div class="flex items-center justify-end gap-2">
+				<Button variant="outline" size="sm" disabled={data.filters.page <= 1} onclick={() => changePage(-1)}>
+					Previous
+				</Button>
+				<span class="text-muted-foreground text-sm">Page {data.filters.page} of {totalPages}</span>
+				<Button variant="outline" size="sm" disabled={data.filters.page >= totalPages} onclick={() => changePage(1)}>
+					Next
+				</Button>
 			</div>
 		{/if}
 	{/if}
 </div>
 
-<!-- Detail -->
-<Dialog.Root bind:open onOpenChange={(v) => !v && close()}>
-	<Dialog.Content class="max-h-[90vh] max-w-2xl overflow-y-auto">
-		{#if selected}
-			<Dialog.Header>
-				<Dialog.Title class="flex items-center gap-2">
-					{coupleName(selected)}
-					<Badge variant="outline" class="capitalize {statusStyle[selected.status]}">
-						{selected.status}
-					</Badge>
-				</Dialog.Title>
-				<Dialog.Description>
-					{selected.serviceTitle ?? 'General enquiry'} · booking #{selected.id}
-				</Dialog.Description>
-			</Dialog.Header>
+<!-- Add / edit -->
+<Dialog.Root bind:open={dialogOpen}>
+	<Dialog.Content class="sm:max-w-md">
+		<Dialog.Header>
+			<Dialog.Title>{editingId ? 'Edit booking' : 'Add booking'}</Dialog.Title>
+		</Dialog.Header>
 
-			{#if selected.hasDispute}
-				<div class="flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-					<TriangleAlert class="size-4 shrink-0" />
-					There is an unresolved dispute on this booking.
-				</div>
-			{/if}
-
-			<div class="grid gap-4 sm:grid-cols-2">
-				<div class="flex flex-col gap-2 text-sm">
-					<p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">Event</p>
-					<span class="flex items-center gap-2">
-						<CalendarDays class="size-4 text-muted-foreground" />
-						{fmtDate(selected.eventDate)}
-					</span>
-					{#if ethiopic(selected.eventDate)}
-						<span class="pl-6 text-xs text-muted-foreground">{ethiopic(selected.eventDate)}</span>
-					{/if}
-					{#if selected.city}
-						<span class="flex items-center gap-2">
-							<MapPin class="size-4 text-muted-foreground" />{selected.city}
-						</span>
-					{/if}
-					{#if selected.expectedGuests}
-						<span class="flex items-center gap-2">
-							<Users class="size-4 text-muted-foreground" />{selected.expectedGuests} guests
-						</span>
-					{/if}
-					{#if selected.weddingStyle}
-						<span class="text-muted-foreground">Style: {selected.weddingStyle}</span>
-					{/if}
-				</div>
-
-				<div class="flex flex-col gap-2 text-sm">
-					<p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">Contact</p>
-					{#if selected.phone}
-						<a href="tel:{selected.phone}" class="flex items-center gap-2 hover:underline">
-							<Phone class="size-4 text-muted-foreground" />{selected.phone}
-						</a>
-					{/if}
-					{#if selected.phone2}
-						<a href="tel:{selected.phone2}" class="flex items-center gap-2 hover:underline">
-							<Phone class="size-4 text-muted-foreground" />{selected.phone2}
-						</a>
-					{/if}
-					{#if selected.email}
-						<a href="mailto:{selected.email}" class="flex items-center gap-2 hover:underline">
-							<Mail class="size-4 text-muted-foreground" />{selected.email}
-						</a>
-					{/if}
-					{#if !selected.coupleVerified}
-						<span class="text-xs text-amber-600">Couple not yet verified</span>
-					{/if}
-				</div>
-			</div>
-
-			<Separator />
-
-			<div class="grid gap-4 sm:grid-cols-3">
-				<div>
-					<p class="text-xs text-muted-foreground">Agreed price</p>
-					<p class="font-medium">{selected.agreedPrice ? birr(selected.agreedPrice) : 'Not set'}</p>
-				</div>
-				<div>
-					<p class="text-xs text-muted-foreground">Received</p>
-					<p class="font-medium text-emerald-600">{birr(selected.paidTotal)}</p>
-				</div>
-				<div>
-					<p class="text-xs text-muted-foreground">Outstanding</p>
-					<p class="font-medium {selected.outstanding > 0 ? 'text-amber-600' : ''}">
-						{birr(selected.outstanding)}
-					</p>
-				</div>
-			</div>
-
-			{#if selected.contract}
-				<div class="flex items-center gap-2 rounded-md border p-3 text-sm">
-					<FileText class="size-4 text-muted-foreground" />
-					<span class="flex-1">
-						Contract · couple {selected.contract.signedByCouple ? 'signed' : 'unsigned'}, you
-						{selected.contract.signedByVendor ? 'signed' : 'have not signed'}
-					</span>
-					{#if selected.contract.documentUrl}
-						<Button variant="outline" size="sm" href={selected.contract.documentUrl} target="_blank">
-							Open
-						</Button>
-					{/if}
-				</div>
-			{/if}
-
-			{#if selected.status === 'cancelled' && selected.cancellationReason}
-				<div class="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
-					<p class="font-medium text-destructive">
-						Cancelled by {selected.cancelledBy ?? 'unknown'}
-					</p>
-					<p class="text-muted-foreground">{selected.cancellationReason}</p>
-				</div>
-			{/if}
-
-			{#if activeMsg}
-				<p
-					class="flex items-center gap-2 text-sm"
-					class:text-destructive={activeMsg.type === 'error'}
-					class:text-emerald-600={activeMsg.type === 'success'}
-				>
-					{#if activeMsg.type === 'error'}<CircleAlert class="size-4" />{:else}<CircleCheck class="size-4" />{/if}
-					{activeMsg.text}
-				</p>
-			{/if}
-
-			<Separator />
-
-			{#if mode === 'view'}
-				{#if selected.status !== 'cancelled'}
-					<div class="flex flex-wrap gap-2">
-						{#if selected.status === 'pending'}
-							<Button onclick={() => startMode('confirm')}>
-								<Check class="size-4" /> Confirm
-							</Button>
-						{/if}
-						<Button variant="outline" onclick={() => startMode('quote')}>Send a quote</Button>
-						<Button variant="outline" onclick={() => startMode('reschedule')}>
-							<Clock class="size-4" /> Reschedule
-						</Button>
-						<Button variant="ghost" class="text-destructive" onclick={() => startMode('cancel')}>
-							<X class="size-4" /> Cancel booking
-						</Button>
-					</div>
-				{/if}
-
-			{:else if mode === 'confirm'}
-				<form method="POST" action="?/confirm" use:confirmEnhance class="flex flex-col gap-2">
-					<input type="hidden" name="id" value={selected.id} />
-					<InputComp
-						label="Agreed price (ETB)"
-						form={confirmData}
-						errors={confirmErrors}
-						name="agreedPrice"
-						type="number"
-						min="0"
-						placeholder="Leave blank to keep the current price"
-					/>
-					<InputComp
-						label=""
-						form={confirmData}
-						errors={confirmErrors}
-						name="allowOverlap"
-						type="checkboxSingle"
-						placeholder="Allow same-day overlap with another confirmed booking"
-					/>
-					<div class="mt-2 flex gap-2">
-						<Button type="submit" disabled={$confirmBusy}>
-							{$confirmBusy ? 'Confirming…' : 'Confirm booking'}
-						</Button>
-						<Button type="button" variant="ghost" onclick={() => (mode = 'view')}>Back</Button>
-					</div>
-				</form>
-
-			{:else if mode === 'quote'}
-				<form method="POST" action="?/quote" use:quoteEnhance class="flex flex-col gap-2">
-					<input type="hidden" name="id" value={selected.id} />
-					<InputComp
-						label="Proposed price (ETB)"
-						form={quoteData}
-						errors={quoteErrors}
-						name="proposedPrice"
-						type="number"
-						min="0"
-						required
-					/>
-					<InputComp
-						label="Notes"
-						form={quoteData}
-						errors={quoteErrors}
-						name="notes"
-						type="textarea"
-						rows={4}
-						placeholder="What the price covers, deposit terms, travel costs…"
-					/>
-					<div class="mt-2 flex gap-2">
-						<Button type="submit" disabled={$quoteBusy}>
-							{$quoteBusy ? 'Sending…' : 'Send quote'}
-						</Button>
-						<Button type="button" variant="ghost" onclick={() => (mode = 'view')}>Back</Button>
-					</div>
-				</form>
-
-			{:else if mode === 'reschedule'}
-				<form method="POST" action="?/reschedule" use:reschedEnhance class="flex flex-col gap-2">
-					<input type="hidden" name="id" value={selected.id} />
-					<InputComp
-						label="New event date"
-						form={reschedData}
-						errors={reschedErrors}
-						name="eventDate"
-						type="date"
-						oldDays={false}
-						year={true}
-					/>
-					<InputComp
-						label=""
-						form={reschedData}
-						errors={reschedErrors}
-						name="allowOverlap"
-						type="checkboxSingle"
-						placeholder="Allow same-day overlap"
-					/>
-					<div class="mt-2 flex gap-2">
-						<Button type="submit" disabled={$reschedBusy}>
-							{$reschedBusy ? 'Saving…' : 'Move booking'}
-						</Button>
-						<Button type="button" variant="ghost" onclick={() => (mode = 'view')}>Back</Button>
-					</div>
-				</form>
-
-			{:else if mode === 'cancel'}
-				<form method="POST" action="?/cancel" use:cancelEnhance class="flex flex-col gap-2">
-					<input type="hidden" name="id" value={selected.id} />
-					<InputComp
-						label="Why are you cancelling?"
-						form={cancelData}
-						errors={cancelErrors}
-						name="reason"
-						type="textarea"
-						rows={4}
-						required
-						placeholder="The couple sees this, so be clear and polite."
-					/>
-					<div class="mt-2 flex gap-2">
-						<Button type="submit" variant="destructive" disabled={$cancelBusy}>
-							{$cancelBusy ? 'Cancelling…' : 'Cancel this booking'}
-						</Button>
-						<Button type="button" variant="ghost" onclick={() => (mode = 'view')}>Back</Button>
-					</div>
-				</form>
-			{/if}
+		{#if editingId}
+			<form method="POST" action="?/edit" use:editEnhance class="space-y-1">
+				<input type="hidden" name="id" bind:value={$editForm.id} />
+				<Errors allErrors={$editAllErrors} />
+				<InputComp
+					label="Couple"
+					name="weddingPlanId"
+					type="select"
+					items={data.couples.map((c) => ({ value: c.value, name: c.name }))}
+					form={editForm}
+					errors={editErrors}
+				/>
+				<InputComp
+					label="Service"
+					name="serviceId"
+					type="select"
+					items={data.services}
+					form={editForm}
+					errors={editErrors}
+				/>
+				<InputComp label="Status" name="status" type="select" items={statusItems} form={editForm} errors={editErrors} />
+				<InputComp label="Agreed price (ETB)" name="agreedPrice" type="number" form={editForm} errors={editErrors} />
+				<InputComp label="Event date" name="eventDate" type="date" form={editForm} errors={editErrors} />
+				<Dialog.Footer class="pt-4">
+					<Button type="button" variant="outline" onclick={() => (dialogOpen = false)}>Cancel</Button>
+					<Button type="submit" disabled={$editDelayed}>
+						{#if $editDelayed}<Loader2 class="mr-2 size-4 animate-spin" />{/if}
+						Save changes
+					</Button>
+				</Dialog.Footer>
+			</form>
+		{:else}
+			<form method="POST" action="?/add" use:addEnhance class="space-y-1">
+				<Errors allErrors={$addAllErrors} />
+				<InputComp
+					label="Couple"
+					name="weddingPlanId"
+					type="select"
+					items={data.couples.map((c) => ({ value: c.value, name: c.name }))}
+					form={addForm}
+					errors={addErrors}
+				/>
+				<InputComp
+					label="Service"
+					name="serviceId"
+					type="select"
+					items={data.services}
+					form={addForm}
+					errors={addErrors}
+				/>
+				<InputComp label="Status" name="status" type="select" items={statusItems} form={addForm} errors={addErrors} />
+				<InputComp label="Agreed price (ETB)" name="agreedPrice" type="number" form={addForm} errors={addErrors} />
+				<InputComp label="Event date" name="eventDate" type="date" form={addForm} errors={addErrors} />
+				<Dialog.Footer class="pt-4">
+					<Button type="button" variant="outline" onclick={() => (dialogOpen = false)}>Cancel</Button>
+					<Button type="submit" disabled={$addDelayed}>
+						{#if $addDelayed}<Loader2 class="mr-2 size-4 animate-spin" />{/if}
+						Add booking
+					</Button>
+				</Dialog.Footer>
+			</form>
 		{/if}
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Delete -->
+<AlertDialog.Root open={!!pendingDelete} onOpenChange={(v) => !v && (pendingDelete = null)}>
+	<AlertDialog.Content>
+		<AlertDialog.Header>
+			<AlertDialog.Title>Remove this booking?</AlertDialog.Title>
+			<AlertDialog.Description>
+				The booking with {pendingDelete?.label} will be removed. This can't be undone from here.
+			</AlertDialog.Description>
+		</AlertDialog.Header>
+		<form method="POST" action="?/delete" use:deleteEnhance>
+			<input type="hidden" name="id" bind:value={$deleteForm.id} />
+			<AlertDialog.Footer>
+				<AlertDialog.Cancel type="button">Cancel</AlertDialog.Cancel>
+				<Button type="submit" variant="destructive" disabled={$deleting}>
+					{#if $deleting}<Loader2 class="mr-2 size-4 animate-spin" />{/if}
+					Remove
+				</Button>
+			</AlertDialog.Footer>
+		</form>
+	</AlertDialog.Content>
+</AlertDialog.Root>
+
+<!-- Confirm -->
+<Dialog.Root open={confirmOpen !== null} onOpenChange={(v) => !v && (confirmOpen = null)}>
+	<Dialog.Content class="sm:max-w-sm">
+		<Dialog.Header>
+			<Dialog.Title>Confirm booking</Dialog.Title>
+		</Dialog.Header>
+		<form method="POST" action="?/confirm" use:confirmEnhance class="space-y-3">
+			<input type="hidden" name="id" bind:value={$confirmForm.id} />
+			<div class="space-y-1">
+				<label class="text-sm font-medium" for="confirm-price">Agreed price (ETB, optional)</label>
+				<Input id="confirm-price" type="number" step="any" name="agreedPrice" bind:value={$confirmForm.agreedPrice} />
+			</div>
+			<label class="flex items-center gap-2 text-sm">
+				<input type="checkbox" name="allowOverlap" bind:checked={$confirmForm.allowOverlap} />
+				Allow even if I already have a confirmed booking that day
+			</label>
+			<Dialog.Footer>
+				<Button type="button" variant="outline" onclick={() => (confirmOpen = null)}>Cancel</Button>
+				<Button type="submit" disabled={$confirming}>
+					{#if $confirming}<Loader2 class="mr-2 size-4 animate-spin" />{/if}
+					Confirm
+				</Button>
+			</Dialog.Footer>
+		</form>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Cancel -->
+<Dialog.Root open={cancelOpen !== null} onOpenChange={(v) => !v && (cancelOpen = null)}>
+	<Dialog.Content class="sm:max-w-sm">
+		<Dialog.Header>
+			<Dialog.Title>Cancel booking</Dialog.Title>
+		</Dialog.Header>
+		<form method="POST" action="?/cancel" use:cancelEnhance class="space-y-3">
+			<input type="hidden" name="id" bind:value={$cancelForm.id} />
+			<div class="space-y-1">
+				<label class="text-sm font-medium" for="cancel-reason">Reason for the couple</label>
+				<Textarea id="cancel-reason" name="reason" rows={4} bind:value={$cancelForm.reason} />
+				{#if $cancelErrors.reason}<p class="text-red-500 text-sm">{$cancelErrors.reason}</p>{/if}
+			</div>
+			<Dialog.Footer>
+				<Button type="button" variant="outline" onclick={() => (cancelOpen = null)}>Back</Button>
+				<Button type="submit" variant="destructive" disabled={$cancelling}>
+					{#if $cancelling}<Loader2 class="mr-2 size-4 animate-spin" />{/if}
+					Cancel booking
+				</Button>
+			</Dialog.Footer>
+		</form>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Quote -->
+<Dialog.Root open={quoteOpen !== null} onOpenChange={(v) => !v && (quoteOpen = null)}>
+	<Dialog.Content class="sm:max-w-sm">
+		<Dialog.Header>
+			<Dialog.Title>Send a price quote</Dialog.Title>
+		</Dialog.Header>
+		<form method="POST" action="?/quote" use:quoteEnhance class="space-y-3">
+			<input type="hidden" name="id" bind:value={$quoteForm.id} />
+			<div class="space-y-1">
+				<label class="text-sm font-medium" for="quote-price">Proposed price (ETB)</label>
+				<Input id="quote-price" type="number" step="any" name="proposedPrice" bind:value={$quoteForm.proposedPrice} />
+				{#if $quoteErrors.proposedPrice}<p class="text-red-500 text-sm">{$quoteErrors.proposedPrice}</p>{/if}
+			</div>
+			<div class="space-y-1">
+				<label class="text-sm font-medium" for="quote-notes">Notes (optional)</label>
+				<Textarea id="quote-notes" name="notes" rows={3} bind:value={$quoteForm.notes} />
+			</div>
+			<Dialog.Footer>
+				<Button type="button" variant="outline" onclick={() => (quoteOpen = null)}>Cancel</Button>
+				<Button type="submit" disabled={$quoting}>
+					{#if $quoting}<Loader2 class="mr-2 size-4 animate-spin" />{/if}
+					Send quote
+				</Button>
+			</Dialog.Footer>
+		</form>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Reschedule -->
+<Dialog.Root open={rescheduleOpen !== null} onOpenChange={(v) => !v && (rescheduleOpen = null)}>
+	<Dialog.Content class="sm:max-w-sm">
+		<Dialog.Header>
+			<Dialog.Title>Reschedule booking</Dialog.Title>
+		</Dialog.Header>
+		<form method="POST" action="?/reschedule" use:rescheduleEnhance class="space-y-3">
+			<input type="hidden" name="id" bind:value={$rescheduleForm.id} />
+			<InputComp label="New event date" name="eventDate" type="date" form={rescheduleForm} errors={rescheduleErrors} />
+			<label class="flex items-center gap-2 text-sm">
+				<input type="checkbox" name="allowOverlap" bind:checked={$rescheduleForm.allowOverlap} />
+				Allow even if I already have a confirmed booking that day
+			</label>
+			<Dialog.Footer>
+				<Button type="button" variant="outline" onclick={() => (rescheduleOpen = null)}>Cancel</Button>
+				<Button type="submit" disabled={$rescheduling}>
+					{#if $rescheduling}<Loader2 class="mr-2 size-4 animate-spin" />{/if}
+					Reschedule
+				</Button>
+			</Dialog.Footer>
+		</form>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Message thread / reply -->
+<Dialog.Root open={threadOpen !== null} onOpenChange={(v) => !v && (threadOpen = null)}>
+	<Dialog.Content class="sm:max-w-lg">
+		<Dialog.Header>
+			<Dialog.Title>Messages with {threadOpen?.label}</Dialog.Title>
+		</Dialog.Header>
+
+		<div class="max-h-72 space-y-2 overflow-y-auto rounded-md border p-3">
+			{#if threadLoading}
+				<p class="text-muted-foreground text-sm">Loading…</p>
+			{:else if thread.length === 0}
+				<p class="text-muted-foreground text-sm">No messages yet.</p>
+			{:else}
+				{#each thread as m (m.id)}
+					<div class="rounded-md {m.senderId === data.vendorUserId ? 'bg-primary/10 ml-8' : 'bg-muted mr-8'} p-2 text-sm">
+						<p>{m.body}</p>
+						<p class="text-muted-foreground mt-1 text-xs">{new Date(m.createdAt).toLocaleString()}</p>
+					</div>
+				{/each}
+			{/if}
+		</div>
+
+		<form method="POST" action="?/reply" use:replyEnhance class="space-y-2 pt-2">
+			<input type="hidden" name="coupleId" bind:value={$replyForm.coupleId} />
+			<Textarea name="body" rows={3} placeholder="Write a reply…" bind:value={$replyForm.body} />
+			{#if $replyErrors.body}<p class="text-red-500 text-sm">{$replyErrors.body}</p>{/if}
+			<div class="flex justify-end">
+				<Button type="submit" disabled={$replying}>
+					{#if $replying}<Loader2 class="mr-2 size-4 animate-spin" />{/if}
+					<Send class="mr-2 size-4" /> Reply
+				</Button>
+			</div>
+		</form>
 	</Dialog.Content>
 </Dialog.Root>

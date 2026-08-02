@@ -2,18 +2,19 @@ import { fail, redirect } from '@sveltejs/kit';
 import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { db } from '$lib/server/db';
-import { weddingGuests } from '$lib/server/db/schema';
+import { guestLists } from '$lib/server/db/schema';
 import { guestSchema, bulkGuestSchema, guestIdSchema } from '$lib/schemas/guest';
 import { listGuests, assertGuestOwnership, parseGuestLines } from '$lib/server/guests';
-import { and, eq, not } from 'drizzle-orm';
+import { requireCoupleAndWedding } from '$lib/server/weddings';
+import { and, eq } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ parent }) => {
-	const { wedding } = await parent();
-	if (!wedding) throw redirect(302, '/dashboard/wedding');
+	const { couple, wedding } = await parent();
+	if (!wedding) throw redirect(302, '/wedding/wedding');
 
 	const [guests, form, bulkForm, deleteForm] = await Promise.all([
-		listGuests(wedding.id),
+		listGuests(couple!.id),
 		superValidate(zod4(guestSchema), { id: 'guest' }),
 		superValidate(zod4(bulkGuestSchema), { id: 'bulk' }),
 		superValidate(zod4(guestIdSchema), { id: 'delete' })
@@ -21,7 +22,7 @@ export const load: PageServerLoad = async ({ parent }) => {
 
 	return {
 		guests,
-		expectedGuests: wedding.expectedGuests ?? 0,
+		expectedGuests: wedding.guestCountEstimate ?? 0,
 		form,
 		bulkForm,
 		deleteForm
@@ -29,9 +30,8 @@ export const load: PageServerLoad = async ({ parent }) => {
 };
 
 export const actions: Actions = {
-	save: async ({ request, parent }) => {
-		const { wedding } = await parent();
-		if (!wedding) throw redirect(302, '/dashboard/wedding');
+	save: async ({ request, locals }) => {
+		const { couple } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(guestSchema), { id: 'guest' });
 		if (!form.valid) return fail(400, { form });
@@ -40,28 +40,25 @@ export const actions: Actions = {
 			fullName: form.data.fullName,
 			phone: form.data.phone || null,
 			side: form.data.side,
-			isConfirmed: form.data.isConfirmed
+			rsvpStatus: form.data.isConfirmed ? ('confirmed' as const) : ('pending' as const)
 		};
 
 		if (form.data.id) {
-			if (!(await assertGuestOwnership(form.data.id, wedding.id))) return fail(403, { form });
+			if (!(await assertGuestOwnership(form.data.id, couple!.id))) return fail(403, { form });
 
 			await db
-				.update(weddingGuests)
+				.update(guestLists)
 				.set(values)
-				.where(
-					and(eq(weddingGuests.id, form.data.id), eq(weddingGuests.weddingId, wedding.id))
-				);
+				.where(and(eq(guestLists.id, form.data.id), eq(guestLists.coupleId, couple!.id)));
 		} else {
-			await db.insert(weddingGuests).values({ ...values, weddingId: wedding.id });
+			await db.insert(guestLists).values({ ...values, coupleId: couple!.id });
 		}
 
 		return message(form, form.data.id ? 'Guest updated.' : 'Guest added.');
 	},
 
-	bulk: async ({ request, parent }) => {
-		const { wedding } = await parent();
-		if (!wedding) throw redirect(302, '/dashboard/wedding');
+	bulk: async ({ request, locals }) => {
+		const { couple } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(bulkGuestSchema), { id: 'bulk' });
 		if (!form.valid) return fail(400, { form });
@@ -71,48 +68,51 @@ export const actions: Actions = {
 			return message(form, 'No usable names found in that list.', { status: 400 });
 		}
 
-		await db.insert(weddingGuests).values(
+		await db.insert(guestLists).values(
 			parsed.map((g) => ({
-				weddingId: wedding.id,
+				coupleId: couple!.id,
 				fullName: g.fullName,
 				phone: g.phone,
 				side: form.data.side,
-				isConfirmed: false
+				rsvpStatus: 'pending' as const
 			}))
 		);
 
 		return message(form, `Added ${parsed.length} guest${parsed.length === 1 ? '' : 's'}.`);
 	},
 
-	toggle: async ({ request, parent }) => {
-		const { wedding } = await parent();
-		if (!wedding) throw redirect(302, '/dashboard/wedding');
+	toggle: async ({ request, locals }) => {
+		const { couple } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(guestIdSchema), { id: 'toggle' });
 		if (!form.valid) return fail(400, { form });
 
-		if (!(await assertGuestOwnership(form.data.id, wedding.id))) return fail(403, { form });
+		const [current] = await db
+			.select({ rsvpStatus: guestLists.rsvpStatus })
+			.from(guestLists)
+			.where(and(eq(guestLists.id, form.data.id), eq(guestLists.coupleId, couple!.id)))
+			.limit(1);
+		if (!current) return fail(403, { form });
 
 		await db
-			.update(weddingGuests)
-			.set({ isConfirmed: not(weddingGuests.isConfirmed) })
-			.where(and(eq(weddingGuests.id, form.data.id), eq(weddingGuests.weddingId, wedding.id)));
+			.update(guestLists)
+			.set({ rsvpStatus: current.rsvpStatus === 'confirmed' ? 'pending' : 'confirmed' })
+			.where(and(eq(guestLists.id, form.data.id), eq(guestLists.coupleId, couple!.id)));
 
 		return { success: true };
 	},
 
-	delete: async ({ request, parent }) => {
-		const { wedding } = await parent();
-		if (!wedding) throw redirect(302, '/dashboard/wedding');
+	delete: async ({ request, locals }) => {
+		const { couple } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(guestIdSchema), { id: 'delete' });
 		if (!form.valid) return fail(400, { form });
 
-		if (!(await assertGuestOwnership(form.data.id, wedding.id))) return fail(403, { form });
+		if (!(await assertGuestOwnership(form.data.id, couple!.id))) return fail(403, { form });
 
 		await db
-			.delete(weddingGuests)
-			.where(and(eq(weddingGuests.id, form.data.id), eq(weddingGuests.weddingId, wedding.id)));
+			.delete(guestLists)
+			.where(and(eq(guestLists.id, form.data.id), eq(guestLists.coupleId, couple!.id)));
 
 		return message(form, 'Guest removed.');
 	}

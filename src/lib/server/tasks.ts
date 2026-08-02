@@ -1,30 +1,34 @@
 import { db } from '$lib/server/db';
-import { weddingTasks, taskTemplates } from '$lib/server/db/schema';
+import { tasks, taskTemplates } from '$lib/server/db/schema';
 import { and, asc, eq } from 'drizzle-orm';
 
-export async function listTasks(weddingId: number) {
-	return db
+/**
+ * `isConfirmed` is a derived convenience for the UI, which predates the
+ * `status` enum ('todo' | 'in_progress' | 'done'). "Confirmed" maps to
+ * status === 'done'; both other states read as unconfirmed.
+ */
+export async function listTasks(coupleId: number) {
+	const rows = await db
 		.select()
-		.from(weddingTasks)
-		.where(eq(weddingTasks.weddingId, weddingId))
-		.orderBy(asc(weddingTasks.dueDate), asc(weddingTasks.id));
+		.from(tasks)
+		.where(eq(tasks.coupleId, coupleId))
+		.orderBy(asc(tasks.dueDate), asc(tasks.id));
+
+	return rows.map((t) => ({ ...t, isConfirmed: t.status === 'done' }));
 }
 
-export async function assertTaskOwnership(taskId: number, weddingId: number) {
+export async function assertTaskOwnership(taskId: number, coupleId: number) {
 	const [row] = await db
-		.select({ id: weddingTasks.id })
-		.from(weddingTasks)
-		.where(and(eq(weddingTasks.id, taskId), eq(weddingTasks.weddingId, weddingId)))
+		.select({ id: tasks.id })
+		.from(tasks)
+		.where(and(eq(tasks.id, taskId), eq(tasks.coupleId, coupleId)))
 		.limit(1);
 
 	return !!row;
 }
 
 export async function listTaskTemplates() {
-	return db
-		.select()
-		.from(taskTemplates)
-		.orderBy(asc(taskTemplates.daysBeforeWedding));
+	return db.select().from(taskTemplates).orderBy(asc(taskTemplates.daysBeforeWedding));
 }
 
 /** Subtracts N days from the wedding date, clamped to today so nothing lands in the past. */

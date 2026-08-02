@@ -2,9 +2,10 @@ import { fail, redirect } from '@sveltejs/kit';
 import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { db } from '$lib/server/db';
-import { weddings } from '$lib/server/db/schema';
+import { weddingPlans } from '$lib/server/db/schema';
 import { weddingSchema } from '$lib/schemas/wedding';
 import { getWeddingByCoupleId, listCities } from '$lib/server/weddings';
+import { getCoupleByUserId } from '$lib/server/couples';
 import { and, eq, isNull } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -21,7 +22,7 @@ function toDateInput(value: unknown): string {
 
 export const load: PageServerLoad = async ({ parent }) => {
 	const { couple, wedding } = await parent();
-	if (!couple) throw redirect(302, '/dashboard/profile');
+	if (!couple) throw redirect(302, '/wedding/profile');
 
 	const cities = await listCities();
 
@@ -31,7 +32,7 @@ export const load: PageServerLoad = async ({ parent }) => {
 					weddingDate: toDateInput(wedding.weddingDate),
 					weddingStyle: wedding.weddingStyle ?? '',
 					city: wedding.city ?? '',
-					expectedGuests: wedding.expectedGuests ?? 0,
+					expectedGuests: wedding.guestCountEstimate ?? 0,
 					totalBudget: Number(wedding.totalBudget ?? 0)
 				}
 			: {},
@@ -41,14 +42,14 @@ export const load: PageServerLoad = async ({ parent }) => {
 	return {
 		form,
 		isNew: !wedding,
-		cityItems: cities.map((c) => ({ value: c.name, label: `${c.name} — ${c.region}` }))
+		cityItems: cities.map((c) => ({ value: c.name, name: `${c.name} — ${c.region}` }))
 	};
 };
 
 export const actions: Actions = {
-	default: async ({ request, locals, parent }) => {
-		const { couple } = await parent();
-		if (!couple) throw redirect(302, '/dashboard/profile');
+	default: async ({ request, locals }) => {
+		const couple = await getCoupleByUserId(locals.user!.id);
+		if (!couple) throw redirect(302, '/wedding/profile');
 
 		const userId = locals.user!.id;
 		const form = await superValidate(request, zod4(weddingSchema));
@@ -60,17 +61,17 @@ export const actions: Actions = {
 			weddingDate: new Date(`${form.data.weddingDate}T00:00:00`),
 			weddingStyle: form.data.weddingStyle || null,
 			city: form.data.city,
-			expectedGuests: form.data.expectedGuests,
+			guestCountEstimate: form.data.expectedGuests,
 			totalBudget: form.data.totalBudget.toFixed(2)
 		};
 
 		if (existing) {
 			await db
-				.update(weddings)
+				.update(weddingPlans)
 				.set({ ...values, updatedBy: userId })
-				.where(and(eq(weddings.id, existing.id), isNull(weddings.deletedAt)));
+				.where(and(eq(weddingPlans.id, existing.id), isNull(weddingPlans.deletedAt)));
 		} else {
-			await db.insert(weddings).values({
+			await db.insert(weddingPlans).values({
 				...values,
 				coupleId: couple.id,
 				createdBy: userId,

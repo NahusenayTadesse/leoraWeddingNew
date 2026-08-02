@@ -180,13 +180,37 @@
     import { page as pageState } from '$app/state';
 
 // …after openBooking is defined
+// $effect(() => {
+// 	const preselect = Number(pageState.url.searchParams.get('vendor'));
+// 	if (!preselect || bookingOpen) return;
+// 	if (!data.vendorItems.some((v) => v.value === String(preselect))) return;
+
+// 	openBooking();
+// 	$form.vendorId = preselect;
+// });
+
+
+import { untrack } from 'svelte';
+import { replaceState } from '$app/navigation';
+
+let preselectApplied = false; // plain let — not $state, so it's never a dependency
+
 $effect(() => {
 	const preselect = Number(pageState.url.searchParams.get('vendor'));
-	if (!preselect || bookingOpen) return;
+	if (!preselect || preselectApplied) return;
 	if (!data.vendorItems.some((v) => v.value === String(preselect))) return;
 
-	openBooking();
-	$form.vendorId = preselect;
+	preselectApplied = true;
+
+	untrack(() => {
+		openBooking();
+		$form.vendorId = preselect;
+	});
+
+	// drop the param so a refresh doesn't reopen the dialog
+	const url = new URL(pageState.url);
+	url.searchParams.delete('vendor');
+	replaceState(url, pageState.state);
 });
 </script>
 

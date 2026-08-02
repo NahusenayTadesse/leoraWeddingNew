@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { formatPriceRange } from '$lib/price';
+	import { assetUrl } from '$lib/assetUrl';
 	import { superForm } from 'sveltekit-superforms';
 	import { zod4Client } from 'sveltekit-superforms/adapters';
 	import { enhance as formEnhance } from '$app/forms';
@@ -167,7 +168,7 @@
 									<div class="bg-muted aspect-video">
 										{#if cover}
 											<img
-												src="/files/{cover}"
+												src={assetUrl(cover)}
 												alt={service.title}
 												loading="lazy"
 												class="size-full object-cover"
@@ -338,7 +339,7 @@
 								<Card.Root class="p-5">
 									<div class="flex items-start gap-3">
 										<Avatar.Root class="size-9">
-											<Avatar.Image src={review.authorImage} alt={review.authorName} />
+											<Avatar.Image src={assetUrl(review.authorImage)} alt={review.authorName} />
 											<Avatar.Fallback>
 												{review.authorName?.[0]?.toUpperCase() ?? '?'}
 											</Avatar.Fallback>

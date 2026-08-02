@@ -1,13 +1,8 @@
 import { db } from '$lib/server/db';
-import {
-	vendorBookings,
-	vendors,
-	vendorServices,
-	payments
-} from '$lib/server/db/schema';
+import { vendorBookings, vendors, vendorServices, bookingPayments } from '$lib/server/db/schema';
 import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 
-export async function listBookings(weddingId: number) {
+export async function listBookings(weddingPlanId: number) {
 	const rows = await db
 		.select({
 			id: vendorBookings.id,
@@ -25,7 +20,7 @@ export async function listBookings(weddingId: number) {
 		.from(vendorBookings)
 		.innerJoin(vendors, eq(vendorBookings.vendorId, vendors.id))
 		.leftJoin(vendorServices, eq(vendorBookings.serviceId, vendorServices.id))
-		.where(and(eq(vendorBookings.weddingId, weddingId), isNull(vendorBookings.deletedAt)))
+		.where(and(eq(vendorBookings.weddingPlanId, weddingPlanId), isNull(vendorBookings.deletedAt)))
 		.orderBy(asc(vendorBookings.eventDate), asc(vendorBookings.id));
 
 	if (rows.length === 0) return [];
@@ -33,18 +28,18 @@ export async function listBookings(weddingId: number) {
 	// Aggregated separately so the join above doesn't fan out per payment.
 	const totals = await db
 		.select({
-			bookingId: payments.bookingId,
-			confirmed: sql<string>`COALESCE(SUM(CASE WHEN ${payments.status} = 'confirmed' THEN ${payments.amount} ELSE 0 END), 0)`,
-			pending: sql<string>`COALESCE(SUM(CASE WHEN ${payments.status} = 'pending' THEN ${payments.amount} ELSE 0 END), 0)`
+			bookingId: bookingPayments.bookingId,
+			confirmed: sql<string>`COALESCE(SUM(CASE WHEN ${bookingPayments.status} = 'confirmed' THEN ${bookingPayments.amount} ELSE 0 END), 0)`,
+			pending: sql<string>`COALESCE(SUM(CASE WHEN ${bookingPayments.status} = 'pending' THEN ${bookingPayments.amount} ELSE 0 END), 0)`
 		})
-		.from(payments)
+		.from(bookingPayments)
 		.where(
 			inArray(
-				payments.bookingId,
+				bookingPayments.bookingId,
 				rows.map((r) => r.id)
 			)
 		)
-		.groupBy(payments.bookingId);
+		.groupBy(bookingPayments.bookingId);
 
 	const byBooking = new Map(totals.map((t) => [t.bookingId, t]));
 
@@ -89,7 +84,7 @@ export async function listVendorServices(vendorId: number) {
 		.orderBy(asc(vendorServices.title));
 }
 
-export async function getBookingForWedding(bookingId: number, weddingId: number) {
+export async function getBookingForWedding(bookingId: number, weddingPlanId: number) {
 	const [row] = await db
 		.select({
 			id: vendorBookings.id,
@@ -100,7 +95,7 @@ export async function getBookingForWedding(bookingId: number, weddingId: number)
 		.where(
 			and(
 				eq(vendorBookings.id, bookingId),
-				eq(vendorBookings.weddingId, weddingId),
+				eq(vendorBookings.weddingPlanId, weddingPlanId),
 				isNull(vendorBookings.deletedAt)
 			)
 		)

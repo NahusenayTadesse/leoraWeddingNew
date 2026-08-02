@@ -56,6 +56,7 @@
 	function openCreate() {
 		editingId = null;
 		$form.id = undefined;
+		$form.name = '';
 		$form.categoryId = 0;
 		$form.plannedAmount = 0;
 		$form.actualAmount = 0;
@@ -66,7 +67,8 @@
 	function openEdit(item: (typeof data.items)[number]) {
 		editingId = item.id;
 		$form.id = item.id;
-		$form.categoryId = item.categoryId;
+		$form.name = item.name;
+		$form.categoryId = item.categoryId ?? 0;
 		$form.plannedAmount = item.plannedAmount;
 		$form.actualAmount = item.actualAmount;
 		$form.notes = item.notes ?? '';
@@ -74,7 +76,7 @@
 	}
 
 	function confirmDelete(item: (typeof data.items)[number]) {
-		pendingDelete = { id: item.id, label: item.categoryName };
+		pendingDelete = { id: item.id, label: item.name };
 		$deleteData.id = item.id;
 	}
 </script>
@@ -166,7 +168,8 @@
 							{@const diff = item.plannedAmount - item.actualAmount}
 							<Table.Row>
 								<Table.Cell>
-									<p class="font-medium">{item.categoryName}</p>
+									<p class="font-medium">{item.name}</p>
+									<p class="text-muted-foreground text-xs">{item.categoryName}</p>
 									{#if item.notes}
 										<p class="text-muted-foreground line-clamp-1 text-xs">{item.notes}</p>
 									{/if}
@@ -227,6 +230,15 @@
 
 		<form method="POST" action="?/save" use:enhance class="space-y-1">
 			<input type="hidden" name="id" bind:value={$form.id} />
+
+			<InputComp
+				label="item name"
+				{form}
+				{errors}
+				name="name"
+				type="text"
+				placeholder="Photographer deposit"
+			/>
 
 			<InputComp
 				label="category"

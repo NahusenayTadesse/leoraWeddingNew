@@ -4,6 +4,7 @@
 	import { ShareIcon, PlusIcon, CheckIcon, StoreIcon } from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
 	import { useCart } from '$lib/hooks/cart.svelte.js';
+	import { assetUrl } from '$lib/assetUrl';
 
 	type PriceOption = { price: number | string; amount: number | string };
 	type SubCategory = { id: number; name: string; description?: string | null };
@@ -94,7 +95,7 @@
 				<div class="relative overflow-hidden rounded-2xl bg-muted/50 shadow-lg">
 					{#if displayImage}
 						<img
-							src="/files/{displayImage}"
+							src={assetUrl(displayImage)}
 							alt={productName}
 							class="aspect-square w-full object-cover transition-transform duration-300 hover:scale-105"
 						/>
@@ -123,7 +124,7 @@
 								onclick={() => (displayImage = img)}
 							>
 								<img
-									src="/files/{img}"
+									src={assetUrl(img)}
 									alt="Thumbnail {i + 1}"
 									class="h-full w-full object-cover"
 								/>

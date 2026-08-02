@@ -1,30 +1,23 @@
 import { db } from '$lib/server/db';
 import { couples } from '$lib/server/db/schema';
-import { and, eq, isNull, ne } from 'drizzle-orm';
+import { and, eq, isNull, ne, or } from 'drizzle-orm';
+import { slugify } from '$lib/utils/slugify';
 
-/** The couple record owned by a user, ignoring soft-deleted rows. */
+/** The couple record owned by a user (on either side of the partnership), ignoring soft-deleted rows. */
 export async function getCoupleByUserId(userId: string) {
 	const [row] = await db
 		.select()
 		.from(couples)
-		.where(and(eq(couples.userId, userId), isNull(couples.deletedAt)))
+		.where(
+			and(
+				or(eq(couples.partner1UserId, userId), eq(couples.partner2UserId, userId)),
+				isNull(couples.deletedAt)
+			)
+		)
 		.limit(1);
 
 	return row ?? null;
 }
-
-// export function slugify(input: string) {
-// 	return input
-// 		.toLowerCase()
-// 		.normalize('NFKD')
-// 		.replace(/[^a-z0-9\s-]/g, '')
-// 		.trim()
-// 		.replace(/\s+/g, '-')
-// 		.replace(/-+/g, '-')
-// 		.slice(0, 200);
-// }
-
-import { slugify } from '$lib/utils/slugify';
 
 /** Appends -2, -3… until the slug is free. Excludes the couple's own row on edit. */
 export async function uniqueSlug(base: string, excludeId?: number) {

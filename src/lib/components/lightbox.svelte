@@ -2,6 +2,7 @@
 	import { fade, scale } from 'svelte/transition';
 	import { Button } from '$lib/components/ui/button';
 	import { XIcon, ChevronLeftIcon, ChevronRightIcon } from '@lucide/svelte';
+	import { assetUrl } from '$lib/assetUrl';
 
 	// Props
 	let {
@@ -126,7 +127,7 @@
 		<div class="flex max-h-[85vh] max-w-[90vw] items-center justify-center">
 			{#key currentIndex}
 				<img
-					src="/files/{currentImage}"
+					src={assetUrl(currentImage)}
 					alt="{title} - Image {currentIndex + 1}"
 					class="shadow-lg-2xl max-h-[85vh] max-w-[90vw] rounded-lg object-contain"
 					transition:scale={{ duration: 200, start: 0.95 }}
@@ -149,7 +150,7 @@
 						]}
 						onclick={() => (currentIndex = index)}
 					>
-						<img src="/files/{image}" alt="Thumbnail {index + 1}" class="size-full object-cover" />
+						<img src={assetUrl(image)} alt="Thumbnail {index + 1}" class="size-full object-cover" />
 					</button>
 				{/each}
 			</div>

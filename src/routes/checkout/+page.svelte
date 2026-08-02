@@ -15,41 +15,32 @@
 	import CartItem from '$lib/components/floating-cart/cart-item.svelte';
 	import { superForm } from 'sveltekit-superforms/client';
 	import { toast } from 'svelte-sonner';
-	import InputComp from '$lib/formComponents/InputComp.svelte';
 	import LoadingBtn from '$lib/formComponents/LoadingBtn.svelte';
 	import DialogComp from '$lib/formComponents/DialogComp.svelte';
 	import Signup from '$lib/forms/Signup.svelte';
 	import Login from '$lib/forms/Login.svelte';
+	import { formatETB } from '$lib/money';
 
 	const cart = useCart();
 	let { data } = $props();
 
-	const formatPrice = (price: number) => {
-		return new Intl.NumberFormat('en-US', {
-			style: 'currency',
-			currency: 'USD'
-		}).format(price);
-	};
+	const formatPrice = formatETB;
 
-	const { form, errors, enhance, delayed, message } = superForm(data.form, {
-		dataType: 'json'
+	const { form, enhance, delayed, message } = superForm(data.form, {
+		dataType: 'json',
+		onUpdated: ({ form: f }) => {
+			if (f.message?.type === 'success' && f.message.checkoutUrl) {
+				cart.clearCart();
+				window.location.href = f.message.checkoutUrl;
+			}
+		}
 	});
 
-	const formattedData = $derived(
-		cart?.items.map((item) => ({
-			product: item.productId,
-			quantity: item.quantity
-		})) || []
-	);
-
 	$effect(() => {
-		$form.selectedProducts = formattedData;
+		$form.items = cart.lines;
 		if ($message) {
 			if ($message.type === 'error') toast.error($message.text);
-			else {
-				cart.clearCart();
-				toast.success($message.text);
-			}
+			else if (!$message.checkoutUrl) toast.success($message.text);
 		}
 	});
 </script>
@@ -89,15 +80,6 @@
 						method="post"
 						enctype="multipart/form-data"
 					>
-						<InputComp
-							label=""
-							name="selectedProducts"
-							type="hidden"
-							{form}
-							{errors}
-							placeholder=""
-						/>
-
 						<div class="pt-4">
 							<Button
 								type="submit"
@@ -122,14 +104,6 @@
 						method="post"
 						enctype="multipart/form-data"
 					>
-						<InputComp
-							label=""
-							name="selectedProducts"
-							type="hidden"
-							{form}
-							{errors}
-							placeholder=""
-						/>
 						<div
 							class="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
 						>

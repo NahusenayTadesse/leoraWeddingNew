@@ -1,4 +1,12 @@
-import { mysqlTable, int, varchar, boolean, timestamp, datetime } from 'drizzle-orm/mysql-core';
+import {
+	mysqlTable,
+	int,
+	varchar,
+	boolean,
+	timestamp,
+	datetime,
+	customType
+} from 'drizzle-orm/mysql-core';
 import { sql } from 'drizzle-orm';
 import { user } from './auth.schema';
 
@@ -25,6 +33,34 @@ export { user } from './auth.schema';
 export const userRef = (column: string) => varchar(column, { length: 36 });
 
 export const idMaker = () => int('id').autoincrement().primaryKey();
+
+/**
+ * A JSON column that parses itself. Use this instead of drizzle's `json()`.
+ *
+ * Drizzle's own `json()` has no `mapFromDriverValue` — it hands back whatever
+ * the driver gave it and trusts mysql2 to have parsed the text. mysql2 only
+ * does that when the wire metadata says the column is JSON, and on MariaDB
+ * `JSON` is not a real type: it is `longtext` plus a `json_valid()` CHECK, and
+ * only the connection's extended type metadata marks it as JSON at all. Any
+ * host where that metadata is missing — an older MariaDB, or a column created
+ * as plain `longtext` without the CHECK — sends back the raw string instead,
+ * unchanged and unparsed.
+ *
+ * `DESCRIBE` cannot tell the two apart: both print `longtext`. The failure
+ * surfaces far downstream, as `{#each plan.features}` iterating a string one
+ * character at a time and rendering `[`, `"`, `E`, `v` … as list items.
+ *
+ * Parsing here makes reads identical on every host. `dataType` still emits
+ * `json`, so the generated DDL is unchanged.
+ */
+export const jsonCol = <T>(name: string) =>
+	customType<{ data: T; driverData: string }>({
+		dataType: () => 'json',
+		toDriver: (value: T) => JSON.stringify(value),
+		fromDriver: (value: string) =>
+			// Already parsed when the driver recognised the column as JSON.
+			typeof value === 'string' ? (JSON.parse(value) as T) : (value as T)
+	})(name);
 
 /**
  * The sentinel a live row carries in `aliveKey`. Any value works as long as it

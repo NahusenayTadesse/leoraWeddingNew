@@ -77,7 +77,7 @@
 	the marketing header/footer. `/dashboard` is NOT one of them — it is the
 	couple's planner and carries the normal site header, as dashboard.php did.
 -->
-{#if !page.url.pathname.startsWith('/vendor-dashboard')}
+{#if !page.url.pathname.startsWith('/vendor-dashboard') && !page.url.pathname.startsWith('/admin')}
 	<Header data={data?.user?.name ?? ''} />
 	{@render children()}
 	<Footer />

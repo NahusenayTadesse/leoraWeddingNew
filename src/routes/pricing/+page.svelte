@@ -102,7 +102,11 @@
 					     upgrade buttons line up across all three cards. -->
 					<Card.Content class="flex-1">
 						<ul class="space-y-2.5">
-							{#each plan.features ?? [] as feature (feature)}
+							<!-- Keyed by index, not by the string. Features are free text an
+							     admin typed, so the same line can legitimately appear twice —
+							     keying on the value itself crashed the page with
+							     each_key_duplicate the moment a plan repeated a bullet. -->
+							{#each plan.features ?? [] as feature, i (i)}
 								<li class="flex items-start gap-2.5 text-[13.5px]">
 									<Check class="mt-0.5 size-4 shrink-0 text-(--color-success)" />
 									<span>{feature}</span>

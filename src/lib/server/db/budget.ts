@@ -6,12 +6,11 @@ import {
 	smallint,
 	decimal,
 	text,
-	json,
 	mysqlEnum,
 	boolean,
 	index
 } from 'drizzle-orm/mysql-core';
-import { secureFields, idMaker } from './common';
+import { secureFields, idMaker, jsonCol } from './common';
 import { couples } from './weddings';
 import { vendors } from './vendors';
 
@@ -89,8 +88,8 @@ export const budgetComparisons = mysqlTable(
 			.notNull()
 			.references(() => couples.id, { onDelete: 'cascade' }),
 		name: varchar('name', { length: 150 }).default('Untitled comparison').notNull(),
-		vendorIds: json('vendor_ids').$type<number[]>().notNull(),
-		resultSummary: json('result_summary'),
+		vendorIds: jsonCol<number[]>('vendor_ids').notNull(),
+		resultSummary: jsonCol('result_summary'),
 		...secureFields
 	},
 	(table) => [index('budget_comparisons_couple_idx').on(table.coupleId)]

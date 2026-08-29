@@ -6,13 +6,12 @@ import {
 	int,
 	decimal,
 	text,
-	json,
 	mysqlEnum,
 	timestamp,
 	datetime,
 	boolean
 } from 'drizzle-orm/mysql-core';
-import { secureFields, idMaker as intPk, userRef, user, aliveKey } from './common';
+import { secureFields, idMaker as intPk, userRef, user, aliveKey, jsonCol } from './common';
 import { vendors, vendorBookings } from './vendors';
 import { couples, weddingPlans } from './weddings';
 
@@ -42,7 +41,7 @@ export const subscriptionPlans = mysqlTable('subscription_plans', {
 		.default('one_time')
 		.notNull(),
 	/** Bullet list shown on the pricing page. */
-	features: json('features').$type<string[]>(),
+	features: jsonCol<string[]>('features'),
 
 	/**
 	 * Who the plan is sold to. Couples and vendors both subscribe, on separate

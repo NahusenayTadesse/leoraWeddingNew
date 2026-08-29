@@ -6,7 +6,6 @@ import {
 	smallint,
 	decimal,
 	text,
-	json,
 	mysqlEnum,
 	boolean,
 	tinyint,
@@ -16,7 +15,7 @@ import {
 	check
 } from 'drizzle-orm/mysql-core';
 import { sql } from 'drizzle-orm';
-import { secureFields, idMaker as intPk, userRef, user, aliveKey } from './common';
+import { secureFields, idMaker as intPk, userRef, user, aliveKey, jsonCol } from './common';
 import { weddingPlans, couples } from './weddings';
 import { subscriptionPlans } from './payments';
 import { address } from './locations';
@@ -107,7 +106,7 @@ export const vendorPackages = mysqlTable(
 		name: varchar('name', { length: 150 }).notNull(),
 		price: decimal('price', { precision: 12, scale: 2 }).notNull(),
 		description: text('description'),
-		inclusions: json('inclusions').$type<string[]>(),
+		inclusions: jsonCol<string[]>('inclusions'),
 		...secureFields
 	},
 	(table) => [index('vendor_packages_vendor_idx').on(table.vendorId)]

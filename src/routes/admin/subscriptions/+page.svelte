@@ -94,7 +94,8 @@
 				<Card.Content class="space-y-3">
 					{#if plan.features?.length}
 						<ul class="space-y-1 text-sm">
-							{#each plan.features.slice(0, 4) as feature (feature)}
+							<!-- Index-keyed — see the pricing page: duplicate bullets are valid input. -->
+							{#each plan.features.slice(0, 4) as feature, i (i)}
 								<li class="text-muted-foreground">• {feature}</li>
 							{/each}
 						</ul>

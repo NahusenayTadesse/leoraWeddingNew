@@ -136,7 +136,9 @@
 					<Card.Content class="space-y-3">
 						{#if pkg.inclusions?.length}
 							<ul class="space-y-1 text-sm">
-								{#each pkg.inclusions.slice(0, 4) as item (item)}
+								<!-- Index-keyed: inclusions are free text a vendor typed, so the
+								     same line can repeat and value keys throw each_key_duplicate. -->
+								{#each pkg.inclusions.slice(0, 4) as item, i (i)}
 									<li class="flex items-start gap-1.5">
 										<Check class="mt-0.5 size-3.5 shrink-0 text-emerald-600" />
 										<span>{item}</span>

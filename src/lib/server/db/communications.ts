@@ -3,12 +3,11 @@ import {
 	varchar,
 	int,
 	text,
-	json,
 	boolean,
 	timestamp,
 	index
 } from 'drizzle-orm/mysql-core';
-import { secureFields, idMaker, userRef, user } from './common';
+import { secureFields, idMaker, userRef, user, jsonCol } from './common';
 import { couples } from './weddings';
 import { vendors } from './vendors';
 
@@ -24,7 +23,7 @@ export const notifications = mysqlTable(
 		body: varchar('body', { length: 255 }),
 		isRead: boolean('is_read').default(false).notNull(),
 		/** Payload for the click-through target, e.g. `{ bookingId: 12 }`. */
-		data: json('data'),
+		data: jsonCol('data'),
 		createdAt: timestamp('created_at', { fsp: 3 }).defaultNow().notNull()
 	},
 	(table) => [
@@ -90,7 +89,7 @@ export const activityLogs = mysqlTable(
 		entityId: int('entity_id', { unsigned: true }),
 		ipAddress: varchar('ip_address', { length: 45 }),
 		userAgent: varchar('user_agent', { length: 255 }),
-		meta: json('meta'),
+		meta: jsonCol('meta'),
 		createdAt: timestamp('created_at', { fsp: 3 }).defaultNow().notNull()
 	},
 	(table) => [

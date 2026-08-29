@@ -4,10 +4,9 @@ import { and, eq, isNull, sql, inArray } from 'drizzle-orm';
 import { addUser } from '$lib/ZodSchema.js';
 import { db } from '$lib/server/db';
 import {
-	weddings,
+	
 	couples,
 	budgetCategories,
-	weddingBudgetItems,
 	serviceCategories,
 	vendorServices
 } from '$lib/server/db/schema';

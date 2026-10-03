@@ -1,32 +1,37 @@
-import { count, eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { vendors, subscriptions, vendorSubscriptions, subscriptionPlans } from '$lib/server/db/schema';
+import { activityLogs, user } from '$lib/server/db/schema';
+import {
+	overview,
+	revenueSeries,
+	signupSeries,
+	bookingSeries,
+	breakdowns,
+	lastMonths
+} from '$lib/server/adminStats';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {
-	const [statusRows, [{ planCount }], [{ activeCouple }], [{ activeVendor }]] = await Promise.all([
-		db.select({ status: vendors.status, c: count() }).from(vendors).groupBy(vendors.status),
-		db.select({ planCount: count() }).from(subscriptionPlans),
+	const range = lastMonths(12);
+	const [stats, revenue, signups, bookings, mix, recent] = await Promise.all([
+		overview(),
+		revenueSeries(range),
+		signupSeries(range),
+		bookingSeries(range),
+		breakdowns(),
 		db
-			.select({ activeCouple: count() })
-			.from(subscriptions)
-			.where(eq(subscriptions.status, 'active')),
-		db
-			.select({ activeVendor: count() })
-			.from(vendorSubscriptions)
-			.where(eq(vendorSubscriptions.status, 'active'))
+			.select({
+				id: activityLogs.id,
+				action: activityLogs.action,
+				entityType: activityLogs.entityType,
+				entityId: activityLogs.entityId,
+				createdAt: activityLogs.createdAt,
+				who: user.name
+			})
+			.from(activityLogs)
+			.leftJoin(user, eq(user.id, activityLogs.userId))
+			.orderBy(desc(activityLogs.createdAt))
+			.limit(8)
 	]);
-
-	const byStatus = Object.fromEntries(statusRows.map((s) => [s.status, s.c]));
-
-	return {
-		stats: {
-			pendingVendors: byStatus.pending ?? 0,
-			approvedVendors: byStatus.approved ?? 0,
-			rejectedVendors: byStatus.rejected ?? 0,
-			suspendedVendors: byStatus.suspended ?? 0,
-			planCount,
-			activeSubscribers: activeCouple + activeVendor
-		}
-	};
+	return { stats, revenue, signups, bookings, mix, recent };
 };

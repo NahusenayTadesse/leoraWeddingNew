@@ -1,5 +1,21 @@
 <script lang="ts">
-	import { LayoutDashboard, Building2, CreditCard, Heart } from '@lucide/svelte';
+	import {
+		LayoutDashboard,
+		Building2,
+		CreditCard,
+		Heart,
+		BarChart3,
+		Users,
+		CalendarCheck,
+		Wallet,
+		Landmark,
+		Gavel,
+		Star,
+		TicketPercent,
+		MessageSquare,
+		ScrollText,
+		Settings
+	} from '@lucide/svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import type { ComponentProps } from 'svelte';
 	import { page } from '$app/state';
@@ -11,8 +27,19 @@
 
 	const navigation = [
 		{ title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
+		{ title: 'Reports', url: '/admin/reports', icon: BarChart3 },
+		{ title: 'Users', url: '/admin/users', icon: Users },
 		{ title: 'Vendors', url: '/admin/vendors', icon: Building2 },
-		{ title: 'Subscriptions', url: '/admin/subscriptions', icon: CreditCard }
+		{ title: 'Bookings', url: '/admin/bookings', icon: CalendarCheck },
+		{ title: 'Payments', url: '/admin/payments', icon: Wallet },
+		{ title: 'Payouts', url: '/admin/payouts', icon: Landmark },
+		{ title: 'Disputes', url: '/admin/disputes', icon: Gavel },
+		{ title: 'Reviews', url: '/admin/reviews', icon: Star },
+		{ title: 'Subscriptions', url: '/admin/subscriptions', icon: CreditCard },
+		{ title: 'Coupons', url: '/admin/coupons', icon: TicketPercent },
+		{ title: 'Messages', url: '/admin/messages', icon: MessageSquare },
+		{ title: 'Activity log', url: '/admin/activity', icon: ScrollText },
+		{ title: 'Settings', url: '/admin/settings', icon: Settings }
 	];
 
 	const on = 'bg-sidebar-primary text-sidebar-primary-foreground';
@@ -65,11 +92,11 @@
 				</a></Sidebar.GroupLabel
 			>
 			<Sidebar.GroupContent class="mt-8">
-				<Sidebar.Menu class="w-full gap-3">
+				<Sidebar.Menu class="w-full gap-1">
 					{#each navigation as item (item.title)}
 						<Sidebar.MenuItem>
 							<Sidebar.MenuButton
-								class="flex items-center gap-3 rounded-lg px-3 py-5 text-lg
+								class="flex items-center gap-3 rounded-lg px-3 py-4 text-base
           font-normal transition-colors duration-300 hover:bg-sidebar-accent
           hover:text-sidebar-accent-foreground {selectItem}
           {blacken(item.url)}"

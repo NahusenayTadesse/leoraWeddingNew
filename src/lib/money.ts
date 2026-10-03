@@ -42,3 +42,13 @@ export function formatETB(value: string | number | null | undefined): string {
 		currencyDisplay: 'code'
 	}).format(toMoney(value));
 }
+
+/** Whole-birr display for dashboard tiles, where cents just make the number wrap: `'ETB 50,000'`. */
+export function formatETBWhole(value: string | number | null | undefined): string {
+	return new Intl.NumberFormat('en-ET', {
+		style: 'currency',
+		currency: 'ETB',
+		currencyDisplay: 'code',
+		maximumFractionDigits: 0
+	}).format(toMoney(value));
+}

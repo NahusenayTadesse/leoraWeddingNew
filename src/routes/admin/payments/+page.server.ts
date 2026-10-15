@@ -5,6 +5,7 @@ import { payments, bookingPayments, refunds, couples, vendors, paymentCommission
 import { parse, ok, bad } from '$lib/server/adminAction';
 import { audit } from '$lib/server/auditLog';
 import { toMoney } from '$lib/money';
+import { confirmBookingPayment, failBookingPayment, paymentFailureMessage } from '$lib/server/bookingPayments';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {
@@ -72,6 +73,22 @@ export const load: PageServerLoad = async () => {
 const idOnly = z.object({ id: z.coerce.number().int().positive() });
 
 export const actions = {
+	confirmPayment: async (event) => {
+		const p = await parse(event.request, idOnly);
+		if ('error' in p) return p.error;
+		const r = await confirmBookingPayment(p.data.id);
+		if (!r.ok) return bad(paymentFailureMessage[r.reason]);
+		await audit(event, 'payment.confirm', 'booking_payment', p.data.id, { commission: r.commission, net: r.net });
+		return ok(`Payment confirmed. Commission ${r.commission.toFixed(2)} ETB, vendor credited ${r.net.toFixed(2)} ETB.`);
+	},
+	failPayment: async (event) => {
+		const p = await parse(event.request, idOnly);
+		if ('error' in p) return p.error;
+		const r = await failBookingPayment(p.data.id);
+		if (!r.ok) return bad(paymentFailureMessage[r.reason]);
+		await audit(event, 'payment.fail', 'booking_payment', p.data.id);
+		return ok('Payment marked as not received');
+	},
 	approveRefund: async (event) => {
 		const p = await parse(event.request, idOnly);
 		if ('error' in p) return p.error;

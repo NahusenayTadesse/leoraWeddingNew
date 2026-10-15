@@ -1,7 +1,7 @@
 import { desc, eq, isNull, and } from 'drizzle-orm';
 import { z } from 'zod/v4';
 import { db } from '$lib/server/db';
-import { user, roles, couples, vendors } from '$lib/server/db/schema';
+import { user, session, roles, couples, vendors } from '$lib/server/db/schema';
 import { parse, ok, bad } from '$lib/server/adminAction';
 import { audit } from '$lib/server/auditLog';
 import type { Actions, PageServerLoad } from './$types';
@@ -58,8 +58,11 @@ export const actions = {
 			.update(user)
 			.set({ banned: true, banReason: p.data.reason || null, banExpires: null })
 			.where(eq(user.id, p.data.id));
+		// Pages already refuse banned users in hooks; deleting the session rows
+		// also closes the better-auth API, which would otherwise keep answering.
+		await db.delete(session).where(eq(session.userId, p.data.id));
 		await audit(event, 'user.ban', 'user', null, { userId: p.data.id, reason: p.data.reason });
-		return ok('User banned. Their sessions stop working on the next request.');
+		return ok('User banned and signed out everywhere.');
 	},
 	unban: async (event) => {
 		const p = await parse(event.request, idOnly);

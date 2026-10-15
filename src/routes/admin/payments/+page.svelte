@@ -27,7 +27,7 @@
 				<Table.Root>
 					<Table.Header><Table.Row>
 						<Table.Head>#</Table.Head><Table.Head>Vendor</Table.Head><Table.Head>Type</Table.Head><Table.Head>Method</Table.Head>
-						<Table.Head class="text-right">Amount</Table.Head><Table.Head class="text-right">Commission</Table.Head><Table.Head>Status</Table.Head><Table.Head>Date</Table.Head>
+						<Table.Head class="text-right">Amount</Table.Head><Table.Head class="text-right">Commission</Table.Head><Table.Head>Status</Table.Head><Table.Head>Date</Table.Head><Table.Head class="text-right">Actions</Table.Head>
 					</Table.Row></Table.Header>
 					<Table.Body>
 						{#each data.vendor as p (p.id)}
@@ -40,9 +40,15 @@
 								<Table.Cell class="text-right">{p.commission === null ? '—' : formatETB(p.commission)}</Table.Cell>
 								<Table.Cell><StatusBadge status={p.status} /></Table.Cell>
 								<Table.Cell>{date(p.paidAt ?? p.createdAt)}</Table.Cell>
+								<Table.Cell class="space-x-2 text-right whitespace-nowrap">
+									{#if p.status === 'pending'}
+										<ActionForm action="?/confirmPayment" fields={{ id: p.id }} label="Confirm" variant="default" confirmText="Confirm receipt of {formatETB(p.amount)} for {p.vendor ?? 'this vendor'}? This credits their wallet." />
+										<ActionForm action="?/failPayment" fields={{ id: p.id }} label="Not received" />
+									{/if}
+								</Table.Cell>
 							</Table.Row>
 						{:else}
-							<Table.Row><Table.Cell colspan={8} class="text-muted-foreground py-8 text-center">No payments yet.</Table.Cell></Table.Row>
+							<Table.Row><Table.Cell colspan={9} class="text-muted-foreground py-8 text-center">No payments yet.</Table.Cell></Table.Row>
 						{/each}
 					</Table.Body>
 				</Table.Root>

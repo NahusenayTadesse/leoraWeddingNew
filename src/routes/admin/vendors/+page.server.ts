@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, isNull } from 'drizzle-orm';
 import { message, superValidate } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { db } from '$lib/server/db';
@@ -22,6 +22,7 @@ export const load: PageServerLoad = async () => {
 			})
 			.from(vendors)
 			.leftJoin(vendorCategories, eq(vendorCategories.id, vendors.categoryId))
+			.where(isNull(vendors.deletedAt))
 			.orderBy(desc(vendors.createdAt)),
 		superValidate(zod4(vendorStatusSchema))
 	]);

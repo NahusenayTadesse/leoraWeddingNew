@@ -7,7 +7,8 @@
 		CalendarClock,
 		CalendarCheck,
 		Heart,
-		MessageSquare
+		MessageSquare,
+		Wallet
 	} from '@lucide/svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import type { ComponentProps } from 'svelte';
@@ -25,6 +26,7 @@
 		{ title: 'Services', url: '/vendor-dashboard/services', icon: Sparkles },
 		{ title: 'Packages', url: '/vendor-dashboard/packages', icon: PackageOpen },
 		{ title: 'Bookings', url: '/vendor-dashboard/bookings', icon: CalendarCheck },
+		{ title: 'Payments', url: '/vendor-dashboard/payments', icon: Wallet },
 		{ title: 'Availability', url: '/vendor-dashboard/availability', icon: CalendarClock },
 		{ title: 'Messages', url: '/vendor-dashboard/messages', icon: MessageSquare }
 	];

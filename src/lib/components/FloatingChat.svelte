@@ -105,6 +105,28 @@
             sendMessage();
         }
     }
+
+    /**
+     * Chat text → safe HTML. Everything is escaped first (replies quote vendor-written text, so
+     * they must never carry markup), then only **bold** and [links](…) are turned back on, and
+     * only for site paths or https URLs.
+     */
+    function renderMessage(text: string): string {
+        const escaped = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+        return escaped
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (match, label: string, href: string) =>
+                /^(\/(?!\/)|https:\/\/)/.test(href)
+                    ? `<a class="underline underline-offset-4" href="${href}">${label}</a>`
+                    : label
+            )
+            .replace(/\n/g, '<br>');
+    }
 </script>
 
 <div class="fixed left-5 bottom-22 z-50 lg:bottom-5">
@@ -141,7 +163,7 @@
 
             <div class="border-b px-4 py-3">
                 <div class="flex flex-wrap gap-2">
-                    {#each quickLinks as link}
+                    {#each quickLinks as link (link.href)}
                         <a
                             href={link.href}
                             class="rounded-full border bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
@@ -154,7 +176,7 @@
 
             <div bind:this={scrollContainer} class="min-h-0 flex-1 overflow-y-auto p-4">
                 <div class="space-y-4">
-                    {#each messages as message}
+                    {#each messages as message, i (i)}
                         <div
                             class="flex"
                             class:justify-end={message.role === 'user'}
@@ -167,12 +189,8 @@
                                 class:bg-muted={message.role === 'assistant'}
                                 class:text-muted-foreground={message.role === 'assistant'}
                             >
-                                {@html message.content
-                                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                                    .replace(
-                                        /\[([^\]]+)\]\(([^)]+)\)/g,
-                                        '<a class="underline underline-offset-4" href="$2">$1</a>'
-                                    )}
+                                <!-- eslint-disable-next-line svelte/no-at-html-tags -- escaped first; see renderMessage -->
+                                {@html renderMessage(message.content)}
                             </div>
                         </div>
                     {/each}

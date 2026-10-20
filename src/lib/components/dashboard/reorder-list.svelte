@@ -12,7 +12,7 @@
 		title: string;
 		description: string;
 		items: Item[];
-		icon: any;
+		icon: import('svelte').Component;
 	}
 
 	const { title, description, items, icon: Icon }: Props = $props();

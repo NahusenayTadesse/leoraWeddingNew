@@ -12,6 +12,8 @@ const gitignorePath = path.resolve(import.meta.dirname, '.gitignore');
 
 export default defineConfig(
 	includeIgnoreFile(gitignorePath),
+	// The legacy PHP app is kept for reference only.
+	{ ignores: ['leoara_php/**'] },
 	js.configs.recommended,
 	...ts.configs.recommended,
 	...svelte.configs.recommended,
@@ -22,7 +24,10 @@ export default defineConfig(
 		rules: {
 			// typescript-eslint strongly recommend that you do not use the no-undef lint rule on TypeScript projects.
 			// see: https://typescript-eslint.io/troubleshooting/faqs/eslint/#i-get-errors-from-the-no-undef-rule-about-global-variables-not-being-defined-even-though-there-are-no-typescript-errors
-			'no-undef': 'off'
+			'no-undef': 'off',
+			// The app is served from the domain root (no `paths.base`), so plain hrefs and goto paths
+			// are correct; wrapping every link in resolve() would add noise for no behaviour change.
+			'svelte/no-navigation-without-resolve': 'off'
 		}
 	},
 	{

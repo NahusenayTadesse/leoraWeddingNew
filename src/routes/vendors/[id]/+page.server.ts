@@ -1,7 +1,6 @@
 import { error, redirect } from '@sveltejs/kit';
 import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
-import { db } from '$lib/server/db';
 import { reviewSchema, favoriteSchema } from '$lib/schemas/reviews';
 import {
 	getVendor,
@@ -13,7 +12,6 @@ import {
 	upsertVendorReview,
 	canReviewVendor
 } from '$lib/server/vendorDirectory';
-import { and, eq } from 'drizzle-orm';
 import { notify } from '$lib/server/notify';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -44,6 +42,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	]);
 
 	// The owner's account id is for notifications only; it doesn't belong in page data.
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const { userId: _ownerId, ...publicVendor } = vendor;
 
 	return {

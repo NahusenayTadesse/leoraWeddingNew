@@ -17,12 +17,14 @@
 	// change. Nothing here holds a filtered copy of the product list, and a
 	// filtered view is shareable, bookmarkable and back-button-safe for free.
 
+	// svelte-ignore state_referenced_locally
 	let searchValue = $state(data.filters.q);
 	let mobileFiltersOpen = $state(false);
 	let debounce: ReturnType<typeof setTimeout>;
 
 	// Re-sync the box when the URL changes from elsewhere: back button, the
 	// reset action, or a category link somewhere else on the site.
+	// svelte-ignore state_referenced_locally
 	let lastServerQuery = data.filters.q;
 	$effect(() => {
 		if (data.filters.q !== lastServerQuery) {
@@ -33,6 +35,7 @@
 
 	/** Writes a partial filter change to the URL. Any change resets to page 1. */
 	function apply(changes: Record<string, string | number | null>) {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- a local copy, not state
 		const params = new URLSearchParams(page.url.searchParams);
 
 		for (const [key, value] of Object.entries(changes)) {
@@ -69,6 +72,7 @@
 
 	/** Pagination hrefs carry every active filter forward. */
 	function pageHref(n: number) {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- a local copy, not state
 		const params = new URLSearchParams(page.url.searchParams);
 		if (n <= 1) params.delete('page');
 		else params.set('page', String(n));
@@ -315,7 +319,7 @@
 
 				{#if isLoading}
 					<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-						{#each Array(pagination.perPage) as _, i (i)}
+						{#each { length: pagination.perPage }, i (i)}
 							<div class="space-y-3">
 								<Skeleton class="aspect-[4/3] w-full rounded-lg" />
 								<Skeleton class="h-4 w-3/4" />

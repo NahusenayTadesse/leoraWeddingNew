@@ -294,7 +294,9 @@
 			label="Names"
 			type="textarea"
 			rows={10}
-			placeholder={'Abebe Kebede, 0911234567\nHana Tesfaye\nDawit Girma, 0922334455'}
+			placeholder={`Abebe Kebede, 0911234567
+Hana Tesfaye
+Dawit Girma, 0922334455`}
 		/>
 	{/snippet}
 </FormDialog>

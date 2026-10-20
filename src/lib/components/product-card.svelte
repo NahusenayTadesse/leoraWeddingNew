@@ -9,21 +9,23 @@
 		productId: number;
 		productName: string;
 		vendorId: number;
-		vendor: string;
-		price: number | string;
-		amount?: string | number;
+		vendor: string | null;
+		price: number | string | null;
+		amount?: string | number | null;
 		image?: string | null;
 		priceList?: { price: number; amount: string | number }[];
 		category?: string | null;
 	};
 
+	// `amount` arrives with the spread service row; the card shows the price only.
+	// eslint-disable-next-line svelte/no-unused-props
 	let { productId, productName, vendorId, vendor, price, image, category, priceList = [] }: Props =
 		$props();
 
 	const formatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'ETB' });
-	const numericPrice = $derived(typeof price === 'string' ? parseFloat(price) : price);
+	const numericPrice = $derived(price === null ? null : typeof price === 'string' ? parseFloat(price) : price);
 	const formattedPrice = $derived(
-		Number.isFinite(numericPrice) ? formatter.format(numericPrice) : null
+		numericPrice !== null && Number.isFinite(numericPrice) ? formatter.format(numericPrice) : null
 	);
 </script>
 
@@ -61,7 +63,7 @@
 			class="text-muted-foreground hover:text-primary flex min-w-0 items-center gap-1.5 text-xs transition-colors"
 		>
 			<StoreIcon class="size-3.5 shrink-0" />
-			<span class="truncate">{vendor}</span>
+			<span class="truncate">{vendor ?? 'Vendor'}</span>
 		</a>
 
 		<!-- Name -->

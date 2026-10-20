@@ -57,9 +57,13 @@
 		subs = []
 	}: Props = $props();
 
+	// Seeded once on purpose: the page re-mounts this component (`{#key}`) per service.
+	// svelte-ignore state_referenced_locally
 	let displayImage = $state(image);
 
+	// svelte-ignore state_referenced_locally
 	let currentPrice = $state(typeof price === 'string' ? parseFloat(price) : price);
+	// svelte-ignore state_referenced_locally
 	let currentAmount = $state<number | string>(priceList?.[0]?.amount ?? 1);
 
 	const formatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'ETB' });

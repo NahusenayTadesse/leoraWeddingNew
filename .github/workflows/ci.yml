@@ -47,7 +47,6 @@ jobs:
       - name: Type check
         working-directory: leoraWeddingNew
         run: npm run check
-        continue-on-error: true # pre-existing errors are being burned down; see bugs.md
 
       - name: Tests (unit + database)
         working-directory: leoraWeddingNew

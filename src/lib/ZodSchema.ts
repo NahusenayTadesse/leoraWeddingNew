@@ -1,5 +1,4 @@
 import { z } from 'zod/v4';
-import VendorCard from './components/VendorCard.svelte';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 5MB limit
 const ACCEPTED_FILE_TYPES = [
 	'image/jpeg', // Common for both platforms

@@ -21,9 +21,11 @@
 	type Role = 'couple' | 'vendor' | 'admin';
 	type Mode = 'login' | 'signup';
 
-	let { data, mode: initialMode = 'login' }: { data: any; mode?: Mode } = $props();
+	let { data, mode: initialMode = 'login' }: { data: import('../../routes/login/$types').PageData; mode?: Mode } = $props();
 
 	let role = $state<Role>((page.url.searchParams.get('role') as Role) ?? 'couple');
+	// The tab the card opens on; switching afterwards is local state.
+	// svelte-ignore state_referenced_locally
 	let mode = $state<Mode>(initialMode);
 
 	const ROLE_LABEL: Record<Role, string> = { couple: 'Couple', vendor: 'Vendor', admin: 'Admin' };

@@ -123,7 +123,8 @@
 	<meta name="description" content={data.vendor.description ?? data.vendor.businessName} />
 	<meta property="og:title" content="{data.vendor.businessName} · Leora Events" />
 	<meta property="og:description" content={data.vendor.description ?? data.vendor.businessName} />
-	{@html `<script type="application/ld+json">${jsonLd}</script>`}
+	<!-- eslint-disable-next-line svelte/no-at-html-tags -- JSON with `<` escaped -->
+	{@html '<script type="application/ld+json">' + jsonLd + '</' + 'script>'}
 </svelte:head>
 
 <div class="mx-auto max-w-6xl px-4 py-8 lg:px-6">

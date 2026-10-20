@@ -17,6 +17,7 @@
 		if (!$form.weddingDate) return null;
 		const target = new Date(`${$form.weddingDate}T00:00:00`);
 		if (isNaN(target.getTime())) return null;
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- a local value, not state
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);
 		return Math.round((target.getTime() - today.getTime()) / 86_400_000);

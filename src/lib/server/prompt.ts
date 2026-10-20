@@ -18,7 +18,6 @@ const searchVendorsForAiSchema = z.object({
     limit: z.number().int().min(1).max(8).optional().default(5)
 });
 
-type SearchVendorsForAiInput = z.infer<typeof searchVendorsForAiSchema>;
 
 /** Words too common in wedding questions to narrow anything down. */
 const STOP_WORDS = new Set(['wedding', 'the', 'and', 'for', 'best', 'good', 'can', 'you', 'recommend', 'find', 'need', 'want', 'with', 'near']);

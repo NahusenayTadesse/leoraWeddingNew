@@ -21,7 +21,6 @@
 		Heart,
 		Store,
 		Sparkles,
-		X,
 		ChevronLeft,
 		ChevronRight
 	} from '@lucide/svelte';
@@ -46,15 +45,33 @@
 	const mediaGradient = (categoryId: number) =>
 		MEDIA_GRADIENTS[categoryId % MEDIA_GRADIENTS.length];
 
+	// Seeded from the URL, then re-synced below when it changes elsewhere (back/forward, links).
+	// svelte-ignore state_referenced_locally
 	let query = $state(data.applied.q);
 	let debounce: ReturnType<typeof setTimeout>;
 
+	// svelte-ignore state_referenced_locally
 	const selectedCategories = new SvelteSet(data.applied.categoryIds.map(String));
+	// svelte-ignore state_referenced_locally
 	let minRating = $state(data.applied.minRating);
+
+	// svelte-ignore state_referenced_locally
+	let lastApplied = $state.snapshot(data.applied);
+	$effect(() => {
+		const applied = data.applied;
+		if (JSON.stringify(applied) === JSON.stringify(lastApplied)) return;
+		lastApplied = $state.snapshot(applied);
+		// Don't overwrite what someone is still typing.
+		if (document.activeElement?.id !== 'vendor-search') query = applied.q;
+		selectedCategories.clear();
+		for (const id of applied.categoryIds) selectedCategories.add(String(id));
+		minRating = applied.minRating;
+	});
 
 	const favorites = $derived(new Set(data.favoriteIds));
 
 	function apply(patch: Record<string, string | number | null>, resetPage = true) {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- a local copy, not state
 		const params = new URLSearchParams(pageState.url.searchParams);
 		for (const [key, value] of Object.entries(patch)) {
 			if (value === null || value === '' || value === 'all') params.delete(key);
@@ -122,6 +139,7 @@
 		<div class="relative min-w-0 flex-1 sm:max-w-sm">
 			<Search class="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
 			<Input
+				id="vendor-search"
 				bind:value={query}
 				oninput={onSearchInput}
 				placeholder="Search vendors, e.g. 'photographer' or 'decor'"

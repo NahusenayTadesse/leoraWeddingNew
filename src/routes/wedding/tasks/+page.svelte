@@ -33,6 +33,7 @@
 		{ id: 'generate' }
 	);
 
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- computed once per page view
 	const today = new Date();
 	today.setHours(0, 0, 0, 0);
 	const todayMs = today.getTime();

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Card, CardContent, CardHeader, CardTitle } from "@nahu/admin-kit/components/ui/card/index.js";
 	import { Badge } from "@nahu/admin-kit/components/ui/badge/index.js";
-	import { TrendingUpIcon, TrendingDownIcon, ShoppingBagIcon, UserCheckIcon, DollarSignIcon, CreditCardIcon, ClipboardListIcon, UsersIcon } from "@lucide/svelte";
+	import { TrendingUpIcon, TrendingDownIcon, ShoppingBagIcon, UserCheckIcon, DollarSignIcon, ClipboardListIcon, UsersIcon } from "@lucide/svelte";
 
 	type TodayReport = {
 		id: number;

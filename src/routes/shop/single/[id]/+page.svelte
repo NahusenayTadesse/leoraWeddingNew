@@ -5,7 +5,8 @@
 
 	let { data } = $props();
 
-	const jsonLd = {
+	// Structured data for search results; `<` escaped so text can't close the script tag.
+	const jsonLd = $derived({
 		'@context': 'https://schema.org/',
 		'@type': 'Service',
 		name: data?.service.serviceName,
@@ -21,7 +22,7 @@
 			priceCurrency: 'ETB',
 			offerCount: data?.priceList?.length
 		}
-	};
+	});
 </script>
 
 <svelte:head>
@@ -39,11 +40,18 @@
 	<meta property="twitter:title" content={data?.service.serviceName} />
 	<meta property="twitter:image" content={assetUrl(data?.service.image)} />
 
-	<!-- {@html `<script type="application/ld+json">${JSON.stringify(jsonLd)}<\/script>`} -->
+	<!-- eslint-disable-next-line svelte/no-at-html-tags -- JSON with `<` escaped -->
+	{@html '<script type="application/ld+json">' +
+		JSON.stringify(jsonLd).replace(/</g, '\\u003c') +
+		'</' +
+		'script>'}
 </svelte:head>
 
 <div class="min-h-screen w-full bg-background text-foreground">
 	<section class="border-b bg-card shadow-sm">
+		<!-- Keyed: the detail keeps the chosen package/image in local state, which must reset
+		     when navigating from one service to another. -->
+		{#key data?.service.serviceId}
 		<ServiceDetail
 			{...data?.service}
 			priceList={data?.priceList}
@@ -54,6 +62,7 @@
 			vendorCity={data?.vendor.cityName ?? data?.vendor.city}
 			isFavorite={data?.isFavorite}
 		/>
+		{/key}
 	</section>
 	{#if data?.images?.length}
 		<div class="mx-auto mt-12 w-full max-w-7xl px-4 sm:px-6 lg:px-8">

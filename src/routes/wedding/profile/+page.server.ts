@@ -65,8 +65,8 @@ export const actions: Actions = {
 					updatedBy: userId
 				});
 			}
-		} catch (e: any) {
-			if (e?.code === 'ER_DUP_ENTRY') {
+		} catch (e) {
+			if ((e as { code?: string })?.code === 'ER_DUP_ENTRY') {
 				return setError(form, 'slug', 'That link is already taken, try another.');
 			}
 			throw e;

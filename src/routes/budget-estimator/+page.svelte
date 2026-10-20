@@ -42,7 +42,7 @@
 	let selected = $state<number[]>([]);
 	let budgetInput = $state('');
 
-	const maxCompare = data.limits.maxCompare;
+	const maxCompare = $derived(data.limits.maxCompare);
 	const atLimit = $derived(selected.length >= maxCompare);
 
 	function toggle(id: number, checked: boolean) {

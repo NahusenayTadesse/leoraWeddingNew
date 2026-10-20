@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- generic over any content table; see AnyTable */
 import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { and, asc, eq } from 'drizzle-orm';
@@ -86,6 +87,7 @@ export function contentCrud<T extends AnyTable, A extends AnySchema, E extends A
 
 	/** Turns validated form data into a row, minus anything that must not change. */
 	const toRow = async (data: Record<string, any>) => {
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars -- the id must not be written
 		const { id, ...values } = data;
 
 		for (const field of fileFields) {

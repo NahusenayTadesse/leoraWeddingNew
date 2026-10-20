@@ -30,16 +30,22 @@ try {
 
 	if (names.includes('__drizzle_migrations')) {
 		const [[{ n }]] = await conn.query('SELECT COUNT(*) AS n FROM __drizzle_migrations');
-		if (n > 0) throw new Error(`${db.name} already has a migration history (${n} rows). Nothing to do.`);
+		if (n > 0)
+			throw new Error(`${db.name} already has a migration history (${n} rows). Nothing to do.`);
 	}
 	if (!names.includes('user') || !names.includes('vendors')) {
-		throw new Error(`${db.name} has no app tables. On an empty database just run npm run db:migrate.`);
+		throw new Error(
+			`${db.name} has no app tables. On an empty database just run npm run db:migrate.`
+		);
 	}
 
 	await conn.query(
 		'CREATE TABLE IF NOT EXISTS `__drizzle_migrations` (id SERIAL PRIMARY KEY, hash text NOT NULL, created_at bigint)'
 	);
-	await conn.query('INSERT INTO `__drizzle_migrations` (hash, created_at) VALUES (?, ?)', [hash, first.when]);
+	await conn.query('INSERT INTO `__drizzle_migrations` (hash, created_at) VALUES (?, ?)', [
+		hash,
+		first.when
+	]);
 	console.log(`Recorded ${first.tag} as applied on ${db.name}. Now run: npm run db:migrate`);
 } finally {
 	await conn.end();

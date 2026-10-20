@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import './layout.css';
 	import { getFlash } from 'sveltekit-flash-message';
 	import { page, updated } from '$app/state';
@@ -82,9 +83,9 @@
 {#if updated.current}
 	<div class={toastmsg} transition:fly={{ x: 20, duration: 300 }}>
 		<p>
-			A new version of the app is available
+			{m.app_updated()}
 
-			<Button onclick={() => location.reload()}>Reload the page</Button>
+			<Button onclick={() => location.reload()}>{m.app_reload()}</Button>
 		</p>
 	</div>
 {/if}
@@ -99,7 +100,9 @@
 {#if !page.url.pathname.startsWith('/vendor-dashboard') && !page.url.pathname.startsWith('/admin')}
 	<div data-site-type>
 		<Header data={data?.user?.name ?? ''} />
-		{@render children()}
+		<main id="content">
+			{@render children()}
+		</main>
 		<Footer />
 		<FloatingChat />
 	</div>

@@ -6,7 +6,7 @@
 		$props();
 </script>
 
-<main class="flex flex-1 items-center justify-center">
+<div class="flex flex-1 items-center justify-center">
 	<div class="auth-shell">
 		<div class="auth-card">
 			<div class="auth-head">
@@ -16,7 +16,7 @@
 			{@render children()}
 		</div>
 	</div>
-</main>
+</div>
 
 <style>
 	.auth-shell {

@@ -14,7 +14,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<main class="mx-auto w-full max-w-2xl px-4 py-10">
+<div class="mx-auto w-full max-w-2xl px-4 py-10">
 	<div class="mb-6 flex items-center justify-between gap-4">
 		<h1 class="text-2xl font-bold">{m.notif_title()}</h1>
 		{#if unread}
@@ -61,4 +61,4 @@
 			{/each}
 		</ul>
 	{/if}
-</main>
+</div>

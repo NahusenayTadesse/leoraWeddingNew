@@ -32,7 +32,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<main class="flex flex-1 items-center justify-center px-4 py-16">
+<div class="flex flex-1 items-center justify-center px-4 py-16">
 	<div class="w-full max-w-md rounded-2xl border bg-card p-8 text-center shadow-sm">
 		{#if data.status === 'paid'}
 			<CircleCheckIcon class="mx-auto mb-4 size-12 text-green-600" />
@@ -52,4 +52,4 @@
 		{/if}
 		<Button href={data.returnPath} class="w-full">{m.pay_return_continue()}</Button>
 	</div>
-</main>
+</div>

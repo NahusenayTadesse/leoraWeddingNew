@@ -66,7 +66,7 @@
 	<meta property="og:description" content={m.contact_meta_description()} />
 </svelte:head>
 
-<main class="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+<div class="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
 	<div class="mb-12 text-center">
 		<p class="mb-2 text-sm font-semibold tracking-wide text-(--leora-gold-dark) uppercase">
 			{m.contact_eyebrow()}
@@ -195,4 +195,4 @@
 			</p>
 		</div>
 	</div>
-</main>
+</div>

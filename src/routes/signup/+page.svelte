@@ -13,6 +13,6 @@
 	/>
 </svelte:head>
 
-<main class="flex flex-1 items-center justify-center">
+<div class="flex flex-1 items-center justify-center">
 	<AuthPanel {data} mode="signup" />
-</main>
+</div>

@@ -225,7 +225,7 @@
 		</div>
 	</header>
 
-	<main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+	<div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
 		<div class="grid grid-cols-1 gap-8 lg:grid-cols-4">
 			<aside class="lg:col-span-1 {mobileFiltersOpen ? 'block' : 'hidden lg:block'}">
 				<div class="sticky top-36 max-h-[calc(100dvh-11rem)] space-y-6 overflow-y-auto pr-2">
@@ -413,5 +413,5 @@
 				{/if}
 			</div>
 		</div>
-	</main>
+	</div>
 </div>

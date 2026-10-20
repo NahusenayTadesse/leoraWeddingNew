@@ -240,7 +240,7 @@
 										{/if}
 									</div>
 									<div class="p-4">
-										<h3 class="font-medium">{service.title}</h3>
+										<h2 class="font-medium">{service.title}</h2>
 										{#if service.description}
 											<p class="mt-1 line-clamp-3 text-sm text-muted-foreground">
 												{service.description}

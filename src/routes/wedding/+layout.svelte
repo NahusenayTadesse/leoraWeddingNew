@@ -104,8 +104,8 @@
 			</nav>
 		</div>
 
-		<main class="min-w-0 flex-1 pb-20 lg:pb-0">
+		<div class="min-w-0 flex-1 pb-20 lg:pb-0">
 			{@render children()}
-		</main>
+		</div>
 	</div>
 </div>

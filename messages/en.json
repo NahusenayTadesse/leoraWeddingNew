@@ -934,5 +934,7 @@
 	"srv_plan_free": "This plan is free.",
 	"srv_plan_covered": "This plan is fully covered by your coupon.",
 	"srv_plan_unavailable": "This plan is no longer available.",
-	"srv_pay_after_confirm": "You can pay once the vendor has confirmed the booking."
+	"srv_pay_after_confirm": "You can pay once the vendor has confirmed the booking.",
+	"app_updated": "A new version of the app is available",
+	"app_reload": "Reload the page"
 }

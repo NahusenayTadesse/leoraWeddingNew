@@ -75,7 +75,7 @@
 	<title>Become a Vendor — Leora Events</title>
 </svelte:head>
 
-<main class="wizard-main">
+<div class="wizard-main">
 	<!-- Stepper -->
 	<div class="stepper">
 		{#each STEP_LABELS as label, i (label)}
@@ -253,7 +253,7 @@
 			{/if}
 		</form>
 	</div>
-</main>
+</div>
 
 <style>
 	.wizard-main {

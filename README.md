@@ -82,8 +82,10 @@ npm ci && npm run build
 NODE_ENV=production node build     # with the production env vars set
 ```
 
-Run `npm run db:migrate` before starting a new release. Put the app behind a reverse proxy
-(nginx, Caddy) that terminates TLS and forwards `X-Forwarded-For`/`-Proto`.
+Run `npm run db:migrate` before starting a new release, and restart the process after
+replacing `build/` (a running server keeps the old file list and fails on files that are gone). Put the app behind a reverse proxy
+(nginx, Caddy) that terminates TLS, forwards `X-Forwarded-For`/`-Proto`, and gzips/brotli-compresses HTML
+responses (adapter-node pre-compresses static assets but not pages).
 
 ### First deploy checklist
 

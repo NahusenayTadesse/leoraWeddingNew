@@ -934,5 +934,7 @@
 	"srv_plan_free": "ይህ እቅድ ነፃ ነው።",
 	"srv_plan_covered": "ይህ እቅድ በኩፖንዎ ሙሉ በሙሉ ተሸፍኗል።",
 	"srv_plan_unavailable": "ይህ እቅድ ከአሁን በኋላ አይገኝም።",
-	"srv_pay_after_confirm": "አቅራቢው ቦታ ማስያዙን ካረጋገጠ በኋላ መክፈል ይችላሉ።"
+	"srv_pay_after_confirm": "አቅራቢው ቦታ ማስያዙን ካረጋገጠ በኋላ መክፈል ይችላሉ።",
+	"app_updated": "አዲስ የመተግበሪያው ስሪት ይገኛል",
+	"app_reload": "ገጹን እንደገና ጫን"
 }

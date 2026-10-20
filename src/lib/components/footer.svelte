@@ -64,7 +64,7 @@
 			</a>
 			{#each columns as column (column.title)}
 				<div>
-					<h4 class="mb-3.5 font-display text-[13px] font-bold">{column.title}</h4>
+					<h2 class="mb-3.5 font-display text-[13px] font-bold">{column.title}</h2>
 					<ul class="space-y-2.5">
 						{#each column.links as [label, href] (href)}
 							<li>

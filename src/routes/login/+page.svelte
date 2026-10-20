@@ -10,6 +10,6 @@
 	<meta name="description" content="Log in to Leora Events to keep planning your wedding day." />
 </svelte:head>
 
-<main class="flex flex-1 items-center justify-center">
+<div class="flex flex-1 items-center justify-center">
 	<AuthPanel {data} mode="login" />
-</main>
+</div>

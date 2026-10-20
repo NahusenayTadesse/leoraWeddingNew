@@ -14,7 +14,13 @@ const config = {
 			mode: 'auto',
 			directives: {
 				'default-src': ['self'],
-				'script-src': ['self'],
+				// Svelte replays early <img> load/error events with the inline handler
+				// `this.__e=event` (bits-ui Avatar). Allow that exact body by hash, nothing else.
+				'script-src': [
+					'self',
+					'unsafe-hashes',
+					'sha256-7dQwUgLau1NFCCGjfn9FsYptB6ZtWxJin6VohGIu20I='
+				],
 				'style-src': ['self', 'unsafe-inline', 'https://fonts.googleapis.com'],
 				'font-src': ['self', 'data:', 'https://fonts.gstatic.com'],
 				'img-src': ['self', 'data:', 'blob:', 'https:'],

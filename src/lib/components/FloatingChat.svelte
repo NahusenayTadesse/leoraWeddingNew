@@ -239,7 +239,7 @@
 		type="button"
 		size="lg"
 		class="rounded-2xl px-4 py-8 shadow-2xl"
-		aria-label={open ? m.chat_close() : m.chat_open()}
+		aria-label={open ? m.chat_close() : undefined}
 		onclick={() => (open = !open)}
 	>
 		{#if open}

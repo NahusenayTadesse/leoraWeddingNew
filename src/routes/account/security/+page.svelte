@@ -18,7 +18,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<main class="mx-auto w-full max-w-xl space-y-6 px-4 py-10">
+<div class="mx-auto w-full max-w-xl space-y-6 px-4 py-10">
 	<h1 class="text-2xl font-bold">{m.sec_title()}</h1>
 
 	{#if data.required && !data.twoFactorEnabled}
@@ -123,4 +123,4 @@
 			{/snippet}
 		</ActionForm>
 	</Card.Root>
-</main>
+</div>

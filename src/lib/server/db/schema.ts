@@ -1,4 +1,4 @@
-import { mysqlTable, int, varchar, text, timestamp } from 'drizzle-orm/mysql-core';
+import { mysqlTable, mysqlEnum, int, varchar, text, timestamp } from 'drizzle-orm/mysql-core';
 export const contactMessages = mysqlTable('contact_messages', {
 	id: int('id').primaryKey().autoincrement(),
 	name: varchar('name', { length: 255 }).notNull(),
@@ -6,6 +6,8 @@ export const contactMessages = mysqlTable('contact_messages', {
 	phone: varchar('phone', { length: 20 }),
 	subject: varchar('subject', { length: 255 }).notNull(),
 	message: text('message').notNull(),
+	/** Inbox workflow on the admin Messages page. */
+	status: mysqlEnum('status', ['new', 'read', 'replied']).default('new').notNull(),
 	createdAt: timestamp('created_at').defaultNow().notNull()
 });
 

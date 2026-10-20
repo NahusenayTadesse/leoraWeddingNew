@@ -1,4 +1,4 @@
-import { and, eq, inArray, or, sql, asc, like, type SQL } from 'drizzle-orm';
+import { and, eq, inArray, isNull, or, sql, asc, like, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '$lib/server/db';
 import {
@@ -28,9 +28,14 @@ function pushToMapArray<K, V>(map: Map<K, V[]>, key: K, value: V) {
     map.set(key, existing);
 }
 
-export async function searchVendorsForAi(input: SearchVendorsForAiInput) {
+export async function searchVendorsForAi(input: z.input<typeof searchVendorsForAiSchema>) {
     const parsed = searchVendorsForAiSchema.parse(input);
-    const filters: SQL[] = [];
+    // Only what the public directory shows (docs/schema-conventions.md): live, listed, approved.
+    const filters: SQL[] = [
+        isNull(vendors.deletedAt),
+        eq(vendors.isActive, true),
+        eq(vendors.status, 'approved')
+    ];
 
     const query = parsed.query ? normalize(parsed.query) : undefined;
     const likeQuery = query ? `%${query}%` : undefined;

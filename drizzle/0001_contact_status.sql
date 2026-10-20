@@ -1,0 +1,1 @@
+ALTER TABLE `contact_messages` ADD `status` enum('new','read','replied') DEFAULT 'new' NOT NULL;

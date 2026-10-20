@@ -8,6 +8,20 @@
       "when": 1785665541925,
       "tag": "0000_lively_silk_fever",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1792509679514,
+      "tag": "0001_contact_status",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1792509708539,
+      "tag": "0002_vendors_fulltext",
+      "breakpoints": true
     }
   ]
 }

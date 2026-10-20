@@ -4,22 +4,25 @@ import { json, type RequestHandler } from '@sveltejs/kit';
 import { dev } from '$app/environment';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
-import { PROMPT, searchVendorsForAi as searchProductsForAi  } from '$lib/server/prompt';
-import { GEMINI_KEY, CHAT_LIMIT_SECRET } from '$env/static/private';
+import { PROMPT, searchVendorsForAi } from '$lib/server/prompt';
+import { env } from '$env/dynamic/private';
+import { takeToken } from '$lib/server/rateLimit';
 
 // Import Google Gen AI SDK
 import { GoogleGenAI, Type, type Content, type FunctionResponse } from '@google/genai';
 
-const CHAT_LIMIT_COOKIE = 'tmx_chat_limit';
+const CHAT_LIMIT_COOKIE = 'leora_chat_limit';
 
 const MAX_AI_PROMPTS = 10;
 const LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 const COOKIE_MAX_AGE_SECONDS = 24 * 60 * 60;
 
-// Initialize the Google Gen AI Client
-const ai = new GoogleGenAI({
-	apiKey: GEMINI_KEY
-});
+// Created on first use, so a missing key disables chat instead of failing the build.
+let client: GoogleGenAI | null = null;
+function ai(): GoogleGenAI {
+	if (!env.GEMINI_KEY) throw new Error('GEMINI_KEY is not configured');
+	return (client ??= new GoogleGenAI({ apiKey: env.GEMINI_KEY }));
+}
 
 // Using a standard high-efficiency Gemini model
 const MODEL = 'gemini-3.5-flash-lite';
@@ -43,7 +46,7 @@ function fromBase64url(value: string) {
 }
 
 function sign(value: string) {
-	return createHmac('sha256', CHAT_LIMIT_SECRET).update(value).digest('base64url');
+	return createHmac('sha256', env.CHAT_LIMIT_SECRET || env.BETTER_AUTH_SECRET || '').update(value).digest('base64url');
 }
 
 function makeSignedCookie(payload: ChatLimitPayload) {
@@ -121,40 +124,35 @@ function checkAndUpdateChatLimit(cookies: import('@sveltejs/kit').Cookies) {
 	};
 }
 
-// Map tools to Gemini's Function Declarations schema
 const tools = [
 	{
 		functionDeclarations: [
 			{
-				name: 'searchProductsForAi',
+				name: 'searchVendors',
 				description:
-					'Search the public dana Electronics product catalog. Use only for dana product-related questions such as product availability, prices, categories, tags, and recommendations.',
+					'Search approved wedding vendors listed on Leora Events. Use for questions about finding vendors, venues, photographers, decor, catering, prices or availability by category or city.',
 				parameters: {
 					type: Type.OBJECT,
 					properties: {
 						query: {
 							type: Type.STRING,
-							description:
-								'The product search query, for example "charger", "power bank", "earbuds".'
+							description: 'Free-text search, for example "photographer", "garden venue", "habesha kemis".'
 						},
 						categoryName: {
 							type: Type.STRING,
-							description: 'Optional product category name, for example "Mobile Accessories".'
+							description: 'Optional vendor category name, for example "Photography" or "Venues".'
 						},
-						tagNames: {
-							type: Type.ARRAY,
-							description: 'Optional product tags to filter by.',
-							items: {
-								type: Type.STRING
-							}
+						city: {
+							type: Type.STRING,
+							description: 'Optional city, for example "Addis Ababa" or "Bahir Dar".'
 						},
-						inStockOnly: {
+						verifiedOnly: {
 							type: Type.BOOLEAN,
-							description: 'Whether to return only products that appear to be in stock.'
+							description: 'Return only vendors with the verified badge.'
 						},
 						limit: {
 							type: Type.INTEGER,
-							description: 'Maximum number of products to return. Must be between 1 and 8.'
+							description: 'Maximum number of vendors to return, between 1 and 8.'
 						}
 					}
 				}
@@ -163,31 +161,43 @@ const tools = [
 	}
 ];
 
-function cleanToolArgs(args: any) {
-	if (!args || typeof args !== 'object') {
-		return {};
-	}
+const str = (v: unknown, max: number) =>
+	typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : undefined;
 
+function cleanToolArgs(args: unknown) {
+	const a = (args && typeof args === 'object' ? args : {}) as Record<string, unknown>;
 	return {
-		query: typeof args.query === 'string' ? args.query : undefined,
-		categoryName: typeof args.categoryName === 'string' ? args.categoryName : undefined,
-		tagNames: Array.isArray(args.tagNames)
-			? args.tagNames.filter((tag: unknown): tag is string => typeof tag === 'string')
-			: undefined,
-		inStockOnly: typeof args.inStockOnly === 'boolean' ? args.inStockOnly : undefined,
-		limit:
-			typeof args.limit === 'number' ? Math.max(1, Math.min(8, Math.floor(args.limit))) : undefined
+		query: str(a.query, 100),
+		categoryName: str(a.categoryName, 50),
+		city: str(a.city, 50),
+		verifiedOnly: a.verifiedOnly === true,
+		limit: typeof a.limit === 'number' ? Math.max(1, Math.min(8, Math.floor(a.limit))) : 5
 	};
 }
 
-export const POST: RequestHandler = async ({ request, cookies }) => {
+/** Per message and per conversation, so one request can't run up a large Gemini bill. */
+const MAX_MESSAGE_CHARS = 2000;
+
+export const POST: RequestHandler = async ({ request, cookies, getClientAddress, locals }) => {
 	try {
 		const { messages } = (await request.json()) as {
 			messages: ChatMessage[];
 		};
 
-		if (!Array.isArray(messages)) {
+		if (
+			!Array.isArray(messages) ||
+			messages.some((m) => typeof m?.content !== 'string' || m.content.length > MAX_MESSAGE_CHARS)
+		) {
 			return json({ error: 'Invalid messages format.' }, { status: 400 });
+		}
+
+		// The cookie is easy to clear, so the server also counts per IP (and per account).
+		const serverKey = locals.user ? `chat:user:${locals.user.id}` : `chat:ip:${getClientAddress()}`;
+		if (!takeToken(serverKey, { capacity: MAX_AI_PROMPTS, perMinute: MAX_AI_PROMPTS / (24 * 60) })) {
+			return json(
+				{ error: 'You have reached the chat limit. Please try again later.' },
+				{ status: 429 }
+			);
 		}
 
 		const limit = checkAndUpdateChatLimit(cookies);
@@ -216,7 +226,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		 * First request:
 		 * Send history and configurations to Gemini.
 		 */
-		const firstResponse = await ai.models.generateContent({
+		const firstResponse = await ai().models.generateContent({
 			model: MODEL,
 			contents: contents,
 			config: {
@@ -250,7 +260,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		const functionResponses: FunctionResponse[] = [];
 
 		for (const call of functionCalls) {
-			if (call.name !== 'searchProductsForAi') {
+			if (call.name !== 'searchVendors') {
 				functionResponses.push({
 					name: call.name,
 					response: { error: 'Unknown function call.' }
@@ -260,19 +270,19 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 
 			try {
 				const args = cleanToolArgs(call.args);
-				const result = await searchProductsForAi(args);
+				const result = await searchVendorsForAi(args);
 
 				functionResponses.push({
 					name: call.name,
 					response: { result: result }
 				});
 			} catch (error) {
-				console.error('searchProductsForAi failed:', error);
+				console.error('searchVendors failed:', error);
 				functionResponses.push({
 					name: call.name,
 					response: {
 						error:
-							'Product search failed. Tell the user to visit the Shop page or contact dana support.'
+							'Vendor search failed. Suggest the user browse the Vendors page or contact Leora support.'
 					}
 				});
 			}
@@ -288,7 +298,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		 * Second request:
 		 * Provide the tool outputs so Gemini can form its final string.
 		 */
-		const finalResponse = await ai.models.generateContent({
+		const finalResponse = await ai().models.generateContent({
 			model: MODEL,
 			contents: followUpContents,
 			config: {

@@ -25,6 +25,12 @@
 
 	const queue = $derived([
 		{
+			label: 'Receipts to review',
+			n: s.queue.receiptsToReview,
+			href: '/admin/payments?tab=review',
+			icon: Wallet
+		},
+		{
 			label: 'Vendors awaiting approval',
 			n: s.queue.pendingVendors,
 			href: '/admin/vendors',
@@ -64,6 +70,7 @@
 			label="Platform revenue"
 			value={formatETBWhole(s.platformRevenue)}
 			hint="Subscriptions + commission"
+			delta={data.deltas.revenue}
 			icon={TrendingUp}
 			href="/admin/reports"
 		/>
@@ -71,10 +78,18 @@
 			label="Gross bookings value"
 			value={formatETBWhole(s.gmv)}
 			hint="Confirmed vendor payments"
+			delta={data.deltas.gmv}
 			icon={Wallet}
 			href="/admin/payments"
 		/>
-		<Kpi label="Couples" value={s.couples} icon={Heart} href="/admin/users" />
+		<Kpi
+			label="Couples"
+			value={s.couples}
+			hint="{data.deltas.current.couples} joined in 30 days"
+			delta={data.deltas.couples}
+			icon={Heart}
+			href="/admin/users"
+		/>
 		<Kpi
 			label="Vendors"
 			value={s.vendors}
@@ -135,7 +150,8 @@
 							><q.icon class="size-4 text-muted-foreground" />{q.label}</span
 						>
 						<span
-							class="font-semibold {q.n > 0 && q.label.match(/approval|disputes|Payout|Refund/)
+							class="font-semibold {q.n > 0 &&
+							q.label.match(/approval|disputes|Payout|Refund|Receipts/)
 								? 'text-amber-600'
 								: ''}">{q.n}</span
 						>

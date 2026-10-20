@@ -7,13 +7,14 @@ import {
 	signupSeries,
 	bookingSeries,
 	breakdowns,
-	lastMonths
+	lastMonths,
+	periodDeltas
 } from '$lib/server/adminStats';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {
 	const range = lastMonths(12);
-	const [stats, revenue, signups, bookings, mix, recent] = await Promise.all([
+	const [stats, revenue, signups, bookings, mix, recent, deltas] = await Promise.all([
 		overview(),
 		revenueSeries(range),
 		signupSeries(range),
@@ -31,7 +32,8 @@ export const load: PageServerLoad = async () => {
 			.from(activityLogs)
 			.leftJoin(user, eq(user.id, activityLogs.userId))
 			.orderBy(desc(activityLogs.createdAt))
-			.limit(8)
+			.limit(8),
+		periodDeltas()
 	]);
-	return { stats, revenue, signups, bookings, mix, recent };
+	return { stats, revenue, signups, bookings, mix, recent, deltas };
 };

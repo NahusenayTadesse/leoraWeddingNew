@@ -3,6 +3,7 @@
 	import { renderSnippet } from '@nahu/admin-kit/components/ui/data-table/index.js';
 	import DataTable from '@nahu/admin-kit/components/Table/data-table.svelte';
 	import ConfirmAction from '@nahu/admin-kit/components/ConfirmAction.svelte';
+	import { Checkbox } from '@nahu/admin-kit/components/ui/checkbox/index.js';
 	import { ShieldCheck } from '@lucide/svelte';
 	import PageHeader from '$lib/components/admin/PageHeader.svelte';
 	import { date, sortable, status } from '$lib/cells';
@@ -35,7 +36,18 @@
 		pending: 'They go back into the approval queue.'
 	} as const;
 
+	/** Rows ticked for a bulk decision (the kit table fills this through `bind:selected`). */
+	let selected = $state<Row[]>([]);
+	const selectedIds = $derived(selected.map((r) => r.id).join(','));
+
 	const columns: ColumnDef<Row>[] = [
+		{
+			id: 'select',
+			header: ({ table }) => renderSnippet(selectAllCell, table),
+			cell: ({ row }) => renderSnippet(selectCell, row),
+			enableSorting: false,
+			meta: { class: 'w-8' }
+		},
 		{
 			id: 'businessName',
 			accessorKey: 'businessName',
@@ -70,9 +82,26 @@
 	];
 </script>
 
+{#snippet selectAllCell(table: import('@tanstack/table-core').Table<Row>)}
+	<Checkbox
+		checked={table.getIsAllPageRowsSelected()}
+		indeterminate={table.getIsSomePageRowsSelected()}
+		onCheckedChange={(v) => table.toggleAllPageRowsSelected(!!v)}
+		aria-label="Select all on this page"
+	/>
+{/snippet}
+
+{#snippet selectCell(row: import('@tanstack/table-core').Row<Row>)}
+	<Checkbox
+		checked={row.getIsSelected()}
+		onCheckedChange={(v) => row.toggleSelected(!!v)}
+		aria-label="Select {row.original.businessName}"
+	/>
+{/snippet}
+
 {#snippet businessCell(row: Row)}
 	<div class="flex items-center gap-2">
-		<span class="font-medium">{row.businessName}</span>
+		<a href="/admin/vendors/{row.id}" class="font-medium hover:underline">{row.businessName}</a>
 		{#if row.isVerified}
 			<ShieldCheck class="size-3.5 text-success" aria-label="Verified" />
 		{/if}
@@ -102,6 +131,27 @@
 <div class="space-y-6">
 	<PageHeader title="Vendors" description="Approve, reject or suspend vendor listings." />
 
+	{#if selected.length}
+		<div class="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/40 p-3 text-sm">
+			<span class="mr-2 font-medium">{selected.length} selected</span>
+			<ConfirmAction
+				action="?/bulkStatus"
+				fields={{ ids: selectedIds, status: 'approved' }}
+				label="Approve selected"
+				title="Approve {selected.length} vendors?"
+				description="Their listings go live and each vendor is emailed."
+			/>
+			<ConfirmAction
+				action="?/bulkStatus"
+				fields={{ ids: selectedIds, status: 'rejected' }}
+				label="Reject selected"
+				variant="destructive"
+				title="Reject {selected.length} vendors?"
+				description="Their listings are hidden and each vendor is emailed."
+			/>
+		</div>
+	{/if}
+
 	<DataTable
 		{columns}
 		data={data.rows}
@@ -110,5 +160,6 @@
 		facetLabels={{ status: 'Status', categoryId: 'Category' }}
 		dateFilter="Joined"
 		fileName="Vendors"
+		bind:selected
 	/>
 </div>

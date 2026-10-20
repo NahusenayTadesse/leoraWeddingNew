@@ -1,4 +1,5 @@
-import { count, desc, eq, isNull, like, or } from 'drizzle-orm';
+import { and, count, desc, eq, isNull, like, or } from 'drizzle-orm';
+import { z } from 'zod/v4';
 import type { MySqlSelect } from 'drizzle-orm/mysql-core';
 import {
 	buildWhere,
@@ -116,35 +117,68 @@ const VENDOR_STATUS_MESSAGE: Record<string, { title: string; body: (name: string
 	}
 };
 
+/** Changes a vendor's status, audits it and tells the vendor. False if there is no such vendor. */
+async function setVendorStatus(
+	event: Parameters<typeof audit>[0],
+	id: number,
+	status: 'pending' | 'approved' | 'rejected' | 'suspended'
+) {
+	const [before] = await db
+		.select({ status: vendors.status, userId: vendors.userId, name: vendors.businessName })
+		.from(vendors)
+		.where(and(eq(vendors.id, id), isNull(vendors.deletedAt)));
+	if (!before) return false;
+
+	await db.update(vendors).set({ status }).where(eq(vendors.id, id));
+	await audit(event, 'vendor.status', 'vendor', id, { from: before.status, to: status });
+
+	if (before.status !== status) {
+		const message = VENDOR_STATUS_MESSAGE[status];
+		if (message) {
+			await notify(before.userId, {
+				type: `vendor_${status}`,
+				title: message.title,
+				body: message.body(before.name ?? 'your business'),
+				link: '/vendor-dashboard'
+			});
+		}
+	}
+	return true;
+}
+
 export const actions = {
+	/** One decision for several vendors at once; each is audited and told, as for a single one. */
+	bulkStatus: async (event) => {
+		requirePermission(event.locals, PERM.vendorsApprove);
+		const p = await parse(
+			event.request,
+			z.object({
+				ids: z
+					.string()
+					.transform((v) =>
+						v
+							.split(',')
+							.map(Number)
+							.filter((n) => Number.isInteger(n) && n > 0)
+					)
+					.refine((a) => a.length > 0 && a.length <= 200, 'Select between 1 and 200 vendors'),
+				status: z.enum(['approved', 'rejected'])
+			})
+		);
+		if ('error' in p) return p.error;
+		let changed = 0;
+		for (const id of p.data.ids) {
+			if (await setVendorStatus(event, id, p.data.status)) changed++;
+		}
+		return ok(`${changed} vendor${changed === 1 ? '' : 's'} marked ${p.data.status}`);
+	},
 	updateStatus: async (event) => {
 		requirePermission(event.locals, PERM.vendorsApprove);
 		const p = await parse(event.request, vendorStatusSchema);
 		if ('error' in p) return p.error;
 
-		const [before] = await db
-			.select({ status: vendors.status, userId: vendors.userId, name: vendors.businessName })
-			.from(vendors)
-			.where(eq(vendors.id, p.data.id));
-		if (!before) return bad('Vendor not found', 404);
-
-		await db.update(vendors).set({ status: p.data.status }).where(eq(vendors.id, p.data.id));
-		await audit(event, 'vendor.status', 'vendor', p.data.id, {
-			from: before.status,
-			to: p.data.status
-		});
-
-		if (before.status !== p.data.status) {
-			const message = VENDOR_STATUS_MESSAGE[p.data.status];
-			if (message) {
-				await notify(before.userId, {
-					type: `vendor_${p.data.status}`,
-					title: message.title,
-					body: message.body(before.name ?? 'your business'),
-					link: '/vendor-dashboard'
-				});
-			}
-		}
+		if (!(await setVendorStatus(event, p.data.id, p.data.status)))
+			return bad('Vendor not found', 404);
 		return ok(`Vendor marked ${statusLabel(p.data.status).toLowerCase()}`);
 	}
 } satisfies Actions;

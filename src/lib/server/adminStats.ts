@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, isNull, sql, sum } from 'drizzle-orm';
+import { and, count, desc, eq, gte, isNull, lt, sql, sum } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import {
 	user,
@@ -244,7 +244,9 @@ export async function overview() {
 		pendingPayouts,
 		pendingRefunds,
 		recentMessages,
-		newReviews
+		newReviews,
+		bookingReceipts,
+		planReceipts
 	] = await Promise.all([
 		one(db.select({ n: count() }).from(user)),
 		one(db.select({ n: count() }).from(couples).where(isNull(couples.deletedAt))),
@@ -310,6 +312,24 @@ export async function overview() {
 						gte(vendorReviews.createdAt, new Date(Date.now() - 7 * 864e5))
 					)
 				)
+		),
+		one(
+			db
+				.select({ n: count() })
+				.from(bookingPayments)
+				.where(
+					and(
+						eq(bookingPayments.status, 'pending'),
+						sql`${bookingPayments.paymentMethod} <> 'chapa'`,
+						isNull(bookingPayments.deletedAt)
+					)
+				)
+		),
+		one(
+			db
+				.select({ n: count() })
+				.from(payments)
+				.where(and(eq(payments.status, 'pending'), eq(payments.paymentMethod, 'bank_transfer')))
 		)
 	]);
 	const subscriptionRevenue = toMoney(planRev?.v);
@@ -329,7 +349,89 @@ export async function overview() {
 			pendingPayouts: pendingPayouts?.n ?? 0,
 			pendingRefunds: pendingRefunds?.n ?? 0,
 			messagesThisWeek: recentMessages?.n ?? 0,
-			reviewsThisWeek: newReviews?.n ?? 0
+			reviewsThisWeek: newReviews?.n ?? 0,
+			receiptsToReview: (bookingReceipts?.n ?? 0) + (planReceipts?.n ?? 0)
 		}
+	};
+}
+
+/** Percent change, or null when there is no previous figure to compare with. */
+function change(current: number, previous: number): number | null {
+	if (previous === 0) return current === 0 ? 0 : null;
+	return Math.round(((current - previous) / previous) * 100);
+}
+
+/**
+ * The last 30 days against the 30 before: booking value, platform revenue, new couples and new
+ * bookings, for the arrows on the overview tiles.
+ */
+export async function periodDeltas() {
+	const now = Date.now();
+	const day = 864e5;
+	const windows = [
+		[new Date(now - 30 * day), new Date(now)],
+		[new Date(now - 60 * day), new Date(now - 30 * day)]
+	] as const;
+
+	const figures = await Promise.all(
+		windows.map(async ([from, to]) => {
+			const [[g], [p], [c], [cp], [b]] = await Promise.all([
+				db
+					.select({ v: sum(bookingPayments.amount) })
+					.from(bookingPayments)
+					.where(
+						and(
+							eq(bookingPayments.status, 'confirmed'),
+							gte(bookingPayments.paidAt, from),
+							lt(bookingPayments.paidAt, to)
+						)
+					),
+				db
+					.select({ v: sum(payments.amount) })
+					.from(payments)
+					.where(
+						and(
+							eq(payments.status, 'completed'),
+							gte(payments.paidAt, from),
+							lt(payments.paidAt, to)
+						)
+					),
+				db
+					.select({ v: sum(paymentCommissions.commissionAmount) })
+					.from(paymentCommissions)
+					.innerJoin(bookingPayments, eq(bookingPayments.id, paymentCommissions.bookingPaymentId))
+					.where(
+						and(
+							eq(bookingPayments.status, 'confirmed'),
+							gte(bookingPayments.paidAt, from),
+							lt(bookingPayments.paidAt, to)
+						)
+					),
+				db
+					.select({ n: count() })
+					.from(couples)
+					.where(
+						and(isNull(couples.deletedAt), gte(couples.createdAt, from), lt(couples.createdAt, to))
+					),
+				db
+					.select({ n: count() })
+					.from(vendorBookings)
+					.where(and(gte(vendorBookings.createdAt, from), lt(vendorBookings.createdAt, to)))
+			]);
+			return {
+				gmv: toMoney(g?.v),
+				revenue: toMoney(p?.v) + toMoney(c?.v),
+				couples: cp?.n ?? 0,
+				bookings: b?.n ?? 0
+			};
+		})
+	);
+	const [cur, prev] = figures;
+	return {
+		gmv: change(cur.gmv, prev.gmv),
+		revenue: change(cur.revenue, prev.revenue),
+		couples: change(cur.couples, prev.couples),
+		bookings: change(cur.bookings, prev.bookings),
+		current: cur
 	};
 }

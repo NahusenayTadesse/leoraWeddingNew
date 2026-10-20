@@ -148,5 +148,19 @@
 	"avail_prev": "Previous month",
 	"avail_next": "Next month",
 	"avail_public_hint": "Dates marked booked or unavailable are taken. Others may still need confirming with the vendor.",
-	"avail_date_blocked": "The vendor is not available on that date. Please choose another day."
+	"avail_date_blocked": "The vendor is not available on that date. Please choose another day.",
+	"contract_title": "Contract",
+	"contract_none": "No contract has been shared yet.",
+	"contract_open": "Open contract (PDF)",
+	"contract_couple": "Couple",
+	"contract_vendor": "Vendor",
+	"contract_signed_by": "Signed by {name} on {date}",
+	"contract_not_signed": "Not signed yet",
+	"contract_sign_name": "Type your full name to sign",
+	"contract_agree": "I have read the contract and agree to its terms.",
+	"contract_sign": "Sign contract",
+	"contract_attach": "Share a contract (PDF)",
+	"contract_replace": "Replace contract (signatures start over)",
+	"contract_doc_title": "Title",
+	"contract_view": "Contract"
 }

@@ -21,9 +21,11 @@
 		X,
 		Send,
 		MessageCircle,
-		TriangleAlert
+		TriangleAlert,
+		FileText
 	} from '@lucide/svelte';
 	import ActionForm from '@nahu/admin-kit/formComponents/ActionForm.svelte';
+	import ContractPanel from '$lib/components/ContractPanel.svelte';
 	import {
 		cancelSchema,
 		confirmSchema,
@@ -41,6 +43,8 @@
 	type Row = (typeof data.bookings)[number];
 
 	let disputeFor = $state<Row | null>(null);
+	let contractFor = $state<number | null>(null);
+	const contractRow = $derived(data.bookings.find((b) => b.id === contractFor) ?? null);
 
 	const statusItems = [
 		{ value: 'pending', name: 'Pending' },
@@ -216,6 +220,13 @@
 						<X class="size-4" /> Cancel
 					</DropdownMenu.Item>
 				{/if}
+				<DropdownMenu.Item onclick={() => (contractFor = b.id)}>
+					<FileText class="size-4" /> Contract{b.contract?.hasDocument
+						? b.contract.signedByCouple && b.contract.signedByVendor
+							? ' (signed)'
+							: ' (awaiting signature)'
+						: ''}
+				</DropdownMenu.Item>
 				{#if b.status !== 'pending'}
 					<DropdownMenu.Item onclick={() => (disputeFor = b)}>
 						<TriangleAlert class="size-4" /> Report a problem
@@ -483,6 +494,21 @@
 					</Dialog.Footer>
 				{/snippet}
 			</ActionForm>
+		{/if}
+	</Dialog.Content>
+</Dialog.Root>
+
+<Dialog.Root open={!!contractRow} onOpenChange={(open) => !open && (contractFor = null)}>
+	<Dialog.Content class="sm:max-w-md">
+		<Dialog.Header>
+			<Dialog.Title>Contract</Dialog.Title>
+			<Dialog.Description>
+				Share a PDF with the couple. Both sides sign by typing their name; replacing the PDF clears
+				both signatures.
+			</Dialog.Description>
+		</Dialog.Header>
+		{#if contractRow}
+			<ContractPanel contract={contractRow.contract} side="vendor" fields={{ id: contractRow.id }} />
 		{/if}
 	</Dialog.Content>
 </Dialog.Root>

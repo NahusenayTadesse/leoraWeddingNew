@@ -305,12 +305,24 @@ export const contracts = mysqlTable(
 		bookingId: int('booking_id')
 			.notNull()
 			.references(() => vendorBookings.id, { onDelete: 'cascade' }),
-		documentUrl: text('document_url'),
+		/** Stored file name of the PDF (served by /contracts/[id] to the two parties and staff). */
+		documentUrl: varchar('document_url', { length: 255 }),
+		title: varchar('title', { length: 150 }),
 		signedByCouple: boolean('signed_by_couple').default(false).notNull(),
 		signedByVendor: boolean('signed_by_vendor').default(false).notNull(),
+		/** Typed-name e-signatures: who, when, from where. Cleared when the document changes. */
+		coupleSignedName: varchar('couple_signed_name', { length: 150 }),
+		coupleSignedAt: timestamp('couple_signed_at', { fsp: 3 }),
+		coupleSignedIp: varchar('couple_signed_ip', { length: 45 }),
+		vendorSignedName: varchar('vendor_signed_name', { length: 150 }),
+		vendorSignedAt: timestamp('vendor_signed_at', { fsp: 3 }),
+		vendorSignedIp: varchar('vendor_signed_ip', { length: 45 }),
 		...secureFields
 	},
-	(table) => [index('contracts_booking_idx').on(table.bookingId)]
+	(table) => [
+		index('contracts_booking_idx').on(table.bookingId),
+		index('contracts_document_idx').on(table.documentUrl)
+	]
 );
 
 export const disputes = mysqlTable(

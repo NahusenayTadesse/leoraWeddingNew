@@ -19,6 +19,8 @@ import {
 import { fromMoney } from '$lib/money';
 import { notify } from '$lib/server/notify';
 import { ClaimRefused, openDispute } from '$lib/server/claims';
+import { attachContract, contractsForBookings, signContract } from '$lib/server/contracts';
+import { saveUploadedFile, UploadRefused } from '@nahu/admin-kit/server/files';
 import { parse, ok, bad } from '$lib/server/adminAction';
 import { z as zv4 } from 'zod/v4';
 import {
@@ -57,7 +59,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		listVendorBookings(vendor.id, tab, query),
 		unreadCountsByCouple(vendor.id, vendor.userId),
 		listVendorServices(vendor.id),
-		listCouplesForBooking(),
+		listCouplesForBooking(vendor.id),
 		superValidate(zod4(vendorBookingAddSchema), { id: 'add' }),
 		superValidate(zod4(vendorBookingEditSchema), { id: 'edit' }),
 		superValidate(zod4(crudIdSchema), { id: 'delete' }),
@@ -68,12 +70,15 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		superValidate(zod4(replySchema), { id: 'reply' })
 	]);
 
+	const contractByBooking = await contractsForBookings(rows.map((b) => b.id));
+
 	return {
 		vendorUserId: vendor.userId,
 		bookings: rows.map((b) => ({
 			...b,
 			eventDate: toDateInput(b.eventDate),
-			unread: unread.get(b.coupleId) ?? 0
+			unread: unread.get(b.coupleId) ?? 0,
+			contract: contractByBooking.get(b.id) ?? null
 		})),
 		tab,
 		server: { pagination: pagination(query, total), facets, filters: currentQuery(query) },
@@ -96,6 +101,15 @@ export const actions: Actions = {
 		const form = await superValidate(request, zod4(vendorBookingAddSchema), { id: 'add' });
 		if (!form.valid) {
 			return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
+		}
+
+		const allowed = await listCouplesForBooking(vendor.id);
+		if (!allowed.some((c) => c.value === form.data.weddingPlanId)) {
+			return message(
+				form,
+				{ type: 'error', text: 'You can only add bookings for couples who have contacted you.' },
+				{ status: 403 }
+			);
 		}
 
 		try {
@@ -123,6 +137,9 @@ export const actions: Actions = {
 			return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
 		}
 
+		const before = await getVendorBooking(vendor.id, form.data.id);
+		if (!before) return message(form, { type: 'error', text: 'Booking not found' }, { status: 404 });
+
 		try {
 			const [result] = await db
 				.update(vendorBookings)
@@ -136,6 +153,18 @@ export const actions: Actions = {
 				.where(and(eq(vendorBookings.id, form.data.id), eq(vendorBookings.vendorId, vendor.id)));
 			if (result.affectedRows === 0) {
 				return message(form, { type: 'error', text: 'Booking not found' }, { status: 404 });
+			}
+			// The couple pays against the agreed price, so they hear about any change to it.
+			const newPrice = form.data.agreedPrice != null ? fromMoney(form.data.agreedPrice) : null;
+			const priceChanged = (before.agreedPrice ?? null) !== newPrice;
+			const dateChanged = (before.eventDate ?? null) !== (form.data.eventDate ?? null);
+			if (priceChanged || dateChanged) {
+				await notify(before.partner1UserId, {
+					type: 'booking_updated',
+					title: 'Booking details changed',
+					body: `${vendor.businessName ?? 'Your vendor'} updated your booking${priceChanged ? ` — agreed price is now ETB ${newPrice ?? '0.00'}` : ''}${dateChanged ? ` — date is now ${form.data.eventDate ?? 'unset'}` : ''}.`,
+					link: '/wedding/bookings'
+				});
 			}
 			return message(form, { type: 'success', text: 'Booking updated' });
 		} catch (err) {
@@ -330,5 +359,57 @@ export const actions: Actions = {
 			throw err;
 		}
 		return ok('Thanks — our team will look into it and get back to you.');
+	},
+
+	/** Attaches (or replaces) the booking's contract PDF; both signatures start over. */
+	attachContract: async ({ request, locals }) => {
+		const vendor = await requireVendor(locals);
+		const data = await request.formData();
+		const id = Number(data.get('id'));
+		const title = String(data.get('title') ?? '').trim().slice(0, 150) || 'Service agreement';
+		const file = data.get('document');
+		if (!(file instanceof File) || file.size === 0) return bad('Attach the contract as a PDF.');
+		if (file.type !== 'application/pdf') return bad('Contracts must be PDF files.');
+
+		const booking = await getVendorBooking(vendor.id, id);
+		if (!booking) return bad('Booking not found', 404);
+
+		let documentUrl: string;
+		try {
+			documentUrl = await saveUploadedFile(file);
+		} catch (err) {
+			if (err instanceof UploadRefused) return bad(err.message);
+			throw err;
+		}
+		await attachContract({ bookingId: booking.id, documentUrl, title, userId: locals.user!.id });
+		await notify(booking.partner1UserId, {
+			type: 'contract_ready',
+			title: 'Contract ready to sign',
+			body: `${vendor.businessName ?? 'Your vendor'} shared a contract ("${title}") for you to review and sign.`,
+			link: '/wedding/bookings'
+		});
+		return ok('Contract shared with the couple.');
+	},
+
+	signContract: async ({ request, locals, getClientAddress }) => {
+		const vendor = await requireVendor(locals);
+		const p = await parse(
+			request,
+			zv4.object({
+				id: zv4.coerce.number().int().positive(),
+				name: zv4.string().trim().min(3, 'Type your full name to sign').max(150)
+			})
+		);
+		if ('error' in p) return p.error;
+		const booking = await getVendorBooking(vendor.id, p.data.id);
+		if (!booking) return bad('Booking not found', 404);
+		const signed = await signContract({
+			bookingId: booking.id,
+			side: 'vendor',
+			name: p.data.name,
+			ip: getClientAddress()
+		});
+		if (!signed) return bad('Attach a contract first.');
+		return ok('Contract signed.');
 	}
 };

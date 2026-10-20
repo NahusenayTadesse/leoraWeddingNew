@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db';
 import { vendorBookings, vendors, vendorServices, bookingPayments } from '$lib/server/db/schema';
 import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { contractsForBookings } from '$lib/server/contracts';
 
 /** Vendor's contact user + display name, for the auto-generated booking-request message. */
 export async function getVendorForMessage(vendorId: number) {
@@ -91,6 +92,8 @@ export async function listBookings(weddingPlanId: number) {
 		)
 		.orderBy(sql`${bookingPayments.createdAt} DESC`);
 
+	const contractByBooking = await contractsForBookings(rows.map((r) => r.id));
+
 	return rows.map((r) => {
 		const t = byBooking.get(r.id);
 		const agreed = Number(r.agreedPrice ?? 0);
@@ -103,6 +106,7 @@ export async function listBookings(weddingPlanId: number) {
 			paid,
 			pendingPaid: pending,
 			balance: Math.max(0, Math.round((agreed - paid - pending) * 100) / 100),
+			contract: contractByBooking.get(r.id) ?? null,
 			payments: history
 				.filter((h) => h.bookingId === r.id)
 				.map((h) => ({

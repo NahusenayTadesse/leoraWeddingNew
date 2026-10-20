@@ -1,6 +1,7 @@
 <script lang="ts">
 	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
 	import ActionForm from '@nahu/admin-kit/formComponents/ActionForm.svelte';
+	import ContractPanel from '$lib/components/ContractPanel.svelte';
 	import { createForm } from '@nahu/admin-kit/forms/createForm';
 	import { bookingSchema } from '$lib/schemas/booking';
 	import { bookingTransferSchema } from '$lib/schemas/payment';
@@ -48,6 +49,8 @@
 	let payMode = $state<'chapa' | 'transfer'>('chapa');
 	let refundFor = $state<{ paymentId: number; amount: number } | null>(null);
 	let disputeFor = $state<{ bookingId: number; label: string } | null>(null);
+	let contractFor = $state<number | null>(null);
+	const contractBooking = $derived(data.bookings.find((b) => b.id === contractFor) ?? null);
 	let chapaAmount = $state(0);
 	let chapaType = $state<'advance' | 'full' | 'balance'>('advance');
 	let serviceItems = $state<{ value: string; name: string }[]>([]);
@@ -380,6 +383,14 @@
 
 					{#if booking.status !== 'cancelled'}
 						<div class="mt-4 flex flex-wrap justify-end gap-2 border-t pt-4">
+							{#if booking.contract?.hasDocument}
+								<Button variant="outline" size="sm" onclick={() => (contractFor = booking.id)}>
+									{m.contract_title()}
+									{#if !booking.contract.signedByCouple}
+										<span class="ml-1.5 size-2 rounded-full bg-(--leora-gold)"></span>
+									{/if}
+								</Button>
+							{/if}
 							<Button
 								variant="ghost"
 								size="sm"
@@ -755,6 +766,23 @@
 					</Dialog.Footer>
 				{/snippet}
 			</ActionForm>
+		{/if}
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Contract -->
+<Dialog.Root open={!!contractBooking} onOpenChange={(open) => !open && (contractFor = null)}>
+	<Dialog.Content class="sm:max-w-md">
+		<Dialog.Header>
+			<Dialog.Title>{m.contract_title()}</Dialog.Title>
+			<Dialog.Description>{contractBooking?.vendorName}</Dialog.Description>
+		</Dialog.Header>
+		{#if contractBooking}
+			<ContractPanel
+				contract={contractBooking.contract}
+				side="couple"
+				fields={{ bookingId: contractBooking.id }}
+			/>
 		{/if}
 	</Dialog.Content>
 </Dialog.Root>

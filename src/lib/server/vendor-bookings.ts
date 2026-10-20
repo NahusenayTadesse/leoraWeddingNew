@@ -221,7 +221,16 @@ export async function hasConfirmedConflict(vendorId: number, eventDate: string, 
 }
 
 /** Wedding plans a vendor can attach a new booking to, labelled by couple name. */
-export async function listCouplesForBooking() {
+/**
+ * Couples a vendor may add a booking for: those who have messaged them or already booked them.
+ * Listing every couple on the platform leaked all their names to every vendor, and let a vendor
+ * put a booking (with any price) on a stranger's wedding.
+ */
+export async function listCouplesForBooking(vendorId: number) {
+	const known = sql`(
+		EXISTS (SELECT 1 FROM messages m WHERE m.couple_id = couples.id AND m.vendor_id = ${vendorId})
+		OR EXISTS (SELECT 1 FROM vendor_bookings vb WHERE vb.wedding_plan_id = wedding_plans.id AND vb.vendor_id = ${vendorId})
+	)`;
 	const rows = await db
 		.select({
 			weddingPlanId: weddingPlans.id,
@@ -230,7 +239,7 @@ export async function listCouplesForBooking() {
 		})
 		.from(weddingPlans)
 		.innerJoin(couples, eq(couples.id, weddingPlans.coupleId))
-		.where(and(isNull(weddingPlans.deletedAt), isNull(couples.deletedAt)))
+		.where(and(isNull(weddingPlans.deletedAt), isNull(couples.deletedAt), known))
 		.orderBy(asc(couples.groomName));
 
 	return rows.map((r) => ({

@@ -17,6 +17,7 @@ import { LIMITS, takeToken } from '$lib/server/rateLimit';
 import { ClaimRefused, openDispute, requestRefund } from '$lib/server/claims';
 import { notify } from '$lib/server/notify';
 import { isBlocked } from '$lib/server/availability';
+import { signContract } from '$lib/server/contracts';
 import { parse, ok, bad } from '$lib/server/adminAction';
 import { z } from 'zod/v4';
 
@@ -278,5 +279,35 @@ export const actions: Actions = {
 			throw err;
 		}
 		return ok('Thanks — our team will look into it and get back to you.');
+	},
+
+	/** Signs the booking's contract with the typed full name. */
+	signContract: async ({ request, locals, getClientAddress }) => {
+		const { wedding } = await requireCoupleAndWedding(locals);
+		const p = await parse(
+			request,
+			z.object({
+				bookingId: z.coerce.number().int().positive(),
+				name: z.string().trim().min(3, 'Type your full name to sign').max(150)
+			})
+		);
+		if ('error' in p) return p.error;
+		const booking = await getBookingForWedding(p.data.bookingId, wedding.id);
+		if (!booking) return bad('That is not yours to change.', 403);
+		const signed = await signContract({
+			bookingId: booking.id,
+			side: 'couple',
+			name: p.data.name,
+			ip: getClientAddress()
+		});
+		if (!signed) return bad('There is no contract to sign yet.');
+		const vendor = await getVendorForMessage(booking.vendorId);
+		await notify(vendor?.userId, {
+			type: 'contract_signed',
+			title: 'Contract signed',
+			body: `The couple signed the contract for booking #${booking.id}.`,
+			link: '/vendor-dashboard/bookings'
+		});
+		return ok('Contract signed.');
 	}
 };

@@ -148,5 +148,19 @@
 	"avail_prev": "ያለፈው ወር",
 	"avail_next": "የሚቀጥለው ወር",
 	"avail_public_hint": "ተይዟል ወይም አይገኝም የተባሉት ቀናት ተይዘዋል። ሌሎቹ ከአቅራቢው ጋር ማረጋገጥ ሊያስፈልጋቸው ይችላል።",
-	"avail_date_blocked": "አቅራቢው በዚያ ቀን አይገኝም። እባክዎ ሌላ ቀን ይምረጡ።"
+	"avail_date_blocked": "አቅራቢው በዚያ ቀን አይገኝም። እባክዎ ሌላ ቀን ይምረጡ።",
+	"contract_title": "ውል",
+	"contract_none": "እስካሁን ምንም ውል አልተጋራም።",
+	"contract_open": "ውሉን ክፈት (PDF)",
+	"contract_couple": "ጥንዶች",
+	"contract_vendor": "አቅራቢ",
+	"contract_signed_by": "በ{name} {date} ተፈርሟል",
+	"contract_not_signed": "ገና አልተፈረመም",
+	"contract_sign_name": "ለመፈረም ሙሉ ስምዎን ይጻፉ",
+	"contract_agree": "ውሉን አንብቤ በውሎቹ ተስማምቻለሁ።",
+	"contract_sign": "ውል ፈርም",
+	"contract_attach": "ውል ያጋሩ (PDF)",
+	"contract_replace": "ውል ይተኩ (ፊርማዎች እንደገና ይጀምራሉ)",
+	"contract_doc_title": "ርዕስ",
+	"contract_view": "ውል"
 }

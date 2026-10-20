@@ -7,7 +7,21 @@ import {
 	couples,
 	messages
 } from '$lib/server/db/schema';
-import { and, asc, count, desc, eq, gte, inArray, isNull, like, lt, ne, or, sql } from 'drizzle-orm';
+import {
+	and,
+	asc,
+	count,
+	desc,
+	eq,
+	gte,
+	inArray,
+	isNull,
+	like,
+	lt,
+	ne,
+	or,
+	sql
+} from 'drizzle-orm';
 import type { MySqlSelect } from 'drizzle-orm/mysql-core';
 import {
 	buildWhere,
@@ -53,7 +67,11 @@ export const BOOKING_SORTS = {
 
 function bookingSpec(vendorId: number, tab: BookingTab): WhereSpec<BookingFilter> {
 	return {
-		base: [eq(vendorBookings.vendorId, vendorId), isNull(vendorBookings.deletedAt), tabCondition(tab)],
+		base: [
+			eq(vendorBookings.vendorId, vendorId),
+			isNull(vendorBookings.deletedAt),
+			tabCondition(tab)
+		],
 		search: (term) =>
 			or(
 				like(couples.groomName, `%${term}%`),
@@ -194,7 +212,11 @@ export async function getVendorBooking(vendorId: number, id: number) {
 		.innerJoin(weddingPlans, eq(weddingPlans.id, vendorBookings.weddingPlanId))
 		.innerJoin(couples, eq(couples.id, weddingPlans.coupleId))
 		.where(
-			and(eq(vendorBookings.id, id), eq(vendorBookings.vendorId, vendorId), isNull(vendorBookings.deletedAt))
+			and(
+				eq(vendorBookings.id, id),
+				eq(vendorBookings.vendorId, vendorId),
+				isNull(vendorBookings.deletedAt)
+			)
 		)
 		.limit(1);
 
@@ -202,7 +224,11 @@ export async function getVendorBooking(vendorId: number, id: number) {
 }
 
 /** Whether the vendor already has a confirmed booking on this date (excluding `excludeId`). */
-export async function hasConfirmedConflict(vendorId: number, eventDate: string, excludeId?: number) {
+export async function hasConfirmedConflict(
+	vendorId: number,
+	eventDate: string,
+	excludeId?: number
+) {
 	const conditions = [
 		eq(vendorBookings.vendorId, vendorId),
 		eq(vendorBookings.status, 'confirmed'),
@@ -297,8 +323,7 @@ export async function listThreadsForVendor(
 			const couple = coupleMap.get(coupleId);
 			return {
 				coupleId,
-				coupleName:
-					[couple?.groomName, couple?.brideName].filter(Boolean).join(' & ') || 'Couple',
+				coupleName: [couple?.groomName, couple?.brideName].filter(Boolean).join(' & ') || 'Couple',
 				lastMessage: last.body,
 				lastAt: last.createdAt,
 				unread: msgs.filter((m) => m.receiverId === vendorUserId && !m.isRead).length

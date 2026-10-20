@@ -58,7 +58,11 @@ export const actions: Actions = {
 		const vendor = await requireVendor(locals, '/vendor-dashboard/profile');
 		const form = await superValidate(request, zod4(vendorProfileSchema));
 		if (!form.valid) {
-			return message(form, { type: 'error', text: 'Please check the form for errors.' }, { status: 400 });
+			return message(
+				form,
+				{ type: 'error', text: 'Please check the form for errors.' },
+				{ status: 400 }
+			);
 		}
 
 		const { priceMin, priceMax, email, website, ...rest } = form.data;

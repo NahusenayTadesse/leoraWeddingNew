@@ -31,7 +31,11 @@
 			href: '/admin/payments?tab=review',
 			match: () => data.tab === 'review'
 		},
-		{ title: 'Booking payments', href: '/admin/payments?tab=vendor', match: () => data.tab === 'vendor' },
+		{
+			title: 'Booking payments',
+			href: '/admin/payments?tab=vendor',
+			match: () => data.tab === 'vendor'
+		},
 		{ title: 'Plan payments', href: '/admin/payments?tab=plan', match: () => data.tab === 'plan' },
 		{
 			title: `Refunds${data.pendingRefunds ? ` (${data.pendingRefunds})` : ''}`,
@@ -42,9 +46,24 @@
 
 	const vendorColumns: ColumnDef<VendorRow>[] = [
 		{ id: 'id', accessorKey: 'id', header: sortable('#') },
-		{ id: 'vendor', accessorKey: 'vendor', header: sortable('Vendor'), cell: ({ row }) => row.original.vendor ?? '—' },
-		{ id: 'type', accessorKey: 'type', header: 'Type', cell: ({ row }) => words(row.original.type) },
-		{ id: 'method', accessorKey: 'method', header: 'Method', cell: ({ row }) => words(row.original.method) },
+		{
+			id: 'vendor',
+			accessorKey: 'vendor',
+			header: sortable('Vendor'),
+			cell: ({ row }) => row.original.vendor ?? '—'
+		},
+		{
+			id: 'type',
+			accessorKey: 'type',
+			header: 'Type',
+			cell: ({ row }) => words(row.original.type)
+		},
+		{
+			id: 'method',
+			accessorKey: 'method',
+			header: 'Method',
+			cell: ({ row }) => words(row.original.method)
+		},
 		{
 			id: 'amount',
 			accessorKey: 'amount',
@@ -59,7 +78,12 @@
 			meta: { align: 'right' },
 			cell: ({ row }) => money(row.original.commission)
 		},
-		{ id: 'status', accessorKey: 'status', header: 'Status', cell: ({ row }) => status(row.original.status) },
+		{
+			id: 'status',
+			accessorKey: 'status',
+			header: 'Status',
+			cell: ({ row }) => status(row.original.status)
+		},
 		{
 			id: 'date',
 			accessorKey: 'createdAt',
@@ -72,7 +96,12 @@
 	const planColumns: ColumnDef<PlanRow>[] = [
 		{ id: 'id', accessorKey: 'id', header: sortable('#') },
 		{ id: 'couple', accessorKey: 'couple', header: sortable('Couple') },
-		{ id: 'method', accessorKey: 'method', header: 'Method', cell: ({ row }) => words(row.original.method) },
+		{
+			id: 'method',
+			accessorKey: 'method',
+			header: 'Method',
+			cell: ({ row }) => words(row.original.method)
+		},
 		{
 			id: 'amount',
 			accessorKey: 'amount',
@@ -80,8 +109,18 @@
 			meta: { align: 'right' },
 			cell: ({ row }) => money(row.original.amount)
 		},
-		{ id: 'ref', accessorKey: 'ref', header: 'Reference', cell: ({ row }) => row.original.ref ?? '—' },
-		{ id: 'status', accessorKey: 'status', header: 'Status', cell: ({ row }) => status(row.original.status) },
+		{
+			id: 'ref',
+			accessorKey: 'ref',
+			header: 'Reference',
+			cell: ({ row }) => row.original.ref ?? '—'
+		},
+		{
+			id: 'status',
+			accessorKey: 'status',
+			header: 'Status',
+			cell: ({ row }) => status(row.original.status)
+		},
 		{
 			id: 'date',
 			accessorKey: 'createdAt',
@@ -93,7 +132,12 @@
 
 	const refundColumns: ColumnDef<RefundRow>[] = [
 		{ id: 'id', accessorKey: 'id', header: sortable('#') },
-		{ id: 'paymentId', accessorKey: 'paymentId', header: 'Payment', cell: ({ row }) => `#${row.original.paymentId}` },
+		{
+			id: 'paymentId',
+			accessorKey: 'paymentId',
+			header: 'Payment',
+			cell: ({ row }) => `#${row.original.paymentId}`
+		},
 		{
 			id: 'amount',
 			accessorKey: 'amount',
@@ -101,22 +145,46 @@
 			meta: { align: 'right' },
 			cell: ({ row }) => money(row.original.amount)
 		},
-		{ id: 'reason', accessorKey: 'reason', header: 'Reason', cell: ({ row }) => longText(row.original.reason) },
-		{ id: 'status', accessorKey: 'status', header: 'Status', cell: ({ row }) => status(row.original.status) },
-		{ id: 'date', accessorKey: 'createdAt', header: sortable('Requested'), cell: ({ row }) => date(row.original.createdAt) },
+		{
+			id: 'reason',
+			accessorKey: 'reason',
+			header: 'Reason',
+			cell: ({ row }) => longText(row.original.reason)
+		},
+		{
+			id: 'status',
+			accessorKey: 'status',
+			header: 'Status',
+			cell: ({ row }) => status(row.original.status)
+		},
+		{
+			id: 'date',
+			accessorKey: 'createdAt',
+			header: sortable('Requested'),
+			cell: ({ row }) => date(row.original.createdAt)
+		},
 		{ id: 'actions', header: '', cell: ({ row }) => renderSnippet(refundActions, row.original) }
 	];
 </script>
 
-{#snippet rowActions(p: { status: string; method: string | null; ref: string | null; receiptFile: string | null })}
+{#snippet rowActions(p: {
+	status: string;
+	method: string | null;
+	ref: string | null;
+	receiptFile: string | null;
+})}
 	<div class="flex justify-end gap-2">
 		{#if p.receiptFile}
-			<Button href="/receipts/{p.receiptFile}" target="_blank" variant="ghost" size="sm">Receipt</Button>
+			<Button href="/receipts/{p.receiptFile}" target="_blank" variant="ghost" size="sm"
+				>Receipt</Button
+			>
 		{/if}
 		{#if p.status === 'pending' && p.method === 'chapa' && p.ref}
 			<ActionForm action="?/recheckChapa" fields={{ ref: p.ref }}>
 				{#snippet children({ busy })}
-					<Button type="submit" variant="outline" size="sm" disabled={!!busy}>Check with Chapa</Button>
+					<Button type="submit" variant="outline" size="sm" disabled={!!busy}
+						>Check with Chapa</Button
+					>
 				{/snippet}
 			</ActionForm>
 		{:else if p.status === 'pending'}
@@ -196,7 +264,9 @@
 									{/if}
 								</a>
 							{:else}
-								<span class="flex h-40 items-center justify-center rounded-md border text-sm text-muted-foreground">
+								<span
+									class="flex h-40 items-center justify-center rounded-md border text-sm text-muted-foreground"
+								>
 									No receipt
 								</span>
 							{/if}
@@ -208,7 +278,11 @@
 								<p><span class="text-muted-foreground">Into:</span> {r.bank}</p>
 								{#if r.note}<p class="text-muted-foreground">{r.note}</p>{/if}
 								<p class="text-xs text-muted-foreground">
-									{r.kind === 'booking' ? 'Booking' : r.kind === 'vendor_plan' ? 'Vendor plan' : 'Plan'} payment #{r.id} · {new Date(r.createdAt).toLocaleString()}
+									{r.kind === 'booking'
+										? 'Booking'
+										: r.kind === 'vendor_plan'
+											? 'Vendor plan'
+											: 'Plan'} payment #{r.id} · {new Date(r.createdAt).toLocaleString()}
 								</p>
 								<div class="flex flex-wrap gap-2 pt-2">
 									<ConfirmAction
@@ -294,7 +368,9 @@
 						class="w-full rounded-md border bg-background p-2 text-sm"
 					></textarea>
 					<Dialog.Footer>
-						<Button type="button" variant="outline" onclick={() => (rejecting = null)}>Cancel</Button>
+						<Button type="button" variant="outline" onclick={() => (rejecting = null)}
+							>Cancel</Button
+						>
 						<Button type="submit" variant="destructive" disabled={!!busy || !reason.trim()}>
 							Reject receipt
 						</Button>

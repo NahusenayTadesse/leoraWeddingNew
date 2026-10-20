@@ -31,51 +31,55 @@ import { couples, weddingPlans } from './weddings';
 // PLATFORM BILLING — couples subscribing to a Leora plan
 // ---------------------------------------------------------------------------
 
-export const subscriptionPlans = mysqlTable('subscription_plans', {
-	id: intPk(),
-	/** Stable key used in code and checkout urls: free | golden | platinum. */
-	slug: varchar('slug', { length: 30 }).notNull(),
-	name: varchar('name', { length: 60 }).notNull(),
-	price: decimal('price', { precision: 12, scale: 2 }).default('0').notNull(),
-	billingCycle: mysqlEnum('billing_cycle', ['one_time', 'monthly', 'yearly'])
-		.default('one_time')
-		.notNull(),
-	/** Bullet list shown on the pricing page. */
-	features: jsonCol<string[]>('features'),
+export const subscriptionPlans = mysqlTable(
+	'subscription_plans',
+	{
+		id: intPk(),
+		/** Stable key used in code and checkout urls: free | golden | platinum. */
+		slug: varchar('slug', { length: 30 }).notNull(),
+		name: varchar('name', { length: 60 }).notNull(),
+		price: decimal('price', { precision: 12, scale: 2 }).default('0').notNull(),
+		billingCycle: mysqlEnum('billing_cycle', ['one_time', 'monthly', 'yearly'])
+			.default('one_time')
+			.notNull(),
+		/** Bullet list shown on the pricing page. */
+		features: jsonCol<string[]>('features'),
 
-	/**
-	 * Who the plan is sold to. Couples and vendors both subscribe, on separate
-	 * tiers at overlapping prices, so the pricing page cannot tell them apart
-	 * by price or billing cycle — without this column it renders all of them
-	 * in one grid.
-	 */
-	audience: mysqlEnum('audience', ['couple', 'vendor']).default('couple').notNull(),
+		/**
+		 * Who the plan is sold to. Couples and vendors both subscribe, on separate
+		 * tiers at overlapping prices, so the pricing page cannot tell them apart
+		 * by price or billing cycle — without this column it renders all of them
+		 * in one grid.
+		 */
+		audience: mysqlEnum('audience', ['couple', 'vendor']).default('couple').notNull(),
 
-	/** Vendor-tier limits; null on the couple-facing plans. */
-	maxBookings: int('max_bookings'),
-	featuredListing: boolean('featured_listing').default(false).notNull(),
-	prioritySupport: boolean('priority_support').default(false).notNull(),
+		/** Vendor-tier limits; null on the couple-facing plans. */
+		maxBookings: int('max_bookings'),
+		featuredListing: boolean('featured_listing').default(false).notNull(),
+		prioritySupport: boolean('priority_support').default(false).notNull(),
 
-	// isActive comes from secureFields — it is the same flag.
-	...secureFields,
-	aliveKey
-},
-(table) => [unique('subscription_plans_slug_uq').on(table.slug, table.aliveKey)]
+		// isActive comes from secureFields — it is the same flag.
+		...secureFields,
+		aliveKey
+	},
+	(table) => [unique('subscription_plans_slug_uq').on(table.slug, table.aliveKey)]
 );
 
-export const coupons = mysqlTable('coupons', {
-	id: intPk(),
-	code: varchar('code', { length: 40 }).notNull(),
-	type: mysqlEnum('type', ['percent', 'flat']).notNull(),
-	value: decimal('value', { precision: 12, scale: 2 }).notNull(),
-	maxUses: int('max_uses', { unsigned: true }),
-	usesCount: int('uses_count', { unsigned: true }).default(0).notNull(),
-	expiresAt: datetime('expires_at'),
-	// isActive comes from secureFields — it is the same flag.
-	...secureFields,
-	aliveKey
-},
-(table) => [unique('coupons_code_uq').on(table.code, table.aliveKey)]
+export const coupons = mysqlTable(
+	'coupons',
+	{
+		id: intPk(),
+		code: varchar('code', { length: 40 }).notNull(),
+		type: mysqlEnum('type', ['percent', 'flat']).notNull(),
+		value: decimal('value', { precision: 12, scale: 2 }).notNull(),
+		maxUses: int('max_uses', { unsigned: true }),
+		usesCount: int('uses_count', { unsigned: true }).default(0).notNull(),
+		expiresAt: datetime('expires_at'),
+		// isActive comes from secureFields — it is the same flag.
+		...secureFields,
+		aliveKey
+	},
+	(table) => [unique('coupons_code_uq').on(table.code, table.aliveKey)]
 );
 
 export const subscriptions = mysqlTable(
@@ -158,9 +162,7 @@ export const payments = mysqlTable(
 			onDelete: 'set null'
 		}),
 		couponId: int('coupon_id').references(() => coupons.id, { onDelete: 'set null' }),
-		discountAmount: decimal('discount_amount', { precision: 12, scale: 2 })
-			.default('0')
-			.notNull(),
+		discountAmount: decimal('discount_amount', { precision: 12, scale: 2 }).default('0').notNull(),
 		/**
 		 * Rows start 'pending'. Only the payment gateway's server-to-server
 		 * callback may move one to 'completed' — never the request that created it.

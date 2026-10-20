@@ -1,7 +1,13 @@
 import { z } from 'zod/v4';
 import { requireCoupleAndWedding } from '$lib/server/weddings';
 import { getCoupleByUserId } from '$lib/server/couples';
-import { addTables, removeTable, seatGuest, seatingOverview, updateTable } from '$lib/server/planner';
+import {
+	addTables,
+	removeTable,
+	seatGuest,
+	seatingOverview,
+	updateTable
+} from '$lib/server/planner';
 import { parse, ok, bad } from '$lib/server/adminAction';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -31,10 +37,15 @@ export const actions = {
 		const { couple } = await requireCoupleAndWedding(locals);
 		const p = await parse(
 			request,
-			z.object({ id, name: z.string().trim().min(1).max(50), capacity: z.coerce.number().int().min(1).max(50) })
+			z.object({
+				id,
+				name: z.string().trim().min(1).max(50),
+				capacity: z.coerce.number().int().min(1).max(50)
+			})
 		);
 		if ('error' in p) return p.error;
-		if (!(await updateTable(couple.id, p.data.id, p.data.name, p.data.capacity))) return bad('Table not found', 404);
+		if (!(await updateTable(couple.id, p.data.id, p.data.name, p.data.capacity)))
+			return bad('Table not found', 404);
 		return ok('Table saved');
 	},
 	removeTable: async ({ request, locals }) => {
@@ -54,7 +65,8 @@ export const actions = {
 			})
 		);
 		if ('error' in p) return p.error;
-		if (!(await seatGuest(couple.id, p.data.guestId, p.data.tableId))) return bad('Guest or table not found', 404);
+		if (!(await seatGuest(couple.id, p.data.guestId, p.data.tableId)))
+			return bad('Guest or table not found', 404);
 		return ok(p.data.tableId ? 'Guest seated' : 'Guest unseated');
 	}
 } satisfies Actions;

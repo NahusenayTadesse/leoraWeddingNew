@@ -148,7 +148,12 @@
 			header: sortable('Event date'),
 			cell: ({ row }) => date(row.original.eventDate)
 		},
-		{ id: 'status', accessorKey: 'status', header: 'Status', cell: ({ row }) => status(row.original.status) },
+		{
+			id: 'status',
+			accessorKey: 'status',
+			header: 'Status',
+			cell: ({ row }) => status(row.original.status)
+		},
 		{
 			id: 'agreedPrice',
 			accessorKey: 'agreedPrice',
@@ -184,7 +189,7 @@
 		{/if}
 	</div>
 	{#if b.coupleEmail || b.couplePhone}
-		<span class="text-muted-foreground text-xs">
+		<span class="text-xs text-muted-foreground">
 			{[b.coupleEmail, b.couplePhone].filter(Boolean).join(' · ')}
 		</span>
 	{/if}
@@ -261,10 +266,38 @@
 				resetOnSuccess
 			>
 				{#snippet fields({ form, errors })}
-					<InputComp {form} {errors} name="weddingPlanId" label="Couple" type="select" items={coupleItems} />
-					<InputComp {form} {errors} name="serviceId" label="Service" type="select" items={data.services} />
-					<InputComp {form} {errors} name="status" label="Status" type="select" items={statusItems} />
-					<InputComp {form} {errors} name="agreedPrice" label="Agreed price (ETB)" type="number" min={0} />
+					<InputComp
+						{form}
+						{errors}
+						name="weddingPlanId"
+						label="Couple"
+						type="select"
+						items={coupleItems}
+					/>
+					<InputComp
+						{form}
+						{errors}
+						name="serviceId"
+						label="Service"
+						type="select"
+						items={data.services}
+					/>
+					<InputComp
+						{form}
+						{errors}
+						name="status"
+						label="Status"
+						type="select"
+						items={statusItems}
+					/>
+					<InputComp
+						{form}
+						{errors}
+						name="agreedPrice"
+						label="Agreed price (ETB)"
+						type="number"
+						min={0}
+					/>
 					<InputComp {form} {errors} name="eventDate" label="Event date" type="date" futureDays />
 				{/snippet}
 			</FormDialog>
@@ -305,17 +338,39 @@
 >
 	{#snippet fields({ form, errors })}
 		<InputComp {form} {errors} name="id" type="hidden" />
-		<InputComp {form} {errors} name="weddingPlanId" label="Couple" type="select" items={coupleItems} />
-		<InputComp {form} {errors} name="serviceId" label="Service" type="select" items={data.services} />
+		<InputComp
+			{form}
+			{errors}
+			name="weddingPlanId"
+			label="Couple"
+			type="select"
+			items={coupleItems}
+		/>
+		<InputComp
+			{form}
+			{errors}
+			name="serviceId"
+			label="Service"
+			type="select"
+			items={data.services}
+		/>
 		<InputComp {form} {errors} name="status" label="Status" type="select" items={statusItems} />
-		<InputComp {form} {errors} name="agreedPrice" label="Agreed price (ETB)" type="number" min={0} />
+		<InputComp
+			{form}
+			{errors}
+			name="agreedPrice"
+			label="Agreed price (ETB)"
+			type="number"
+			min={0}
+		/>
 		<InputComp {form} {errors} name="eventDate" label="Event date" type="date" futureDays />
 	{/snippet}
 </FormDialog>
 
 <FormDialog
 	title="Remove this booking?"
-	description="The booking with {row?.coupleNames ?? ''} will be removed. This can't be undone from here."
+	description="The booking with {row?.coupleNames ??
+		''} will be removed. This can't be undone from here."
 	action="?/delete"
 	data={data.deleteForm}
 	schema={idSchema}
@@ -342,7 +397,14 @@
 >
 	{#snippet fields({ form, errors })}
 		<InputComp {form} {errors} name="id" type="hidden" />
-		<InputComp {form} {errors} name="agreedPrice" label="Agreed price (ETB, optional)" type="number" min={0} />
+		<InputComp
+			{form}
+			{errors}
+			name="agreedPrice"
+			label="Agreed price (ETB, optional)"
+			type="number"
+			min={0}
+		/>
 		<InputComp
 			{form}
 			{errors}
@@ -368,7 +430,15 @@
 >
 	{#snippet fields({ form, errors })}
 		<InputComp {form} {errors} name="id" type="hidden" />
-		<InputComp {form} {errors} name="reason" label="Reason for the couple" type="textarea" rows={4} required />
+		<InputComp
+			{form}
+			{errors}
+			name="reason"
+			label="Reason for the couple"
+			type="textarea"
+			rows={4}
+			required
+		/>
 	{/snippet}
 </FormDialog>
 
@@ -385,7 +455,15 @@
 >
 	{#snippet fields({ form, errors })}
 		<InputComp {form} {errors} name="id" type="hidden" />
-		<InputComp {form} {errors} name="proposedPrice" label="Proposed price (ETB)" type="number" min={0} required />
+		<InputComp
+			{form}
+			{errors}
+			name="proposedPrice"
+			label="Proposed price (ETB)"
+			type="number"
+			min={0}
+			required
+		/>
 		<InputComp {form} {errors} name="notes" label="Notes (optional)" type="textarea" rows={3} />
 	{/snippet}
 </FormDialog>
@@ -425,18 +503,20 @@
 
 		<div class="max-h-72 space-y-2 overflow-y-auto rounded-md border p-3">
 			{#if threadLoading}
-				<p class="text-muted-foreground text-sm">Loading…</p>
+				<p class="text-sm text-muted-foreground">Loading…</p>
 			{:else if thread.length === 0}
-				<p class="text-muted-foreground text-sm">No messages yet.</p>
+				<p class="text-sm text-muted-foreground">No messages yet.</p>
 			{:else}
 				{#each thread as m (m.id)}
 					<div
 						class="rounded-md {m.senderId === data.vendorUserId
-							? 'bg-primary/10 ml-8'
-							: 'bg-muted mr-8'} p-2 text-sm"
+							? 'ml-8 bg-primary/10'
+							: 'mr-8 bg-muted'} p-2 text-sm"
 					>
 						<p>{m.body}</p>
-						<p class="text-muted-foreground mt-1 text-xs">{new Date(m.createdAt).toLocaleString()}</p>
+						<p class="mt-1 text-xs text-muted-foreground">
+							{new Date(m.createdAt).toLocaleString()}
+						</p>
 					</div>
 				{/each}
 			{/if}
@@ -489,7 +569,9 @@
 						class="w-full rounded-md border bg-background p-2 text-sm"
 					></textarea>
 					<Dialog.Footer>
-						<Button type="button" variant="outline" onclick={() => (disputeFor = null)}>Cancel</Button>
+						<Button type="button" variant="outline" onclick={() => (disputeFor = null)}
+							>Cancel</Button
+						>
 						<Button type="submit" disabled={!!busy}>Send</Button>
 					</Dialog.Footer>
 				{/snippet}
@@ -508,7 +590,11 @@
 			</Dialog.Description>
 		</Dialog.Header>
 		{#if contractRow}
-			<ContractPanel contract={contractRow.contract} side="vendor" fields={{ id: contractRow.id }} />
+			<ContractPanel
+				contract={contractRow.contract}
+				side="vendor"
+				fields={{ id: contractRow.id }}
+			/>
 		{/if}
 	</Dialog.Content>
 </Dialog.Root>

@@ -1,5 +1,10 @@
 import { db } from '$lib/server/db';
-import { subscriptions, subscriptionPlans, vendorPromotions, vendorSubscriptions } from '$lib/server/db/schema';
+import {
+	subscriptions,
+	subscriptionPlans,
+	vendorPromotions,
+	vendorSubscriptions
+} from '$lib/server/db/schema';
 import { and, eq } from 'drizzle-orm';
 
 /** A monthly/yearly plan expires; a one-time purchase never does. */
@@ -65,7 +70,11 @@ const day = (d: Date) =>
  * the same dates — that is what puts the vendor in the featured placements.
  */
 export async function activateVendorPlan(vendorId: number, planId: number, tx: Writer) {
-	const [plan] = await tx.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, planId)).limit(1);
+	const [plan] = await tx
+		.select()
+		.from(subscriptionPlans)
+		.where(eq(subscriptionPlans.id, planId))
+		.limit(1);
 	if (!plan) return null;
 
 	const start = new Date();
@@ -76,8 +85,12 @@ export async function activateVendorPlan(vendorId: number, planId: number, tx: W
 	await tx
 		.update(vendorSubscriptions)
 		.set({ status: 'expired' })
-		.where(and(eq(vendorSubscriptions.vendorId, vendorId), eq(vendorSubscriptions.status, 'active')));
-	await tx.insert(vendorSubscriptions).values({ vendorId, planId, status: 'active', startsAt, endsAt });
+		.where(
+			and(eq(vendorSubscriptions.vendorId, vendorId), eq(vendorSubscriptions.status, 'active'))
+		);
+	await tx
+		.insert(vendorSubscriptions)
+		.values({ vendorId, planId, status: 'active', startsAt, endsAt });
 
 	if (plan.featuredListing) {
 		await tx.insert(vendorPromotions).values({

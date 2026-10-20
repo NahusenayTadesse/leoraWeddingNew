@@ -46,7 +46,9 @@ function fromBase64url(value: string) {
 }
 
 function sign(value: string) {
-	return createHmac('sha256', env.CHAT_LIMIT_SECRET || env.BETTER_AUTH_SECRET || '').update(value).digest('base64url');
+	return createHmac('sha256', env.CHAT_LIMIT_SECRET || env.BETTER_AUTH_SECRET || '')
+		.update(value)
+		.digest('base64url');
 }
 
 function makeSignedCookie(payload: ChatLimitPayload) {
@@ -136,7 +138,8 @@ const tools = [
 					properties: {
 						query: {
 							type: Type.STRING,
-							description: 'Free-text search, for example "photographer", "garden venue", "habesha kemis".'
+							description:
+								'Free-text search, for example "photographer", "garden venue", "habesha kemis".'
 						},
 						categoryName: {
 							type: Type.STRING,
@@ -193,7 +196,9 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress,
 
 		// The cookie is easy to clear, so the server also counts per IP (and per account).
 		const serverKey = locals.user ? `chat:user:${locals.user.id}` : `chat:ip:${getClientAddress()}`;
-		if (!takeToken(serverKey, { capacity: MAX_AI_PROMPTS, perMinute: MAX_AI_PROMPTS / (24 * 60) })) {
+		if (
+			!takeToken(serverKey, { capacity: MAX_AI_PROMPTS, perMinute: MAX_AI_PROMPTS / (24 * 60) })
+		) {
 			return json(
 				{ error: 'You have reached the chat limit. Please try again later.' },
 				{ status: 429 }

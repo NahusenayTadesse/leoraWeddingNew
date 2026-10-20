@@ -62,7 +62,10 @@ export const load: PageServerLoad = async ({ url }) => {
 		facetCounts({
 			entityType: () =>
 				joined(
-					db.select({ value: activityLogs.entityType, count: count() }).from(activityLogs).$dynamic()
+					db
+						.select({ value: activityLogs.entityType, count: count() })
+						.from(activityLogs)
+						.$dynamic()
 				)
 					.where(buildWhere(query, spec, { except: 'entityType' }))
 					.groupBy(activityLogs.entityType)

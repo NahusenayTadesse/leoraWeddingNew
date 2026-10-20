@@ -26,7 +26,7 @@
 </script>
 
 <header
-	class="bg-background/85 supports-backdrop-filter:bg-background/70 sticky top-0 z-50 w-full border-b backdrop-blur-md"
+	class="sticky top-0 z-50 w-full border-b bg-background/85 backdrop-blur-md supports-backdrop-filter:bg-background/70"
 >
 	<nav class="mx-auto flex max-w-[1180px] items-center justify-between gap-6 px-5 py-3.5 sm:px-8">
 		<a href="/" class="flex shrink-0 items-center gap-2.5">
@@ -38,11 +38,11 @@
 				class="size-9.5 rounded-[10px] object-cover"
 			/>
 			<span class="leading-tight">
-				<span class="font-display block text-[18px] font-extrabold tracking-[-0.01em]">
+				<span class="block font-display text-[18px] font-extrabold tracking-[-0.01em]">
 					Leora Events
 				</span>
 				<small
-					class="text-muted-foreground mt-px hidden text-[9px] font-semibold tracking-[0.12em] uppercase sm:block"
+					class="mt-px hidden text-[9px] font-semibold tracking-[0.12em] text-muted-foreground uppercase sm:block"
 				>
 					Ethiopia's First Wedding Platform
 				</small>
@@ -53,7 +53,7 @@
 			{#each navLinks as link (link.href)}
 				<a
 					href={link.href}
-					class="text-foreground relative py-1 text-[14.5px] font-medium transition-opacity
+					class="relative py-1 text-[14.5px] font-medium text-foreground transition-opacity
 						{isActive(link.href) ? 'opacity-100' : 'opacity-[0.82] hover:opacity-100'}"
 					class:is-active={isActive(link.href)}
 				>
@@ -115,7 +115,7 @@
 					<a
 						href={link.href}
 						onclick={() => (mobileMenuOpen = false)}
-						class="hover:bg-accent rounded-md px-3 py-2.5 text-sm font-medium transition-colors
+						class="rounded-md px-3 py-2.5 text-sm font-medium transition-colors hover:bg-accent
 							{isActive(link.href) ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'}"
 					>
 						{link.label}

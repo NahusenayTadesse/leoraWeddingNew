@@ -72,9 +72,7 @@ function directoryFilters(args: { q?: string; city?: string; minRating?: number 
 
 	if (q) {
 		const needle = `%${q}%`;
-		filters.push(
-			or(like(vendors.businessName, needle), like(vendors.description, needle))!
-		);
+		filters.push(or(like(vendors.businessName, needle), like(vendors.description, needle))!);
 	}
 	if (city) filters.push(eq(vendors.city, city));
 	if (minRating) filters.push(gte(vendors.ratingAvg, minRating.toFixed(2)));
@@ -90,10 +88,7 @@ export async function listVendors(args: ListArgs) {
 
 	const where = and(...filters);
 
-	const [{ total }] = await db
-		.select({ total: count() })
-		.from(vendors)
-		.where(where);
+	const [{ total }] = await db.select({ total: count() }).from(vendors).where(where);
 
 	const featured = sort === 'recommended' ? await featuredVendorIds() : [];
 

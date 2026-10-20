@@ -86,11 +86,21 @@ export const actions: Actions = {
 		const { couple, wedding } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(bookingSchema), { id: 'booking' });
-		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
+		if (!form.valid)
+			return message(
+				form,
+				{ type: 'error', text: 'Please check the form for errors' },
+				{ status: 400 }
+			);
 
 		if (form.data.serviceId) {
 			const ok = await serviceBelongsToVendor(form.data.serviceId, form.data.vendorId);
-			if (!ok) return message(form, { type: 'error', text: "That service doesn't belong to the chosen vendor." }, { status: 400 });
+			if (!ok)
+				return message(
+					form,
+					{ type: 'error', text: "That service doesn't belong to the chosen vendor." },
+					{ status: 400 }
+				);
 		}
 
 		if (await isBlocked(form.data.vendorId, form.data.eventDate)) {
@@ -130,17 +140,30 @@ export const actions: Actions = {
 			link: '/vendor-dashboard/bookings'
 		});
 
-		return message(form, { type: 'success', text: 'Booking request sent. The vendor will confirm shortly.' });
+		return message(form, {
+			type: 'success',
+			text: 'Booking request sent. The vendor will confirm shortly.'
+		});
 	},
 
 	cancel: async ({ request, locals }) => {
 		const { wedding } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(bookingIdSchema), { id: 'cancel' });
-		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
+		if (!form.valid)
+			return message(
+				form,
+				{ type: 'error', text: 'Please check the form for errors' },
+				{ status: 400 }
+			);
 
 		const booking = await getBookingForWedding(form.data.id, wedding.id);
-		if (!booking) return message(form, { type: 'error', text: 'That is not yours to change.' }, { status: 403 });
+		if (!booking)
+			return message(
+				form,
+				{ type: 'error', text: 'That is not yours to change.' },
+				{ status: 403 }
+			);
 
 		if (booking.status === 'cancelled') {
 			return message(form, { type: 'success', text: 'That booking is already cancelled.' });
@@ -184,7 +207,8 @@ export const actions: Actions = {
 		}
 
 		const booking = await getBookingForWedding(form.data.bookingId, wedding.id);
-		if (!booking) return fail(403, { message: { type: 'error', text: 'That is not yours to change.' } });
+		if (!booking)
+			return fail(403, { message: { type: 'error', text: 'That is not yours to change.' } });
 
 		let checkoutUrl: string;
 		try {
@@ -227,7 +251,11 @@ export const actions: Actions = {
 
 		const booking = await getBookingForWedding(form.data.bookingId, wedding.id);
 		if (!booking) {
-			return message(withFiles(form), { type: 'error', text: 'That is not yours to change.' }, { status: 403 });
+			return message(
+				withFiles(form),
+				{ type: 'error', text: 'That is not yours to change.' },
+				{ status: 403 }
+			);
 		}
 
 		try {
@@ -235,7 +263,12 @@ export const actions: Actions = {
 			await submitBookingTransfer({
 				booking,
 				weddingPlanId: wedding.id,
-				payer: { id: locals.user!.id, name: locals.user!.name, email: locals.user!.email, phone: couple.phone },
+				payer: {
+					id: locals.user!.id,
+					name: locals.user!.name,
+					email: locals.user!.email,
+					phone: couple.phone
+				},
 				amount: form.data.amount,
 				paymentType: form.data.paymentType,
 				bankAccountId: form.data.bankAccountId,

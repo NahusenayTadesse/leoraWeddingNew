@@ -18,7 +18,12 @@
 			header: sortable('Rating'),
 			cell: ({ row }) => renderSnippet(stars, row.original.rating)
 		},
-		{ id: 'title', accessorKey: 'title', header: 'Title', cell: ({ row }) => row.original.title ?? '—' },
+		{
+			id: 'title',
+			accessorKey: 'title',
+			header: 'Title',
+			cell: ({ row }) => row.original.title ?? '—'
+		},
 		{
 			id: 'comment',
 			accessorKey: 'comment',

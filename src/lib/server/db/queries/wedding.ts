@@ -31,10 +31,7 @@ export async function requireCouple(locals: App.Locals, returnTo = '/dashboard')
 		.from(couples)
 		.where(
 			and(
-				or(
-					eq(couples.partner1UserId, locals.user.id),
-					eq(couples.partner2UserId, locals.user.id)
-				),
+				or(eq(couples.partner1UserId, locals.user.id), eq(couples.partner2UserId, locals.user.id)),
 				isNull(couples.deletedAt)
 			)
 		)
@@ -81,10 +78,7 @@ export async function findCouple(locals: App.Locals) {
 		.from(couples)
 		.where(
 			and(
-				or(
-					eq(couples.partner1UserId, locals.user.id),
-					eq(couples.partner2UserId, locals.user.id)
-				),
+				or(eq(couples.partner1UserId, locals.user.id), eq(couples.partner2UserId, locals.user.id)),
 				isNull(couples.deletedAt)
 			)
 		)

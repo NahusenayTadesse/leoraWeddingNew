@@ -9,7 +9,9 @@
 	let { data } = $props();
 
 	// svelte-ignore state_referenced_locally
-	const { form, errors, enhance, submitting } = createForm(data.form, weddingSchema, { resetForm: false });
+	const { form, errors, enhance, submitting } = createForm(data.form, weddingSchema, {
+		resetForm: false
+	});
 
 	const styleItems = WEDDING_STYLES.map((s) => ({ value: s, name: s }));
 
@@ -37,7 +39,7 @@
 		<h1 class="text-2xl font-semibold tracking-tight">
 			{data.isNew ? 'Set up your wedding' : 'Wedding details'}
 		</h1>
-		<p class="text-muted-foreground text-sm">
+		<p class="text-sm text-muted-foreground">
 			{data.isNew
 				? 'These details drive your budget, guest list and vendor recommendations.'
 				: 'Changing the date or budget updates the rest of your dashboard.'}
@@ -47,14 +49,14 @@
 	{#if !data.isNew}
 		<div class="grid gap-3 sm:grid-cols-3">
 			<Card.Root class="p-4">
-				<div class="text-muted-foreground flex items-center gap-2 text-xs">
+				<div class="flex items-center gap-2 text-xs text-muted-foreground">
 					<CalendarHeart class="size-4" /> Countdown
 				</div>
 				<p class="mt-1 text-2xl font-semibold">
 					{#if daysAway === null}
 						—
 					{:else if daysAway > 0}
-						{daysAway} <span class="text-muted-foreground text-base font-normal">days</span>
+						{daysAway} <span class="text-base font-normal text-muted-foreground">days</span>
 					{:else if daysAway === 0}
 						Today!
 					{:else}
@@ -64,14 +66,14 @@
 			</Card.Root>
 
 			<Card.Root class="p-4">
-				<div class="text-muted-foreground flex items-center gap-2 text-xs">
+				<div class="flex items-center gap-2 text-xs text-muted-foreground">
 					<Users class="size-4" /> Expected guests
 				</div>
 				<p class="mt-1 text-2xl font-semibold">{$form.expectedGuests || '—'}</p>
 			</Card.Root>
 
 			<Card.Root class="p-4">
-				<div class="text-muted-foreground flex items-center gap-2 text-xs">
+				<div class="flex items-center gap-2 text-xs text-muted-foreground">
 					<Wallet class="size-4" /> Per guest
 				</div>
 				<p class="mt-1 text-2xl font-semibold">
@@ -140,8 +142,8 @@
 						placeholder="500000"
 					/>
 					{#if perGuest}
-						<p class="text-muted-foreground px-1 text-sm">
-							About <span class="text-foreground font-medium">{etb(perGuest)} ETB</span> per guest.
+						<p class="px-1 text-sm text-muted-foreground">
+							About <span class="font-medium text-foreground">{etb(perGuest)} ETB</span> per guest.
 						</p>
 					{/if}
 				</div>

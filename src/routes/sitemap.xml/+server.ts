@@ -4,7 +4,18 @@ import { vendors, vendorServices } from '$lib/server/db/schema';
 import { isListable } from '$lib/server/services';
 import type { RequestHandler } from './$types';
 
-const STATIC = ['/', '/vendors', '/shop', '/pricing', '/budget-estimator', '/card', '/about-us', '/contact-us', '/privacy', '/terms'];
+const STATIC = [
+	'/',
+	'/vendors',
+	'/shop',
+	'/pricing',
+	'/budget-estimator',
+	'/card',
+	'/about-us',
+	'/contact-us',
+	'/privacy',
+	'/terms'
+];
 
 const xmlEscape = (s: string) => s.replace(/[<>&'"]/g, (c) => `&#${c.charCodeAt(0)};`);
 
@@ -14,7 +25,9 @@ export const GET: RequestHandler = async ({ url }) => {
 		db
 			.select({ id: vendors.id, updatedAt: vendors.updatedAt })
 			.from(vendors)
-			.where(and(eq(vendors.status, 'approved'), eq(vendors.isActive, true), isNull(vendors.deletedAt))),
+			.where(
+				and(eq(vendors.status, 'approved'), eq(vendors.isActive, true), isNull(vendors.deletedAt))
+			),
 		db
 			.select({ id: vendorServices.id, updatedAt: vendorServices.updatedAt })
 			.from(vendorServices)
@@ -35,6 +48,9 @@ export const GET: RequestHandler = async ({ url }) => {
 	].join('\n');
 
 	return new Response(body, {
-		headers: { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=3600' }
+		headers: {
+			'content-type': 'application/xml; charset=utf-8',
+			'cache-control': 'public, max-age=3600'
+		}
 	});
 };

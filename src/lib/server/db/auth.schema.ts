@@ -1,5 +1,14 @@
 import { relations } from 'drizzle-orm';
-import { mysqlTable, varchar, text, timestamp, boolean, index, int, datetime } from 'drizzle-orm/mysql-core';
+import {
+	mysqlTable,
+	varchar,
+	text,
+	timestamp,
+	boolean,
+	index,
+	int,
+	datetime
+} from 'drizzle-orm/mysql-core';
 import { sql } from 'drizzle-orm';
 import { roles } from './common';
 

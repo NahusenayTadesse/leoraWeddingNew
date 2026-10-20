@@ -52,8 +52,8 @@
 	{#if data.rows.length === 0}
 		<Card.Root>
 			<Card.Content class="py-16 text-center">
-				<Sparkles class="text-muted-foreground mx-auto size-8" />
-				<p class="text-muted-foreground mt-3 text-sm">You haven't added any services yet.</p>
+				<Sparkles class="mx-auto size-8 text-muted-foreground" />
+				<p class="mt-3 text-sm text-muted-foreground">You haven't added any services yet.</p>
 				<Button class="mt-4" onclick={openCreate}>
 					<Plus class="size-4" /> Add your first service
 				</Button>
@@ -63,7 +63,7 @@
 		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 			{#each data.rows as service (service.id)}
 				<Card.Root class="overflow-hidden">
-					<div class="bg-muted flex h-36 items-center justify-center">
+					<div class="flex h-36 items-center justify-center bg-muted">
 						{#if service.featuredImage}
 							<img
 								src={assetUrl(service.featuredImage)}
@@ -71,16 +71,18 @@
 								class="h-full w-full object-cover"
 							/>
 						{:else}
-							<ImageOff class="text-muted-foreground size-8" />
+							<ImageOff class="size-8 text-muted-foreground" />
 						{/if}
 					</div>
 					<Card.Content class="space-y-2 pt-4">
 						<div class="flex items-start justify-between gap-2">
 							<h3 class="font-medium">{service.title}</h3>
-							<span class="text-muted-foreground shrink-0 text-xs">{categoryName(service.categoryId)}</span>
+							<span class="shrink-0 text-xs text-muted-foreground"
+								>{categoryName(service.categoryId)}</span
+							>
 						</div>
 						{#if service.description}
-							<p class="text-muted-foreground line-clamp-2 text-xs">{service.description}</p>
+							<p class="line-clamp-2 text-xs text-muted-foreground">{service.description}</p>
 						{/if}
 						<div class="flex justify-end gap-1 pt-1">
 							<Button variant="ghost" size="icon" onclick={() => openEdit(service)}>
@@ -116,7 +118,14 @@
 >
 	{#snippet fields({ form, errors })}
 		<InputComp {form} {errors} name="title" label="Title" />
-		<InputComp {form} {errors} name="categoryId" label="Category" type="select" items={data.categories} />
+		<InputComp
+			{form}
+			{errors}
+			name="categoryId"
+			label="Category"
+			type="select"
+			items={data.categories}
+		/>
 		<InputComp {form} {errors} name="description" label="Description" type="textarea" rows={4} />
 		<InputComp {form} {errors} name="featuredImage" label="Photo" type="file" />
 		<InputComp {form} {errors} name="currency" type="hidden" />
@@ -144,7 +153,14 @@
 	{#snippet fields({ form, errors })}
 		<InputComp {form} {errors} name="id" type="hidden" />
 		<InputComp {form} {errors} name="title" label="Title" />
-		<InputComp {form} {errors} name="categoryId" label="Category" type="select" items={data.categories} />
+		<InputComp
+			{form}
+			{errors}
+			name="categoryId"
+			label="Category"
+			type="select"
+			items={data.categories}
+		/>
 		<InputComp {form} {errors} name="description" label="Description" type="textarea" rows={4} />
 		<InputComp
 			{form}

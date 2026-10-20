@@ -35,27 +35,27 @@
 			{#each data.items as n (n.id)}
 				<li>
 					<ActionForm action="?/open" fields={{ id: n.id }}>
-							<button
-								type="submit"
-								class="flex w-full items-start gap-3 p-4 text-left hover:bg-muted/50"
-							>
-								<span
-									class={[
-										'mt-1.5 size-2 shrink-0 rounded-full',
-										n.isRead ? 'bg-transparent' : 'bg-(--leora-gold)'
-									]}
-									aria-hidden="true"
-								></span>
-								<span class="min-w-0 flex-1">
-									<span class={['block', !n.isRead && 'font-semibold']}>{n.title}</span>
-									{#if n.body}
-										<span class="block text-sm text-muted-foreground">{n.body}</span>
-									{/if}
-									<span class="mt-1 block text-xs text-muted-foreground">
-										{new Date(n.createdAt).toLocaleString()}
-									</span>
+						<button
+							type="submit"
+							class="flex w-full items-start gap-3 p-4 text-left hover:bg-muted/50"
+						>
+							<span
+								class={[
+									'mt-1.5 size-2 shrink-0 rounded-full',
+									n.isRead ? 'bg-transparent' : 'bg-(--leora-gold)'
+								]}
+								aria-hidden="true"
+							></span>
+							<span class="min-w-0 flex-1">
+								<span class={['block', !n.isRead && 'font-semibold']}>{n.title}</span>
+								{#if n.body}
+									<span class="block text-sm text-muted-foreground">{n.body}</span>
+								{/if}
+								<span class="mt-1 block text-xs text-muted-foreground">
+									{new Date(n.createdAt).toLocaleString()}
 								</span>
-							</button>
+							</span>
+						</button>
 					</ActionForm>
 				</li>
 			{/each}

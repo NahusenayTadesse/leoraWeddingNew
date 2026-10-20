@@ -6,7 +6,20 @@ import {
 	categoryServices,
 	vendors
 } from '$lib/server/db/schema';
-import { and, asc, desc, eq, exists, gte, inArray, like, lte, or, sql, type SQL } from 'drizzle-orm';
+import {
+	and,
+	asc,
+	desc,
+	eq,
+	exists,
+	gte,
+	inArray,
+	like,
+	lte,
+	or,
+	sql,
+	type SQL
+} from 'drizzle-orm';
 import { priceAgg, isListable, serviceCardQuery } from '$lib/server/services';
 import type { PageServerLoad } from './$types';
 
@@ -46,7 +59,8 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 	const catIds = parseIds(sp.getAll('cat'));
 	const subIds = parseIds(sp.getAll('sub'));
 	const verifiedOnly = sp.get('verified') === '1';
-	const sort: SortKey = sp.get('sort') && sp.get('sort')! in SORTS ? (sp.get('sort') as SortKey) : 'newest';
+	const sort: SortKey =
+		sp.get('sort') && sp.get('sort')! in SORTS ? (sp.get('sort') as SortKey) : 'newest';
 	const currentPage = Math.max(1, Number(sp.get('page')) || 1);
 
 	let minPrice = parseMoney(sp.get('min'));

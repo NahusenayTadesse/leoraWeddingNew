@@ -25,7 +25,7 @@
 	}
 	import Header from '$lib/components/header.svelte';
 	import Footer from '$lib/components/footer.svelte';
-	import FloatingChat from '$lib/components/FloatingChat.svelte'
+	import FloatingChat from '$lib/components/FloatingChat.svelte';
 
 	let { data, children } = $props();
 

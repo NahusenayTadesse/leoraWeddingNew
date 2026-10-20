@@ -48,7 +48,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 			})
 			.from(vendorSubscriptions)
 			.innerJoin(subscriptionPlans, eq(subscriptionPlans.id, vendorSubscriptions.planId))
-			.where(and(eq(vendorSubscriptions.vendorId, vendor.id), eq(vendorSubscriptions.status, 'active')))
+			.where(
+				and(eq(vendorSubscriptions.vendorId, vendor.id), eq(vendorSubscriptions.status, 'active'))
+			)
 			.orderBy(desc(vendorSubscriptions.id))
 			.limit(1),
 		db
@@ -56,7 +58,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 			.from(payments)
 			.leftJoin(subscriptionPlans, eq(subscriptionPlans.id, payments.subscriptionPlanId))
 			.where(
-				and(eq(payments.vendorId, vendor.id), eq(payments.status, 'pending'), eq(payments.paymentMethod, 'bank_transfer'))
+				and(
+					eq(payments.vendorId, vendor.id),
+					eq(payments.status, 'pending'),
+					eq(payments.paymentMethod, 'bank_transfer')
+				)
 			),
 		transferAccounts(),
 		superValidate(zod4(planTransferSchema), { id: 'plan-transfer' })
@@ -72,10 +78,18 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 async function payer(locals: App.Locals) {
 	const vendor = await requireVendor(locals);
-	const [row] = await db.select({ phone: vendors.phone }).from(vendors).where(eq(vendors.id, vendor.id));
+	const [row] = await db
+		.select({ phone: vendors.phone })
+		.from(vendors)
+		.where(eq(vendors.id, vendor.id));
 	return {
 		vendor,
-		payer: { id: locals.user!.id, name: vendor.businessName ?? locals.user!.name, email: locals.user!.email, phone: row?.phone }
+		payer: {
+			id: locals.user!.id,
+			name: vendor.businessName ?? locals.user!.name,
+			email: locals.user!.email,
+			phone: row?.phone
+		}
 	};
 }
 
@@ -91,9 +105,13 @@ export const actions = {
 
 		let started;
 		try {
-			started = await startVendorPlanChapa({ vendorId: vendor.id, planId: form.data.planId, payer: who }, url.origin);
+			started = await startVendorPlanChapa(
+				{ vendorId: vendor.id, planId: form.data.planId, payer: who },
+				url.origin
+			);
 		} catch (err) {
-			if (err instanceof PaymentRefused) return fail(409, { message: { type: 'error', text: err.message } });
+			if (err instanceof PaymentRefused)
+				return fail(409, { message: { type: 'error', text: err.message } });
 			if (err instanceof PaymentStartError) {
 				console.error('Chapa start failed:', err.cause);
 				return fail(502, { message: { type: 'error', text: m.pay_unavailable() } });
@@ -101,7 +119,11 @@ export const actions = {
 			throw err;
 		}
 		if (started.kind === 'activated') {
-			flashRedirect('/vendor-dashboard/plan', { type: 'success', message: m.pay_plan_activated() }, event);
+			flashRedirect(
+				'/vendor-dashboard/plan',
+				{ type: 'success', message: m.pay_plan_activated() },
+				event
+			);
 		}
 		redirect(303, started.url);
 	},

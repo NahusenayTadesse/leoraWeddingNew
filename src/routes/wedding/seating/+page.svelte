@@ -90,7 +90,10 @@
 									>
 										<option value="">{m.seating_seat_at()}</option>
 										{#each data.tables as table (table.id)}
-											<option value={table.id} disabled={table.used + 1 + guest.plusOnes > table.capacity}>
+											<option
+												value={table.id}
+												disabled={table.used + 1 + guest.plusOnes > table.capacity}
+											>
 												{table.name} ({table.used}/{table.capacity})
 											</option>
 										{/each}

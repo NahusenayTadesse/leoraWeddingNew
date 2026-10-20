@@ -19,7 +19,10 @@ export const receipt = z
 	.refine((file) => RECEIPT_TYPES.includes(file.type), { error: () => m.pay_receipt_type() });
 
 const transferFields = {
-	bankAccountId: z.coerce.number({ error: () => m.pay_account_required() }).int().positive(),
+	bankAccountId: z.coerce
+		.number({ error: () => m.pay_account_required() })
+		.int()
+		.positive(),
 	reference: z.string().trim().max(100).default(''),
 	receipt
 };

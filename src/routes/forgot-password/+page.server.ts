@@ -8,9 +8,13 @@ import { m } from '$lib/paraglide/messages.js';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ url }) => {
-	const form = await superValidate({ email: url.searchParams.get('email') ?? '' }, zod4(forgotPasswordSchema), {
-		errors: false
-	});
+	const form = await superValidate(
+		{ email: url.searchParams.get('email') ?? '' },
+		zod4(forgotPasswordSchema),
+		{
+			errors: false
+		}
+	);
 	return { form };
 };
 

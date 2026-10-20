@@ -82,7 +82,12 @@ async function payerFor(locals: App.Locals) {
 	if (!locals.user || !couple) return null;
 	return {
 		couple,
-		payer: { id: locals.user.id, name: locals.user.name, email: locals.user.email, phone: couple.phone }
+		payer: {
+			id: locals.user.id,
+			name: locals.user.name,
+			email: locals.user.email,
+			phone: couple.phone
+		}
 	};
 }
 
@@ -94,7 +99,9 @@ export const actions: Actions = {
 	subscribe: async (event) => {
 		const { request, locals, url, getClientAddress } = event;
 		if (!locals.user) {
-			return fail(401, { message: { type: 'error', text: 'Please sign in to upgrade your plan.' } });
+			return fail(401, {
+				message: { type: 'error', text: 'Please sign in to upgrade your plan.' }
+			});
 		}
 		if (!takeToken(`pay:${getClientAddress()}`, LIMITS.payment)) {
 			return fail(429, { message: { type: 'error', text: m.auth_too_many() } });
@@ -104,7 +111,9 @@ export const actions: Actions = {
 
 		const who = await payerFor(locals);
 		if (!who) {
-			return fail(400, { message: { type: 'error', text: 'Add your couple details before upgrading.' } });
+			return fail(400, {
+				message: { type: 'error', text: 'Add your couple details before upgrading.' }
+			});
 		}
 
 		let started;

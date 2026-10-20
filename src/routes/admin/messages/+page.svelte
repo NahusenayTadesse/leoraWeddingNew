@@ -20,10 +20,20 @@
 			header: sortable('Received'),
 			cell: ({ row }) => dateTime(row.original.createdAt)
 		},
-		{ id: 'status', accessorKey: 'status', header: 'Status', cell: ({ row }) => status(row.original.status) },
+		{
+			id: 'status',
+			accessorKey: 'status',
+			header: 'Status',
+			cell: ({ row }) => status(row.original.status)
+		},
 		{ id: 'name', accessorKey: 'name', header: sortable('From') },
 		{ id: 'email', accessorKey: 'email', header: 'Email' },
-		{ id: 'phone', accessorKey: 'phone', header: 'Phone', cell: ({ row }) => row.original.phone ?? '—' },
+		{
+			id: 'phone',
+			accessorKey: 'phone',
+			header: 'Phone',
+			cell: ({ row }) => row.original.phone ?? '—'
+		},
 		{ id: 'subject', accessorKey: 'subject', header: sortable('Subject') },
 		{
 			id: 'message',
@@ -38,7 +48,10 @@
 {#snippet actionsCell(m: Row)}
 	<div class="flex justify-end gap-2">
 		{#if m.status !== 'replied'}
-			<ActionForm action="?/setStatus" fields={{ id: m.id, status: m.status === 'new' ? 'read' : 'replied' }}>
+			<ActionForm
+				action="?/setStatus"
+				fields={{ id: m.id, status: m.status === 'new' ? 'read' : 'replied' }}
+			>
 				{#snippet children({ busy })}
 					<Button type="submit" size="sm" variant="ghost" disabled={!!busy}>
 						{m.status === 'new' ? 'Mark read' : 'Mark replied'}

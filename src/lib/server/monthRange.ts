@@ -6,5 +6,9 @@ export function monthRange(param: string | null): { month: string; from: string;
 	const mo = match ? Math.min(12, Math.max(1, Number(match[2]))) : now.getMonth() + 1;
 	const pad = (n: number) => String(n).padStart(2, '0');
 	const last = new Date(y, mo, 0).getDate();
-	return { month: `${y}-${pad(mo)}-01`, from: `${y}-${pad(mo)}-01`, to: `${y}-${pad(mo)}-${pad(last)}` };
+	return {
+		month: `${y}-${pad(mo)}-01`,
+		from: `${y}-${pad(mo)}-01`,
+		to: `${y}-${pad(mo)}-${pad(last)}`
+	};
 }

@@ -11,7 +11,9 @@
 	let { data } = $props();
 
 	// svelte-ignore state_referenced_locally
-	const { form, errors, enhance, submitting } = createForm(data.form, coupleSchema, { resetForm: false });
+	const { form, errors, enhance, submitting } = createForm(data.form, coupleSchema, {
+		resetForm: false
+	});
 
 	const previewSlug = $derived(
 		$form.slug || slugify(`${$form.brideName ?? ''}-${$form.groomName ?? ''}`) || '…'
@@ -24,7 +26,7 @@
 			<h1 class="text-2xl font-semibold tracking-tight">
 				{data.isNew ? 'Welcome to Leora Events' : 'Couple details'}
 			</h1>
-			<p class="text-muted-foreground text-sm">
+			<p class="text-sm text-muted-foreground">
 				{data.isNew
 					? "Tell us who's getting married so we can set up your planning space."
 					: 'Update your names and contact information.'}
@@ -105,8 +107,8 @@
 						type="text"
 						placeholder="hanan-and-dawit"
 					/>
-					<p class="text-muted-foreground px-1 text-sm">
-						leoraevents.com/w/<span class="text-foreground font-medium">{previewSlug}</span>
+					<p class="px-1 text-sm text-muted-foreground">
+						leoraevents.com/w/<span class="font-medium text-foreground">{previewSlug}</span>
 					</p>
 				</div>
 			</Card.Content>

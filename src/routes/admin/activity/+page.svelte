@@ -20,9 +20,16 @@
 			accessorKey: 'who',
 			header: sortable('Who'),
 			cell: ({ row }) =>
-				row.original.who ? `${row.original.who}${row.original.email ? ` (${row.original.email})` : ''}` : 'System'
+				row.original.who
+					? `${row.original.who}${row.original.email ? ` (${row.original.email})` : ''}`
+					: 'System'
 		},
-		{ id: 'action', accessorKey: 'action', header: sortable('Action'), meta: { class: 'font-mono' } },
+		{
+			id: 'action',
+			accessorKey: 'action',
+			header: sortable('Action'),
+			meta: { class: 'font-mono' }
+		},
 		{
 			id: 'entityType',
 			accessorKey: 'entityType',
@@ -30,7 +37,12 @@
 			cell: ({ row }) =>
 				`${row.original.entityType ?? '—'}${row.original.entityId ? ` #${row.original.entityId}` : ''}`
 		},
-		{ id: 'meta', accessorKey: 'meta', header: 'Details', cell: ({ row }) => longText(row.original.meta) },
+		{
+			id: 'meta',
+			accessorKey: 'meta',
+			header: 'Details',
+			cell: ({ row }) => longText(row.original.meta)
+		},
 		{ id: 'ip', accessorKey: 'ip', header: 'IP', cell: ({ row }) => row.original.ip ?? '' }
 	];
 </script>

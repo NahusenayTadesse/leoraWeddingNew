@@ -45,11 +45,11 @@
 	);
 </script>
 
-<div class="bg-muted/30 min-h-svh">
+<div class="min-h-svh bg-muted/30">
 	<div class="mx-auto flex max-w-7xl gap-6 px-4 py-6 lg:px-6">
 		<!-- Sidebar -->
 		<aside class="hidden w-60 shrink-0 lg:block">
-			<div class="bg-card sticky top-6 rounded-xl border p-3">
+			<div class="sticky top-6 rounded-xl border bg-card p-3">
 				<div class="flex items-center gap-3 px-2 py-3">
 					<Avatar.Root class="size-9">
 						<Avatar.Image src={assetUrl(data.user.image)} alt={data.user.name} />
@@ -59,7 +59,7 @@
 						<p class="truncate text-sm font-medium">
 							{data.couple ? `${data.couple.brideName} & ${data.couple.groomName}` : data.user.name}
 						</p>
-						<p class="text-muted-foreground text-xs">Couple account</p>
+						<p class="text-xs text-muted-foreground">Couple account</p>
 					</div>
 				</div>
 
@@ -68,7 +68,7 @@
 				<nav class="flex flex-col gap-1">
 					{#each nav as item (item.href)}
 						{@const Icon = item.icon}
-						 <a
+						<a
 							href={item.href}
 							class={cn(
 								'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
@@ -86,11 +86,11 @@
 		</aside>
 
 		<!-- Mobile nav -->
-		<div class="bg-background fixed inset-x-0 bottom-0 z-40 border-t lg:hidden">
+		<div class="fixed inset-x-0 bottom-0 z-40 border-t bg-background lg:hidden">
 			<nav class="flex justify-around">
 				{#each nav as item (item.href)}
 					{@const Icon = item.icon}
-					  <a
+					<a
 						href={item.href}
 						class={cn(
 							'flex flex-1 flex-col items-center gap-1 py-2 text-[10px]',

@@ -14,7 +14,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	};
 };
 
-const err = (text: string, status = 400) => fail(status, { message: { type: 'error' as const, text } });
+const err = (text: string, status = 400) =>
+	fail(status, { message: { type: 'error' as const, text } });
 const ok = (text: string, extra: Record<string, unknown> = {}) => ({
 	message: { type: 'success' as const, text },
 	...extra
@@ -29,7 +30,10 @@ export const actions: Actions = {
 	enable: async ({ request }) => {
 		const password = String((await request.formData()).get('password') ?? '');
 		try {
-			const result = await auth.api.enableTwoFactor({ body: { password }, headers: request.headers });
+			const result = await auth.api.enableTwoFactor({
+				body: { password },
+				headers: request.headers
+			});
 			const qr = await QRCode.toDataURL(result.totpURI, { margin: 1, width: 220 });
 			return { setup: { qr, uri: result.totpURI, backupCodes: result.backupCodes } };
 		} catch (e) {

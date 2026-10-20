@@ -44,7 +44,11 @@ export async function listThreadsForCouple(coupleId: number, userId: string): Pr
 	if (vendorIds.length === 0) return [];
 
 	const vendorRows = await db
-		.select({ id: vendors.id, businessName: vendors.businessName, categoryName: vendorCategories.name })
+		.select({
+			id: vendors.id,
+			businessName: vendors.businessName,
+			categoryName: vendorCategories.name
+		})
 		.from(vendors)
 		.leftJoin(vendorCategories, eq(vendors.categoryId, vendorCategories.id))
 		.where(inArray(vendors.id, vendorIds));

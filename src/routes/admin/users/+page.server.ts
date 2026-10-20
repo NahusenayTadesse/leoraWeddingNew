@@ -31,7 +31,9 @@ const kind = sql<'vendor' | 'couple' | 'none'>`case
 	else 'none' end`;
 
 /** `banned` is nullable; null is "never banned". */
-const bannedState = sql<'banned' | 'active'>`if(coalesce(${user.banned}, false), 'banned', 'active')`;
+const bannedState = sql<
+	'banned' | 'active'
+>`if(coalesce(${user.banned}, false), 'banned', 'active')`;
 
 const SORTS = { name: user.name, email: user.email, createdAt: user.createdAt };
 
@@ -41,7 +43,8 @@ const spec: WhereSpec<Filter> = {
 	filters: {
 		kind: (value) => sql`${kind} = ${value}`,
 		// `0` is the "No role" facet.
-		roleId: (value) => (value === '0' ? sql`${user.roleId} is null` : eq(user.roleId, Number(value))),
+		roleId: (value) =>
+			value === '0' ? sql`${user.roleId} is null` : eq(user.roleId, Number(value)),
 		banned: (value) => sql`${bannedState} = ${value}`
 	}
 };
@@ -128,12 +131,21 @@ export const actions = {
 	ban: async (event) => {
 		requirePermission(event.locals, PERM.usersManage);
 		const form = await superValidate(event.request, zod4(userBanSchema));
-		if (!form.valid) return message(form, { type: 'error', text: 'Invalid request' }, { status: 400 });
+		if (!form.valid)
+			return message(form, { type: 'error', text: 'Invalid request' }, { status: 400 });
 		if (form.data.id === event.locals.user?.id) {
-			return message(form, { type: 'error', text: "You can't ban your own account." }, { status: 400 });
+			return message(
+				form,
+				{ type: 'error', text: "You can't ban your own account." },
+				{ status: 400 }
+			);
 		}
 		if (!event.locals.isSuperAdmin && (await isAdminAccount(form.data.id))) {
-			return message(form, { type: 'error', text: 'Only an admin can ban an admin.' }, { status: 403 });
+			return message(
+				form,
+				{ type: 'error', text: 'Only an admin can ban an admin.' },
+				{ status: 403 }
+			);
 		}
 		await db
 			.update(user)
@@ -142,7 +154,10 @@ export const actions = {
 		// Pages already refuse banned users in hooks; deleting the session rows
 		// also closes the better-auth API, which would otherwise keep answering.
 		await db.delete(session).where(eq(session.userId, form.data.id));
-		await audit(event, 'user.ban', 'user', null, { userId: form.data.id, reason: form.data.reason });
+		await audit(event, 'user.ban', 'user', null, {
+			userId: form.data.id,
+			reason: form.data.reason
+		});
 		return message(form, { type: 'success', text: 'User banned and signed out everywhere.' });
 	},
 	unban: async (event) => {
@@ -159,9 +174,14 @@ export const actions = {
 	setRole: async (event) => {
 		requirePermission(event.locals, PERM.usersManage);
 		const form = await superValidate(event.request, zod4(userRoleSchema));
-		if (!form.valid) return message(form, { type: 'error', text: 'Invalid request' }, { status: 400 });
+		if (!form.valid)
+			return message(form, { type: 'error', text: 'Invalid request' }, { status: 400 });
 		if (form.data.id === event.locals.user?.id) {
-			return message(form, { type: 'error', text: "You can't change your own role." }, { status: 400 });
+			return message(
+				form,
+				{ type: 'error', text: "You can't change your own role." },
+				{ status: 400 }
+			);
 		}
 		const roleId = form.data.roleId === 0 ? null : form.data.roleId;
 		let roleName: string | null = null;
@@ -176,8 +196,15 @@ export const actions = {
 		}
 		// Granting or taking away Admin is for admins only; otherwise a staff member with
 		// user.manage could promote an account they control.
-		if (!event.locals.isSuperAdmin && (roleName === 'Admin' || (await isAdminAccount(form.data.id)))) {
-			return message(form, { type: 'error', text: 'Only an admin can change admin roles.' }, { status: 403 });
+		if (
+			!event.locals.isSuperAdmin &&
+			(roleName === 'Admin' || (await isAdminAccount(form.data.id)))
+		) {
+			return message(
+				form,
+				{ type: 'error', text: 'Only an admin can change admin roles.' },
+				{ status: 403 }
+			);
 		}
 		await db.update(user).set({ roleId }).where(eq(user.id, form.data.id));
 		await audit(event, 'user.setRole', 'user', null, { userId: form.data.id, roleId });

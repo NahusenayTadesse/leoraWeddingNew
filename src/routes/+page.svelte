@@ -133,8 +133,8 @@
 	<div class="relative mx-auto max-w-[1180px] px-5 pt-16 pb-20 sm:px-8 lg:pt-24">
 		<div class="grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
 			<div>
-				<Badge variant="secondary" class="text-accent-foreground mb-5 gap-1.5">
-					<span class="bg-primary size-1.5 rounded-full"></span>
+				<Badge variant="secondary" class="mb-5 gap-1.5 text-accent-foreground">
+					<span class="size-1.5 rounded-full bg-primary"></span>
 					Ethiopia's First Wedding Platform
 				</Badge>
 
@@ -144,7 +144,7 @@
 					Plan your dream Ethiopian wedding, all in one place
 				</h1>
 
-				<p class="text-muted-foreground mt-5 max-w-xl text-[15.5px] leading-relaxed">
+				<p class="mt-5 max-w-xl text-[15.5px] leading-relaxed text-muted-foreground">
 					Vendors, budgeting, planning, invitations and guests — Leora brings every part of your
 					wedding into a single, beautifully designed workspace.
 				</p>
@@ -159,17 +159,17 @@
 						<dt class="font-display text-2xl font-extrabold">
 							{data.stats.vendorCount.toLocaleString()}
 						</dt>
-						<dd class="text-muted-foreground text-[13px]">Vendors listed</dd>
+						<dd class="text-[13px] text-muted-foreground">Vendors listed</dd>
 					</div>
 					<div>
 						<dt class="font-display text-2xl font-extrabold">{data.stats.regionCount}</dt>
-						<dd class="text-muted-foreground text-[13px]">Cities covered</dd>
+						<dd class="text-[13px] text-muted-foreground">Cities covered</dd>
 					</div>
 					<div>
 						<dt class="font-display text-2xl font-extrabold">
 							{data.vendors.length ? `${Number(data.vendors[0].ratingAvg).toFixed(1)}/5` : '—'}
 						</dt>
-						<dd class="text-muted-foreground text-[13px]">Top rated vendor</dd>
+						<dd class="text-[13px] text-muted-foreground">Top rated vendor</dd>
 					</div>
 				</dl>
 			</div>
@@ -197,12 +197,12 @@
 						<div class="fc-value">{v.businessName}</div>
 						<div class="fc-mini-row">
 							<span><span class="fc-dot"></span>{v.categoryName}</span>
-							<span class="text-primary inline-flex items-center gap-0.5">
+							<span class="inline-flex items-center gap-0.5 text-primary">
 								<Star class="size-3 fill-current" />{Number(v.ratingAvg).toFixed(1)}
 							</span>
 						</div>
 					{:else}
-						<div class="text-muted-foreground mt-2 text-[12.5px]">
+						<div class="mt-2 text-[12.5px] text-muted-foreground">
 							No vendors listed yet — they appear here as they're approved.
 						</div>
 					{/if}
@@ -217,7 +217,7 @@
 						<div class="flex items-center gap-1.5">
 							<Check class="size-3.5 text-(--color-success)" /> Melse date set
 						</div>
-						<div class="text-accent-foreground flex items-center gap-1.5 font-bold">
+						<div class="flex items-center gap-1.5 font-bold text-accent-foreground">
 							<ArrowRight class="size-3.5" /> Send invitations
 						</div>
 					</div>
@@ -235,29 +235,29 @@
 
 <!-- ========================= MARKETPLACE ========================= -->
 <section class="mx-auto max-w-[1180px] px-5 py-16 sm:px-8">
-	<p class="text-accent-foreground text-[12.5px] font-bold tracking-[0.08em] uppercase">
+	<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">
 		Marketplace
 	</p>
-	<h2 class="font-display mt-2 text-3xl font-extrabold text-balance sm:text-4xl">
+	<h2 class="mt-2 font-display text-3xl font-extrabold text-balance sm:text-4xl">
 		Every vendor your wedding needs
 	</h2>
-	<p class="text-muted-foreground mt-3 max-w-2xl text-[15px]">
-		Browse verified photographers, venues, decorators and more — with real reviews, real pricing, and
-		real availability.
+	<p class="mt-3 max-w-2xl text-[15px] text-muted-foreground">
+		Browse verified photographers, venues, decorators and more — with real reviews, real pricing,
+		and real availability.
 	</p>
 
 	{#if data.categories.length}
 		<div class="mt-9 grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
 			{#each data.categories as category (category.id)}
 				<a href="/vendors?category={category.slug}">
-					<Card.Root class="cat-card hover:border-primary h-full">
+					<Card.Root class="cat-card h-full hover:border-primary">
 						<Card.Content class="flex items-center gap-3.5">
-							<span class="bg-accent grid size-11 shrink-0 place-items-center rounded-xl text-xl">
+							<span class="grid size-11 shrink-0 place-items-center rounded-xl bg-accent text-xl">
 								{category.icon ?? '💍'}
 							</span>
 							<span>
 								<span class="block text-sm font-bold">{category.name}</span>
-								<span class="text-muted-foreground block text-[12.5px]">
+								<span class="block text-[12.5px] text-muted-foreground">
 									{category.count}
 									{category.count === 1 ? 'vendor' : 'vendors'}
 								</span>
@@ -269,7 +269,7 @@
 		</div>
 	{:else}
 		<Card.Root class="mt-9">
-			<Card.Content class="text-muted-foreground py-12 text-center text-sm">
+			<Card.Content class="py-12 text-center text-sm text-muted-foreground">
 				No vendor categories yet.
 			</Card.Content>
 		</Card.Root>
@@ -277,15 +277,15 @@
 </section>
 
 <!-- ====================== BUDGET ESTIMATOR ====================== -->
-<section class="bg-card border-y">
+<section class="border-y bg-card">
 	<div class="mx-auto max-w-[1180px] px-5 py-16 sm:px-8">
-		<p class="text-accent-foreground text-[12.5px] font-bold tracking-[0.08em] uppercase">
+		<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">
 			Budget Estimator
 		</p>
-		<h2 class="font-display mt-2 text-3xl font-extrabold text-balance sm:text-4xl">
+		<h2 class="mt-2 font-display text-3xl font-extrabold text-balance sm:text-4xl">
 			Know your number before you book anything
 		</h2>
-		<p class="text-muted-foreground mt-3 max-w-2xl text-[15px]">
+		<p class="mt-3 max-w-2xl text-[15px] text-muted-foreground">
 			Adjust guest count and venue tier to see a live estimate, broken down by category.
 		</p>
 
@@ -293,11 +293,8 @@
 			<Card.Root>
 				<Card.Content class="space-y-6">
 					<div>
-						<label
-							for="guestSlider"
-							class="mb-2.5 flex items-baseline justify-between"
-						>
-							<span class="text-muted-foreground text-[12.5px] font-bold">Guest count</span>
+						<label for="guestSlider" class="mb-2.5 flex items-baseline justify-between">
+							<span class="text-[12.5px] font-bold text-muted-foreground">Guest count</span>
 							<span class="font-display text-lg font-extrabold">{guests} guests</span>
 						</label>
 						<input
@@ -312,7 +309,7 @@
 					</div>
 
 					<div>
-						<span class="text-muted-foreground mb-2.5 block text-[12.5px] font-bold">
+						<span class="mb-2.5 block text-[12.5px] font-bold text-muted-foreground">
 							Venue tier
 						</span>
 						<div class="flex flex-wrap gap-2">
@@ -329,10 +326,10 @@
 					</div>
 
 					<div class="border-t pt-5">
-						<p class="text-muted-foreground text-[12.5px] font-bold">Estimated Total</p>
-						<p class="font-display mt-1 text-4xl font-extrabold">
+						<p class="text-[12.5px] font-bold text-muted-foreground">Estimated Total</p>
+						<p class="mt-1 font-display text-4xl font-extrabold">
 							{estimateTotal.toLocaleString()}
-							<span class="text-muted-foreground text-lg font-bold">ETB</span>
+							<span class="text-lg font-bold text-muted-foreground">ETB</span>
 						</p>
 					</div>
 				</Card.Content>
@@ -343,8 +340,11 @@
 					{#each breakdown as line (line.name)}
 						<div class="grid grid-cols-[1fr_auto] items-center gap-3 sm:grid-cols-[9rem_1fr_4rem]">
 							<span class="text-[13px] font-medium">{line.name}</span>
-							<div class="bg-muted col-span-2 h-1.5 overflow-hidden rounded-full sm:col-span-1">
-								<div class="est-bar bg-primary h-full rounded-full" style="width:{line.pct * 100}%"></div>
+							<div class="col-span-2 h-1.5 overflow-hidden rounded-full bg-muted sm:col-span-1">
+								<div
+									class="est-bar h-full rounded-full bg-primary"
+									style="width:{line.pct * 100}%"
+								></div>
 							</div>
 							<b class="text-right text-[13px] font-bold tabular-nums">
 								{Math.round(line.amount / 1000)}k
@@ -363,34 +363,34 @@
 
 <!-- ====================== PLANNING DASHBOARD ====================== -->
 <section class="mx-auto max-w-[1180px] px-5 py-16 sm:px-8">
-	<p class="text-accent-foreground text-[12.5px] font-bold tracking-[0.08em] uppercase">
+	<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">
 		Planning Dashboard
 	</p>
-	<h2 class="font-display mt-2 text-3xl font-extrabold text-balance sm:text-4xl">
+	<h2 class="mt-2 font-display text-3xl font-extrabold text-balance sm:text-4xl">
 		One workspace for the whole wedding
 	</h2>
-	<p class="text-muted-foreground mt-3 max-w-2xl text-[15px]">
+	<p class="mt-3 max-w-2xl text-[15px] text-muted-foreground">
 		Track budget, tasks, vendors and guests — all updating live as you plan.
 	</p>
 
 	<div class="mt-9 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
 		<Card.Root>
 			<Card.Content class="space-y-3">
-				<p class="text-muted-foreground text-[11.5px] font-bold tracking-[0.08em] uppercase">
+				<p class="text-[11.5px] font-bold tracking-[0.08em] text-muted-foreground uppercase">
 					To do
 				</p>
 				{#each [['Finalize decor theme', 'Due in 5 days'], ['Confirm catering count', 'Due in 9 days']] as [title, due] (title)}
-					<div class="bg-muted/50 rounded-xl px-4 py-3">
+					<div class="rounded-xl bg-muted/50 px-4 py-3">
 						<b class="block text-[13.5px]">{title}</b>
-						<span class="text-muted-foreground text-[12.5px]">{due}</span>
+						<span class="text-[12.5px] text-muted-foreground">{due}</span>
 					</div>
 				{/each}
-				<p class="text-muted-foreground pt-2 text-[11.5px] font-bold tracking-[0.08em] uppercase">
+				<p class="pt-2 text-[11.5px] font-bold tracking-[0.08em] text-muted-foreground uppercase">
 					In progress
 				</p>
-				<div class="bg-muted/50 rounded-xl px-4 py-3">
+				<div class="rounded-xl bg-muted/50 px-4 py-3">
 					<b class="block text-[13.5px]">Send invitations</b>
-					<span class="text-muted-foreground text-[12.5px]">62% sent</span>
+					<span class="text-[12.5px] text-muted-foreground">62% sent</span>
 				</div>
 			</Card.Content>
 		</Card.Root>
@@ -417,13 +417,13 @@
 				</div>
 				<div>
 					<div class="font-display text-2xl font-extrabold">68%</div>
-					<div class="text-muted-foreground text-[12.5px]">Wedding ready</div>
+					<div class="text-[12.5px] text-muted-foreground">Wedding ready</div>
 				</div>
 				<div class="w-full border-t pt-4">
-					<p class="text-muted-foreground flex justify-between text-[12.5px]">
+					<p class="flex justify-between text-[12.5px] text-muted-foreground">
 						<span>Guests invited</span><b class="text-foreground">318</b>
 					</p>
-					<p class="text-muted-foreground mt-1.5 flex justify-between text-[12.5px]">
+					<p class="mt-1.5 flex justify-between text-[12.5px] text-muted-foreground">
 						<span>Confirmed</span><b class="text-foreground">240</b>
 					</p>
 				</div>
@@ -434,13 +434,13 @@
 
 <!-- ========================= LEORA CARD ========================= -->
 <section class="mx-auto max-w-[1180px] px-5 py-16 sm:px-8">
-	<p class="text-accent-foreground text-[12.5px] font-bold tracking-[0.08em] uppercase">
+	<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">
 		The Leora Card
 	</p>
-	<h2 class="font-display mt-2 text-3xl font-extrabold text-balance sm:text-4xl">
+	<h2 class="mt-2 font-display text-3xl font-extrabold text-balance sm:text-4xl">
 		An invitation worth sharing
 	</h2>
-	<p class="text-muted-foreground mt-3 max-w-2xl text-[15px]">
+	<p class="mt-3 max-w-2xl text-[15px] text-muted-foreground">
 		Every Leora Card comes with a live countdown, interactive map, guest RSVP flow and a personal QR
 		check-in — wrapped in a design your guests will want to screenshot.
 	</p>
@@ -449,9 +449,9 @@
 		{#each cardFeatures as [num, title, body] (num)}
 			<Card.Root class="h-full">
 				<Card.Content>
-					<span class="font-display text-primary text-2xl font-extrabold">{num}</span>
+					<span class="font-display text-2xl font-extrabold text-primary">{num}</span>
 					<h3 class="mt-2 text-base font-bold">{title}</h3>
-					<p class="text-muted-foreground mt-1.5 text-[13.5px] leading-relaxed">{body}</p>
+					<p class="mt-1.5 text-[13.5px] leading-relaxed text-muted-foreground">{body}</p>
 				</Card.Content>
 			</Card.Root>
 		{/each}
@@ -459,15 +459,15 @@
 </section>
 
 <!-- ======================= MULTI-EVENT ========================= -->
-<section class="bg-card border-y">
+<section class="border-y bg-card">
 	<div class="mx-auto max-w-[1180px] px-5 py-16 sm:px-8">
-		<p class="text-accent-foreground text-[12.5px] font-bold tracking-[0.08em] uppercase">
+		<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">
 			Multi-Event Support
 		</p>
-		<h2 class="font-display mt-2 text-3xl font-extrabold text-balance sm:text-4xl">
+		<h2 class="mt-2 font-display text-3xl font-extrabold text-balance sm:text-4xl">
 			Ethiopian weddings are more than one day
 		</h2>
-		<p class="text-muted-foreground mt-3 max-w-2xl text-[15px]">
+		<p class="mt-3 max-w-2xl text-[15px] text-muted-foreground">
 			Plan every event in the celebration under a single guest list and budget.
 		</p>
 
@@ -477,7 +477,7 @@
 					<Card.Root class="event-node h-full">
 						<Card.Content class="flex items-center gap-3.5">
 							<span
-								class="bg-accent text-accent-foreground font-display grid size-10 shrink-0 place-items-center rounded-xl text-sm font-extrabold"
+								class="grid size-10 shrink-0 place-items-center rounded-xl bg-accent font-display text-sm font-extrabold text-accent-foreground"
 							>
 								{num}
 							</span>
@@ -489,17 +489,17 @@
 		</ol>
 
 		<div class="mt-12">
-			<p class="text-accent-foreground text-[12.5px] font-bold tracking-[0.08em] uppercase">
+			<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">
 				Wedding Timeline
 			</p>
-			<h3 class="font-display mt-2 text-2xl font-extrabold">
+			<h3 class="mt-2 font-display text-2xl font-extrabold">
 				From engagement to reception, mapped out
 			</h3>
 			<ol class="mt-6 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
 				{#each timeline as [name, when] (name)}
-					<li class="border-primary border-l-2 py-1 pl-3.5">
+					<li class="border-l-2 border-primary py-1 pl-3.5">
 						<p class="text-[13.5px] font-bold">{name}</p>
-						<p class="text-muted-foreground text-[12.5px]">{when}</p>
+						<p class="text-[12.5px] text-muted-foreground">{when}</p>
 					</li>
 				{/each}
 			</ol>
@@ -510,10 +510,10 @@
 <!-- ======================== TESTIMONIALS ======================== -->
 {#if data.testimonials.length}
 	<section class="mx-auto max-w-[1180px] px-5 py-16 sm:px-8">
-		<p class="text-accent-foreground text-[12.5px] font-bold tracking-[0.08em] uppercase">
+		<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">
 			Testimonials
 		</p>
-		<h2 class="font-display mt-2 text-3xl font-extrabold sm:text-4xl">
+		<h2 class="mt-2 font-display text-3xl font-extrabold sm:text-4xl">
 			Couples planning with Leora
 		</h2>
 
@@ -524,14 +524,14 @@
 						<p class="text-[14px] leading-relaxed">"{t.message}"</p>
 						<div class="mt-5 flex items-center gap-3 pt-4">
 							<span
-								class="bg-accent text-accent-foreground grid size-10 shrink-0 place-items-center rounded-full text-[12.5px] font-bold"
+								class="grid size-10 shrink-0 place-items-center rounded-full bg-accent text-[12.5px] font-bold text-accent-foreground"
 							>
 								{initials(t.name)}
 							</span>
 							<span>
 								<span class="block text-[13.5px] font-bold">{t.name}</span>
 								{#if t.position}
-									<span class="text-muted-foreground block text-[12.5px]">{t.position}</span>
+									<span class="block text-[12.5px] text-muted-foreground">{t.position}</span>
 								{/if}
 							</span>
 						</div>
@@ -544,14 +544,14 @@
 
 <!-- ============================ FAQ ============================ -->
 <section id="faq" class="mx-auto max-w-[760px] px-5 py-16 sm:px-8">
-	<p class="text-accent-foreground text-[12.5px] font-bold tracking-[0.08em] uppercase">FAQ</p>
-	<h2 class="font-display mt-2 text-3xl font-extrabold sm:text-4xl">Common questions</h2>
+	<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">FAQ</p>
+	<h2 class="mt-2 font-display text-3xl font-extrabold sm:text-4xl">Common questions</h2>
 
 	<Accordion.Root type="single" class="mt-7">
 		{#each faqs as [q, a], i (q)}
 			<Accordion.Item value={`faq-${i}`}>
 				<Accordion.Trigger class="text-left text-[15px] font-semibold">{q}</Accordion.Trigger>
-				<Accordion.Content class="text-muted-foreground text-[14px] leading-relaxed">
+				<Accordion.Content class="text-[14px] leading-relaxed text-muted-foreground">
 					{a}
 				</Accordion.Content>
 			</Accordion.Item>
@@ -561,14 +561,14 @@
 
 <!-- ============================ CTA ============================ -->
 <section class="mx-auto max-w-[1180px] px-5 pb-8 sm:px-8">
-	<Card.Root class="from-leora-royal to-leora-navy overflow-hidden border-0 bg-linear-160">
+	<Card.Root class="overflow-hidden border-0 bg-linear-160 from-leora-royal to-leora-navy">
 		<Card.Content class="relative px-8 py-14 text-center">
 			<div class="pointer-events-none absolute inset-0 bg-(image:--hero-glow)"></div>
 			<div class="relative">
 				<p class="text-[12.5px] font-bold tracking-[0.08em] text-(--leora-gold) uppercase">
 					Get Started
 				</p>
-				<h2 class="font-display mt-2 text-3xl font-extrabold text-balance text-white sm:text-4xl">
+				<h2 class="mt-2 font-display text-3xl font-extrabold text-balance text-white sm:text-4xl">
 					Your wedding, planned properly
 				</h2>
 				<p class="mx-auto mt-3 max-w-lg text-[15px] text-white/70">

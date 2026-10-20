@@ -16,7 +16,12 @@ export const GET: RequestHandler = async ({ url }) => {
 
 export const POST: RequestHandler = async ({ request }) => {
 	const raw = await request.text();
-	if (!webhookSignatureOk(raw, request.headers.get('x-chapa-signature') ?? request.headers.get('chapa-signature'))) {
+	if (
+		!webhookSignatureOk(
+			raw,
+			request.headers.get('x-chapa-signature') ?? request.headers.get('chapa-signature')
+		)
+	) {
 		return json({ ok: false }, { status: 401 });
 	}
 	let txRef: string | undefined;

@@ -12,7 +12,8 @@ import { defineConfig } from 'vitest/config';
  * any database whose name doesn't end in _test.
  */
 if (process.env.VITEST) {
-	process.env.DATABASE_URL = process.env.TEST_DATABASE_URL ?? 'mysql://dev@localhost:3306/leora_test';
+	process.env.DATABASE_URL =
+		process.env.TEST_DATABASE_URL ?? 'mysql://dev@localhost:3306/leora_test';
 	process.env.CHAPA_SECRET_KEY = 'CHASECK_TEST-unit-tests';
 	process.env.SECRET_KEY = 'CHASECK_TEST-unit-tests';
 	process.env.GEMINI_KEY = '';

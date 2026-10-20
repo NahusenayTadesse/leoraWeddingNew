@@ -9,7 +9,12 @@
  */
 import { and, eq, lt, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { subscriptions, vendorSubscriptions, vendors, subscriptionPlans } from '$lib/server/db/schema';
+import {
+	subscriptions,
+	vendorSubscriptions,
+	vendors,
+	subscriptionPlans
+} from '$lib/server/db/schema';
 import { reconcileStale } from '$lib/server/payments';
 import { notify } from '$lib/server/notify';
 import { isoDay } from '$lib/server/availability';
@@ -30,11 +35,20 @@ export async function expirePlans() {
 export async function remindExpiringVendorPlans() {
 	const inThreeDays = isoDay(new Date(Date.now() + 3 * 24 * 3600_000));
 	const rows = await db
-		.select({ userId: vendors.userId, plan: subscriptionPlans.name, endsAt: vendorSubscriptions.endsAt })
+		.select({
+			userId: vendors.userId,
+			plan: subscriptionPlans.name,
+			endsAt: vendorSubscriptions.endsAt
+		})
 		.from(vendorSubscriptions)
 		.innerJoin(vendors, eq(vendors.id, vendorSubscriptions.vendorId))
 		.innerJoin(subscriptionPlans, eq(subscriptionPlans.id, vendorSubscriptions.planId))
-		.where(and(eq(vendorSubscriptions.status, 'active'), sql`${vendorSubscriptions.endsAt} = ${inThreeDays}`));
+		.where(
+			and(
+				eq(vendorSubscriptions.status, 'active'),
+				sql`${vendorSubscriptions.endsAt} = ${inThreeDays}`
+			)
+		);
 	for (const r of rows) {
 		await notify(r.userId, {
 			type: 'plan_expiring',

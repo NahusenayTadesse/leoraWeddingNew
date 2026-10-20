@@ -48,7 +48,10 @@
 			header: 'Status',
 			cell: ({ row }) =>
 				row.original.banned
-					? status('banned', row.original.banReason ? `Banned: ${row.original.banReason}` : 'Banned')
+					? status(
+							'banned',
+							row.original.banReason ? `Banned: ${row.original.banReason}` : 'Banned'
+						)
 					: status('active')
 		},
 		{

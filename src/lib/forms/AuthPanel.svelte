@@ -21,7 +21,10 @@
 	type Role = 'couple' | 'vendor' | 'admin';
 	type Mode = 'login' | 'signup';
 
-	let { data, mode: initialMode = 'login' }: { data: import('../../routes/login/$types').PageData; mode?: Mode } = $props();
+	let {
+		data,
+		mode: initialMode = 'login'
+	}: { data: import('../../routes/login/$types').PageData; mode?: Mode } = $props();
 
 	let role = $state<Role>((page.url.searchParams.get('role') as Role) ?? 'couple');
 	// The tab the card opens on; switching afterwards is local state.
@@ -33,9 +36,7 @@
 
 	const isSignup = $derived(mode === 'signup');
 
-	const headTitle = $derived(
-		isSignup ? `Join Leora as a ${ROLE_LABEL[role]}` : 'Welcome back'
-	);
+	const headTitle = $derived(isSignup ? `Join Leora as a ${ROLE_LABEL[role]}` : 'Welcome back');
 
 	const headSub = $derived(
 		!isSignup
@@ -433,7 +434,6 @@
 	}
 
 	/* Password field with the reveal toggle sitting inside the input. */
-
 
 	.checkbox-row {
 		display: flex;

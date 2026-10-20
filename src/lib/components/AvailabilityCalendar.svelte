@@ -89,7 +89,11 @@
 				{@const isBooked = bookedSet.has(day)}
 				{@const isBlocked = blockedSet.has(day)}
 				{@const past = day < today}
-				{@const state = isBooked ? m.avail_booked() : isBlocked ? m.avail_blocked() : m.avail_free()}
+				{@const state = isBooked
+					? m.avail_booked()
+					: isBlocked
+						? m.avail_blocked()
+						: m.avail_free()}
 				<button
 					type="button"
 					disabled={!onToggle || past || isBooked || pending.includes(day)}

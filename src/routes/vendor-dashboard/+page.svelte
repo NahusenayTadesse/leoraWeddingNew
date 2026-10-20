@@ -54,7 +54,7 @@
 <div class="space-y-6">
 	<div>
 		<h1 class="text-2xl font-semibold tracking-tight">Welcome back, {data.vendor.businessName}</h1>
-		<p class="text-muted-foreground text-sm">Here's what's happening with your listing.</p>
+		<p class="text-sm text-muted-foreground">Here's what's happening with your listing.</p>
 	</div>
 
 	{#if data.vendor.status !== 'approved'}
@@ -65,11 +65,11 @@
 					<p class="text-sm font-medium">
 						Your listing is {STATUS_LABEL[data.vendor.status]?.toLowerCase() ?? data.vendor.status}
 					</p>
-					<p class="text-muted-foreground text-xs">
+					<p class="text-xs text-muted-foreground">
 						{#if data.vendor.status === 'pending'}
-							Our team reviews every new vendor before it appears in the Marketplace. This
-							usually takes 1–2 business days — finish setting up your services and packages in
-							the meantime.
+							Our team reviews every new vendor before it appears in the Marketplace. This usually
+							takes 1–2 business days — finish setting up your services and packages in the
+							meantime.
 						{:else if data.vendor.status === 'rejected'}
 							Contact support to find out what needs to change before you can relist.
 						{:else}
@@ -86,42 +86,42 @@
 		<Card.Root>
 			<Card.Content class="flex items-center justify-between py-5">
 				<div>
-					<p class="text-muted-foreground text-xs">Pending requests</p>
+					<p class="text-xs text-muted-foreground">Pending requests</p>
 					<p class="text-2xl font-semibold">{data.stats.pending}</p>
 				</div>
-				<CalendarClock class="text-muted-foreground size-8" />
+				<CalendarClock class="size-8 text-muted-foreground" />
 			</Card.Content>
 		</Card.Root>
 		<Card.Root>
 			<Card.Content class="flex items-center justify-between py-5">
 				<div>
-					<p class="text-muted-foreground text-xs">Confirmed upcoming</p>
+					<p class="text-xs text-muted-foreground">Confirmed upcoming</p>
 					<p class="text-2xl font-semibold">{data.stats.confirmedUpcoming}</p>
 				</div>
-				<CalendarCheck class="text-muted-foreground size-8" />
+				<CalendarCheck class="size-8 text-muted-foreground" />
 			</Card.Content>
 		</Card.Root>
 		<Card.Root>
 			<Card.Content class="flex items-center justify-between py-5">
 				<div>
-					<p class="text-muted-foreground text-xs">Wallet balance</p>
+					<p class="text-xs text-muted-foreground">Wallet balance</p>
 					<p class="text-2xl font-semibold">{formatETB(data.stats.walletBalance)}</p>
 				</div>
-				<Wallet class="text-muted-foreground size-8" />
+				<Wallet class="size-8 text-muted-foreground" />
 			</Card.Content>
 		</Card.Root>
 		<Card.Root>
 			<Card.Content class="flex items-center justify-between py-5">
 				<div>
-					<p class="text-muted-foreground text-xs">Rating</p>
+					<p class="text-xs text-muted-foreground">Rating</p>
 					<p class="text-2xl font-semibold">
 						{Number(data.vendor.ratingAvg ?? 0).toFixed(1)}
-						<span class="text-muted-foreground text-sm font-normal"
+						<span class="text-sm font-normal text-muted-foreground"
 							>({data.vendor.reviewCount ?? 0})</span
 						>
 					</p>
 				</div>
-				<Sparkles class="text-muted-foreground size-8" />
+				<Sparkles class="size-8 text-muted-foreground" />
 			</Card.Content>
 		</Card.Root>
 	</div>
@@ -137,7 +137,7 @@
 			</Card.Header>
 			<Card.Content>
 				{#if data.recentBookings.length === 0}
-					<div class="text-muted-foreground py-10 text-center text-sm">
+					<div class="py-10 text-center text-sm text-muted-foreground">
 						No booking requests yet. Couples will find you once your listing is approved.
 					</div>
 				{:else}
@@ -146,7 +146,7 @@
 							<div class="flex items-center justify-between gap-3 py-3">
 								<div>
 									<p class="font-medium">{booking.coupleNames}</p>
-									<p class="text-muted-foreground text-xs">
+									<p class="text-xs text-muted-foreground">
 										{booking.eventDate ?? 'Date not set'}
 										{#if booking.agreedPrice}
 											· {formatETB(booking.agreedPrice)}
@@ -176,19 +176,19 @@
 				{#each checklist as item (item.label)}
 					<a
 						href={item.href}
-						class="hover:bg-muted flex items-center justify-between gap-2 rounded-lg border p-3 text-sm transition-colors"
+						class="flex items-center justify-between gap-2 rounded-lg border p-3 text-sm transition-colors hover:bg-muted"
 					>
 						<span class="flex items-center gap-2">
 							{#if item.done}
 								<ShieldCheck class="size-4 text-emerald-600" />
 							{:else}
-								<span class="border-muted-foreground/40 size-4 rounded-full border-2"></span>
+								<span class="size-4 rounded-full border-2 border-muted-foreground/40"></span>
 							{/if}
 							<span class:text-muted-foreground={item.done} class:line-through={item.done}>
 								{item.label}
 							</span>
 						</span>
-						<ArrowRight class="text-muted-foreground size-3.5" />
+						<ArrowRight class="size-3.5 text-muted-foreground" />
 					</a>
 				{/each}
 			</Card.Content>

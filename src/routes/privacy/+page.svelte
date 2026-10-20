@@ -20,8 +20,7 @@
 				<tr>
 					<td>Payment info</td>
 					<td>
-						Payment method type and transaction history (processed via secure third-party
-						providers)
+						Payment method type and transaction history (processed via secure third-party providers)
 					</td>
 				</tr>
 				<tr><td>Usage data</td><td>Pages visited, searches, device and browser type</td></tr>
@@ -54,7 +53,9 @@
 
 	<h2>5. Your Rights</h2>
 	<ul>
-		<li>Access, correct, or export your personal data from <a href="/account">Account Settings</a></li>
+		<li>
+			Access, correct, or export your personal data from <a href="/account">Account Settings</a>
+		</li>
 		<li>Request account deletion at any time</li>
 		<li>Opt out of marketing emails while still receiving essential account notifications</li>
 	</ul>
@@ -79,6 +80,7 @@
 
 	<h2>9. Contact Us</h2>
 	<p>
-		For privacy questions or data requests, reach out via our <a href="/contact-us">Contact page</a>.
+		For privacy questions or data requests, reach out via our <a href="/contact-us">Contact page</a
+		>.
 	</p>
 </LegalPage>

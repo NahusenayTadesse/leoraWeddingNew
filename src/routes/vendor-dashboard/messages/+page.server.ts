@@ -3,7 +3,11 @@ import { db } from '$lib/server/db';
 import { messages, couples } from '$lib/server/db/schema';
 import { and, eq, isNull } from 'drizzle-orm';
 import { requireVendor } from '$lib/server/vendor';
-import { listThreadsForVendor, listConversation, markThreadRead } from '$lib/server/vendor-bookings';
+import {
+	listThreadsForVendor,
+	listConversation,
+	markThreadRead
+} from '$lib/server/vendor-bookings';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
@@ -12,11 +16,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const threads = await listThreadsForVendor(vendor.id, vendor.userId);
 
 	const coupleParam = Number(url.searchParams.get('couple'));
-	const activeCoupleId = Number.isInteger(coupleParam) && coupleParam > 0
-		? coupleParam
-		: (threads[0]?.coupleId ?? null);
+	const activeCoupleId =
+		Number.isInteger(coupleParam) && coupleParam > 0 ? coupleParam : (threads[0]?.coupleId ?? null);
 
-	let activeThread: { couple: { coupleId: number; coupleName: string }; messages: Awaited<ReturnType<typeof listConversation>> } | null = null;
+	let activeThread: {
+		couple: { coupleId: number; coupleName: string };
+		messages: Awaited<ReturnType<typeof listConversation>>;
+	} | null = null;
 
 	if (activeCoupleId) {
 		const existing = threads.find((t) => t.coupleId === activeCoupleId);

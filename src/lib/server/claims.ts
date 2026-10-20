@@ -154,7 +154,11 @@ export async function openDispute(input: {
 }
 
 /** Tells both sides of a booking that staff changed its dispute. */
-export async function announceDisputeUpdate(disputeId: number, status: string, notes: string | null) {
+export async function announceDisputeUpdate(
+	disputeId: number,
+	status: string,
+	notes: string | null
+) {
 	const [d] = await db
 		.select({ bookingId: disputes.bookingId })
 		.from(disputes)
@@ -164,7 +168,12 @@ export async function announceDisputeUpdate(disputeId: number, status: string, n
 	if (!parties) return;
 	const body = `Dispute on booking #${d.bookingId} is now "${status.replace('_', ' ')}".${notes ? ` ${notes}` : ''}`;
 	await Promise.all([
-		notify(parties.partner1, { type: 'dispute_update', title: 'Dispute update', body, link: '/wedding/bookings' }),
+		notify(parties.partner1, {
+			type: 'dispute_update',
+			title: 'Dispute update',
+			body,
+			link: '/wedding/bookings'
+		}),
 		notify(parties.vendorUserId, {
 			type: 'dispute_update',
 			title: 'Dispute update',

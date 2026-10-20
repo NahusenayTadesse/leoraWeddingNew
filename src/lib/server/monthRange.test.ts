@@ -3,7 +3,11 @@ import { monthRange } from './monthRange';
 
 describe('monthRange', () => {
 	it('gives the first and last day of the asked month', () => {
-		expect(monthRange('2027-02')).toEqual({ month: '2027-02-01', from: '2027-02-01', to: '2027-02-28' });
+		expect(monthRange('2027-02')).toEqual({
+			month: '2027-02-01',
+			from: '2027-02-01',
+			to: '2027-02-28'
+		});
 		expect(monthRange('2028-02-14')).toMatchObject({ to: '2028-02-29' });
 	});
 

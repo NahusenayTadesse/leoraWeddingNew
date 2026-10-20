@@ -90,13 +90,13 @@
 </svelte:head>
 
 <section class="mx-auto max-w-[1080px] px-5 pt-14 pb-8 text-center sm:px-8">
-	<p class="text-accent-foreground text-[12.5px] font-bold tracking-[0.08em] uppercase">
+	<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">
 		Budget Estimator
 	</p>
-	<h1 class="font-display mx-auto mt-2 max-w-2xl text-3xl font-extrabold text-balance sm:text-4xl">
+	<h1 class="mx-auto mt-2 max-w-2xl font-display text-3xl font-extrabold text-balance sm:text-4xl">
 		Know your number before you book anything
 	</h1>
-	<p class="text-muted-foreground mx-auto mt-3 max-w-xl text-[15px]">
+	<p class="mx-auto mt-3 max-w-xl text-[15px] text-muted-foreground">
 		Build an estimate from guest count and venue tier, or compare real vendors on price and rating.
 	</p>
 </section>
@@ -115,7 +115,7 @@
 					<Card.Content class="space-y-6">
 						<div>
 							<label for="guests" class="mb-2.5 flex items-baseline justify-between">
-								<span class="text-muted-foreground text-[12.5px] font-bold">Guest count</span>
+								<span class="text-[12.5px] font-bold text-muted-foreground">Guest count</span>
 								<span class="font-display text-lg font-extrabold">{guests} guests</span>
 							</label>
 							<input
@@ -130,7 +130,7 @@
 						</div>
 
 						<div>
-							<span class="text-muted-foreground mb-2.5 block text-[12.5px] font-bold">
+							<span class="mb-2.5 block text-[12.5px] font-bold text-muted-foreground">
 								Venue tier
 							</span>
 							<div class="grid gap-2">
@@ -142,8 +142,8 @@
 											{tier === t.key ? 'border-primary bg-accent' : 'hover:border-primary/50'}"
 									>
 										<span class="block text-[13.5px] font-bold">{t.label}</span>
-										<span class="text-muted-foreground block text-[12.5px]">{t.blurb}</span>
-										<span class="text-muted-foreground block text-[12px]">
+										<span class="block text-[12.5px] text-muted-foreground">{t.blurb}</span>
+										<span class="block text-[12px] text-muted-foreground">
 											~ETB {tierMultiplier[t.key].toLocaleString()} per guest
 										</span>
 									</button>
@@ -152,10 +152,10 @@
 						</div>
 
 						<div class="border-t pt-5">
-							<p class="text-muted-foreground text-[12.5px] font-bold">Estimated Total</p>
-							<p class="font-display mt-1 text-4xl font-extrabold">
+							<p class="text-[12.5px] font-bold text-muted-foreground">Estimated Total</p>
+							<p class="mt-1 font-display text-4xl font-extrabold">
 								{estimateTotal.toLocaleString()}
-								<span class="text-muted-foreground text-lg font-bold">ETB</span>
+								<span class="text-lg font-bold text-muted-foreground">ETB</span>
 							</p>
 						</div>
 					</Card.Content>
@@ -169,10 +169,12 @@
 					</Card.Header>
 					<Card.Content class="space-y-3.5">
 						{#each breakdown as line (line.name)}
-							<div class="grid grid-cols-[1fr_auto] items-center gap-3 sm:grid-cols-[9rem_1fr_5rem]">
+							<div
+								class="grid grid-cols-[1fr_auto] items-center gap-3 sm:grid-cols-[9rem_1fr_5rem]"
+							>
 								<span class="text-[13px] font-medium">{line.name}</span>
-								<div class="bg-muted col-span-2 h-1.5 overflow-hidden rounded-full sm:col-span-1">
-									<div class="bg-primary h-full rounded-full" style="width:{line.pct * 100}%"></div>
+								<div class="col-span-2 h-1.5 overflow-hidden rounded-full bg-muted sm:col-span-1">
+									<div class="h-full rounded-full bg-primary" style="width:{line.pct * 100}%"></div>
 								</div>
 								<b class="text-right text-[13px] font-bold tabular-nums">
 									{line.amount.toLocaleString()}
@@ -199,10 +201,10 @@
 		<!-- ================= MODE 2 ================= -->
 		<Tabs.Content value="compare" class="mt-8">
 			{#if data.limits.exhausted}
-				<Card.Root class="border-primary mb-6">
+				<Card.Root class="mb-6 border-primary">
 					<Card.Content class="flex flex-wrap items-center justify-between gap-4">
 						<span class="flex items-center gap-2.5">
-							<Lock class="text-accent-foreground size-4 shrink-0" />
+							<Lock class="size-4 shrink-0 text-accent-foreground" />
 							<span class="text-[13.5px]">
 								You've used all {data.limits.maxRuns} free comparison runs. Upgrade to Golden for unlimited
 								access.
@@ -214,7 +216,7 @@
 			{:else if data.planSlug === 'free'}
 				<Card.Root class="mb-6">
 					<Card.Content class="flex flex-wrap items-center justify-between gap-4">
-						<span class="text-muted-foreground text-[13.5px]">
+						<span class="text-[13.5px] text-muted-foreground">
 							Free plan: compare up to {maxCompare} vendors, {data.limits.maxRuns! -
 								data.limits.runsUsed} of {data.limits.maxRuns} runs left.
 						</span>
@@ -228,7 +230,7 @@
 					<Card.Header>
 						<Card.Title class="font-display text-base font-extrabold">
 							Pick vendors
-							<span class="text-muted-foreground text-[12.5px] font-medium">
+							<span class="text-[12.5px] font-medium text-muted-foreground">
 								({selected.length}/{maxCompare})
 							</span>
 						</Card.Title>
@@ -247,11 +249,11 @@
 										/>
 										<Label for="v{v.id}" class="flex-1 cursor-pointer font-normal">
 											<span class="block text-[13.5px] font-semibold">{v.businessName}</span>
-											<span class="text-muted-foreground block text-[12px]">
+											<span class="block text-[12px] text-muted-foreground">
 												{v.categoryName}{v.city ? ` · ${v.city}` : ''}
 											</span>
 										</Label>
-										<span class="text-primary flex items-center gap-0.5 text-[12.5px]">
+										<span class="flex items-center gap-0.5 text-[12.5px] text-primary">
 											<Star class="size-3 fill-current" />
 											{Number(v.ratingAvg).toFixed(1)}
 										</span>
@@ -259,7 +261,7 @@
 								{/each}
 							</ul>
 						{:else}
-							<p class="text-muted-foreground py-10 text-center text-sm">
+							<p class="py-10 text-center text-sm text-muted-foreground">
 								No approved vendors to compare yet.
 							</p>
 						{/if}
@@ -276,7 +278,7 @@
 								<div class="overflow-x-auto">
 									<table class="w-full text-[13px]">
 										<thead>
-											<tr class="text-muted-foreground border-b text-left">
+											<tr class="border-b text-left text-muted-foreground">
 												<th class="pb-2 font-semibold">Vendor</th>
 												<th class="pb-2 font-semibold">Price</th>
 												<th class="pb-2 font-semibold">Rating</th>
@@ -292,7 +294,7 @@
 															<Badge class="ml-1.5">Best value</Badge>
 														{/if}
 													</td>
-													<td class="text-muted-foreground py-2.5">
+													<td class="py-2.5 text-muted-foreground">
 														{formatPriceRange(v.priceMin, v.priceMax) ?? '—'}
 													</td>
 													<td class="py-2.5">
@@ -306,7 +308,7 @@
 									</table>
 								</div>
 							{:else}
-								<p class="text-muted-foreground py-10 text-center text-sm">
+								<p class="py-10 text-center text-sm text-muted-foreground">
 									Select up to {maxCompare} vendors to compare them side by side.
 								</p>
 							{/if}
@@ -320,10 +322,15 @@
 							</Card.Title>
 						</Card.Header>
 						<Card.Content class="space-y-3">
-							<Label for="budget" class="text-muted-foreground text-[12.5px] font-bold">
+							<Label for="budget" class="text-[12.5px] font-bold text-muted-foreground">
 								Your total budget (ETB)
 							</Label>
-							<Input id="budget" inputmode="numeric" placeholder="500000" bind:value={budgetInput} />
+							<Input
+								id="budget"
+								inputmode="numeric"
+								placeholder="500000"
+								bind:value={budgetInput}
+							/>
 
 							{#if budgetNum > 0}
 								{#if withinBudget.length}
@@ -333,14 +340,14 @@
 												<a href="/vendors/{v.id}" class="text-[13px] font-medium hover:underline">
 													{v.businessName}
 												</a>
-												<span class="text-muted-foreground text-[12.5px]">
+												<span class="text-[12.5px] text-muted-foreground">
 													{formatPriceRange(v.priceMin, v.priceMax) ?? '—'}
 												</span>
 											</li>
 										{/each}
 									</ul>
 								{:else}
-									<p class="text-muted-foreground pt-1 text-[13px]">
+									<p class="pt-1 text-[13px] text-muted-foreground">
 										Nothing starts below ETB {budgetNum.toLocaleString()} yet. Try a higher figure, or
 										browse the <a href="/vendors" class="underline">full marketplace</a>.
 									</p>

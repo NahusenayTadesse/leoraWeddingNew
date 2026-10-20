@@ -49,14 +49,22 @@ export function listEvents(coupleId: number) {
 }
 
 export async function addEvent(coupleId: number, input: EventInput, userId: string) {
-	await db.insert(weddingEvents).values({ coupleId, ...input, createdBy: userId, updatedBy: userId });
+	await db
+		.insert(weddingEvents)
+		.values({ coupleId, ...input, createdBy: userId, updatedBy: userId });
 }
 
 export async function updateEvent(coupleId: number, id: number, input: EventInput, userId: string) {
 	const [res] = await db
 		.update(weddingEvents)
 		.set({ ...input, updatedBy: userId })
-		.where(and(eq(weddingEvents.id, id), eq(weddingEvents.coupleId, coupleId), isNull(weddingEvents.deletedAt)));
+		.where(
+			and(
+				eq(weddingEvents.id, id),
+				eq(weddingEvents.coupleId, coupleId),
+				isNull(weddingEvents.deletedAt)
+			)
+		);
 	return res.affectedRows > 0;
 }
 
@@ -64,7 +72,13 @@ export async function removeEvent(coupleId: number, id: number, userId: string) 
 	const [res] = await db
 		.update(weddingEvents)
 		.set({ deletedAt: new Date(), deletedBy: userId })
-		.where(and(eq(weddingEvents.id, id), eq(weddingEvents.coupleId, coupleId), isNull(weddingEvents.deletedAt)));
+		.where(
+			and(
+				eq(weddingEvents.id, id),
+				eq(weddingEvents.coupleId, coupleId),
+				isNull(weddingEvents.deletedAt)
+			)
+		);
 	return res.affectedRows > 0;
 }
 
@@ -89,7 +103,11 @@ export async function seatingOverview(coupleId: number) {
 	const plan = await ensureSeatingPlan(coupleId);
 	const [tables, guests] = await Promise.all([
 		db
-			.select({ id: seatingTables.id, name: seatingTables.tableName, capacity: seatingTables.capacity })
+			.select({
+				id: seatingTables.id,
+				name: seatingTables.tableName,
+				capacity: seatingTables.capacity
+			})
 			.from(seatingTables)
 			.where(and(eq(seatingTables.seatingPlanId, plan.id), isNull(seatingTables.deletedAt)))
 			.orderBy(asc(seatingTables.id)),
@@ -155,9 +173,17 @@ export async function addTables(coupleId: number, count: number, capacity: numbe
 	);
 }
 
-export async function updateTable(coupleId: number, tableId: number, name: string, capacity: number) {
+export async function updateTable(
+	coupleId: number,
+	tableId: number,
+	name: string,
+	capacity: number
+) {
 	if (!(await ownTable(coupleId, tableId))) return false;
-	await db.update(seatingTables).set({ tableName: name, capacity }).where(eq(seatingTables.id, tableId));
+	await db
+		.update(seatingTables)
+		.set({ tableName: name, capacity })
+		.where(eq(seatingTables.id, tableId));
 	return true;
 }
 
@@ -165,8 +191,14 @@ export async function updateTable(coupleId: number, tableId: number, name: strin
 export async function removeTable(coupleId: number, tableId: number) {
 	if (!(await ownTable(coupleId, tableId))) return false;
 	await db.transaction(async (tx) => {
-		await tx.update(guestLists).set({ seatingTableId: null }).where(eq(guestLists.seatingTableId, tableId));
-		await tx.update(seatingTables).set({ deletedAt: new Date() }).where(eq(seatingTables.id, tableId));
+		await tx
+			.update(guestLists)
+			.set({ seatingTableId: null })
+			.where(eq(guestLists.seatingTableId, tableId));
+		await tx
+			.update(seatingTables)
+			.set({ deletedAt: new Date() })
+			.where(eq(seatingTables.id, tableId));
 	});
 	return true;
 }

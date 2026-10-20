@@ -149,11 +149,15 @@ const vendorSorts = {
 };
 const vendorSpec: WhereSpec<(typeof VENDOR_FILTERS)[number]> = {
 	search: (term) =>
-		or(like(vendors.businessName, `%${term}%`), like(bookingPayments.transactionReference, `%${term}%`)),
+		or(
+			like(vendors.businessName, `%${term}%`),
+			like(bookingPayments.transactionReference, `%${term}%`)
+		),
 	dateColumn: bookingPayments.createdAt,
 	filters: {
 		status: (v) => eq(bookingPayments.status, v as typeof bookingPayments.status._.data),
-		method: (v) => eq(bookingPayments.paymentMethod, v as typeof bookingPayments.paymentMethod._.data),
+		method: (v) =>
+			eq(bookingPayments.paymentMethod, v as typeof bookingPayments.paymentMethod._.data),
 		type: (v) => eq(bookingPayments.paymentType, v as typeof bookingPayments.paymentType._.data)
 	}
 };
@@ -164,10 +168,18 @@ const vendorJoined = <T extends MySqlSelect>(q: T) =>
 
 async function vendorTab(query: TableQuery<(typeof VENDOR_FILTERS)[number]>) {
 	const where = buildWhere(query, vendorSpec);
-	const facet = (key: (typeof VENDOR_FILTERS)[number], column: typeof bookingPayments.status | typeof bookingPayments.paymentMethod | typeof bookingPayments.paymentType) => () =>
-		vendorJoined(db.select({ value: column, count: count() }).from(bookingPayments).$dynamic())
-			.where(buildWhere(query, vendorSpec, { except: key }))
-			.groupBy(column);
+	const facet =
+		(
+			key: (typeof VENDOR_FILTERS)[number],
+			column:
+				| typeof bookingPayments.status
+				| typeof bookingPayments.paymentMethod
+				| typeof bookingPayments.paymentType
+		) =>
+		() =>
+			vendorJoined(db.select({ value: column, count: count() }).from(bookingPayments).$dynamic())
+				.where(buildWhere(query, vendorSpec, { except: key }))
+				.groupBy(column);
 
 	const [rows, [{ total }], facets] = await Promise.all([
 		vendorJoined(
@@ -213,7 +225,12 @@ async function vendorTab(query: TableQuery<(typeof VENDOR_FILTERS)[number]>) {
 /* ---------- plan payments ---------- */
 
 const PLAN_FILTERS = ['status', 'method'] as const;
-const planSorts = { id: payments.id, couple: coupleName, amount: payments.amount, date: payments.createdAt };
+const planSorts = {
+	id: payments.id,
+	couple: coupleName,
+	amount: payments.amount,
+	date: payments.createdAt
+};
 const planSpec: WhereSpec<(typeof PLAN_FILTERS)[number]> = {
 	search: (term) =>
 		or(
@@ -228,7 +245,9 @@ const planSpec: WhereSpec<(typeof PLAN_FILTERS)[number]> = {
 	}
 };
 const planJoined = <T extends MySqlSelect>(q: T) =>
-	q.leftJoin(couples, eq(couples.id, payments.coupleId)).leftJoin(vendors, eq(vendors.id, payments.vendorId));
+	q
+		.leftJoin(couples, eq(couples.id, payments.coupleId))
+		.leftJoin(vendors, eq(vendors.id, payments.vendorId));
 
 async function planTab(query: TableQuery<(typeof PLAN_FILTERS)[number]>) {
 	const where = buildWhere(query, planSpec);
@@ -261,7 +280,9 @@ async function planTab(query: TableQuery<(typeof PLAN_FILTERS)[number]>) {
 					.where(buildWhere(query, planSpec, { except: 'status' }))
 					.groupBy(payments.status),
 			method: () =>
-				planJoined(db.select({ value: payments.paymentMethod, count: count() }).from(payments).$dynamic())
+				planJoined(
+					db.select({ value: payments.paymentMethod, count: count() }).from(payments).$dynamic()
+				)
 					.where(buildWhere(query, planSpec, { except: 'method' }))
 					.groupBy(payments.paymentMethod)
 		})
@@ -336,9 +357,13 @@ export const load: PageServerLoad = async ({ url }) => {
 	const [pending, review, vendor, plan, refundList] = await Promise.all([
 		pendingRefunds,
 		reviewTab(),
-		tab === 'vendor' ? vendorTab(parseTableQuery(url, VENDOR_FILTERS, 20, Object.keys(vendorSorts))) : null,
+		tab === 'vendor'
+			? vendorTab(parseTableQuery(url, VENDOR_FILTERS, 20, Object.keys(vendorSorts)))
+			: null,
 		tab === 'plan' ? planTab(parseTableQuery(url, PLAN_FILTERS, 20, Object.keys(planSorts))) : null,
-		tab === 'refunds' ? refundsTab(parseTableQuery(url, REFUND_FILTERS, 20, Object.keys(refundSorts))) : null
+		tab === 'refunds'
+			? refundsTab(parseTableQuery(url, REFUND_FILTERS, 20, Object.keys(refundSorts)))
+			: null
 	]);
 
 	return { tab, pendingRefunds: pending, review, vendor, plan, refunds: refundList };
@@ -373,7 +398,9 @@ export const actions = {
 			if (err instanceof PaymentRefused) return bad(err.message);
 			throw err;
 		}
-		await audit(event, 'payment.reject', `${p.data.kind}_payment`, p.data.id, { reason: p.data.reason });
+		await audit(event, 'payment.reject', `${p.data.kind}_payment`, p.data.id, {
+			reason: p.data.reason
+		});
 		return ok('Receipt rejected. The payer has been told why.');
 	},
 	/** Asks Chapa again about one pending online payment. */

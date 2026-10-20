@@ -21,7 +21,9 @@ const current = () =>
 export const load: PageServerLoad = async () => {
 	const [row] = await current();
 	const form = await superValidate(
-		row ? { type: row.commissionType, value: toMoney(row.value) } : { type: 'percentage' as const, value: 10 },
+		row
+			? { type: row.commissionType, value: toMoney(row.value) }
+			: { type: 'percentage' as const, value: 10 },
 		zod4(commissionSchema),
 		{ errors: false }
 	);
@@ -34,7 +36,12 @@ export const load: PageServerLoad = async () => {
 		form,
 		accounts,
 		commission: row
-			? { id: row.id, type: row.commissionType, value: toMoney(row.value), updatedAt: row.updatedAt }
+			? {
+					id: row.id,
+					type: row.commissionType,
+					value: toMoney(row.value),
+					updatedAt: row.updatedAt
+				}
 			: null
 	};
 };
@@ -71,7 +78,9 @@ export const actions = {
 			.update(bankAccounts)
 			.set({ isActive: !row.isActive, updatedBy: event.locals.user?.id })
 			.where(eq(bankAccounts.id, row.id));
-		await audit(event, 'settings.bank_account.toggle', 'bank_accounts', row.id, { active: !row.isActive });
+		await audit(event, 'settings.bank_account.toggle', 'bank_accounts', row.id, {
+			active: !row.isActive
+		});
 		return ok(row.isActive ? 'Account hidden from checkout' : 'Account shown on checkout');
 	},
 	/** Soft delete: past payments still point at it for reconciliation. */
@@ -90,7 +99,11 @@ export const actions = {
 	commission: async (event) => {
 		const form = await superValidate(event.request, zod4(commissionSchema));
 		if (!form.valid) {
-			return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
+			return message(
+				form,
+				{ type: 'error', text: 'Please check the form for errors' },
+				{ status: 400 }
+			);
 		}
 		const p = { data: form.data };
 		const [row] = await current();

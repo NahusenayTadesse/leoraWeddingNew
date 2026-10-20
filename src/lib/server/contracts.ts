@@ -78,8 +78,18 @@ export async function signContract(input: {
 	const now = new Date();
 	const values =
 		input.side === 'couple'
-			? { signedByCouple: true, coupleSignedName: input.name, coupleSignedAt: now, coupleSignedIp: input.ip }
-			: { signedByVendor: true, vendorSignedName: input.name, vendorSignedAt: now, vendorSignedIp: input.ip };
+			? {
+					signedByCouple: true,
+					coupleSignedName: input.name,
+					coupleSignedAt: now,
+					coupleSignedIp: input.ip
+				}
+			: {
+					signedByVendor: true,
+					vendorSignedName: input.name,
+					vendorSignedAt: now,
+					vendorSignedIp: input.ip
+				};
 	await db.update(contracts).set(values).where(eq(contracts.id, contract.id));
 	return true;
 }

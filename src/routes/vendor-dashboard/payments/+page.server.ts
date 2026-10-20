@@ -23,7 +23,10 @@ async function openPayoutTotal(vendorId: number) {
 		.select({ total: sql<string>`coalesce(sum(${vendorPayouts.amount}), 0)` })
 		.from(vendorPayouts)
 		.where(
-			and(eq(vendorPayouts.vendorId, vendorId), inArray(vendorPayouts.status, ['requested', 'processing']))
+			and(
+				eq(vendorPayouts.vendorId, vendorId),
+				inArray(vendorPayouts.status, ['requested', 'processing'])
+			)
 		);
 	return toMoney(row?.total);
 }

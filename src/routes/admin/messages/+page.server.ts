@@ -15,7 +15,11 @@ import { parse, ok } from '$lib/server/adminAction';
 import { audit } from '$lib/server/auditLog';
 import type { Actions, PageServerLoad } from './$types';
 
-const SORTS = { name: contactMessages.name, subject: contactMessages.subject, createdAt: contactMessages.createdAt };
+const SORTS = {
+	name: contactMessages.name,
+	subject: contactMessages.subject,
+	createdAt: contactMessages.createdAt
+};
 
 const FILTERS = ['status'] as const;
 
@@ -74,10 +78,16 @@ export const actions = {
 	setStatus: async (event) => {
 		const p = await parse(
 			event.request,
-			z.object({ id: z.coerce.number().int().positive(), status: z.enum(['new', 'read', 'replied']) })
+			z.object({
+				id: z.coerce.number().int().positive(),
+				status: z.enum(['new', 'read', 'replied'])
+			})
 		);
 		if ('error' in p) return p.error;
-		await db.update(contactMessages).set({ status: p.data.status }).where(eq(contactMessages.id, p.data.id));
+		await db
+			.update(contactMessages)
+			.set({ status: p.data.status })
+			.where(eq(contactMessages.id, p.data.id));
 		await audit(event, 'message.status', 'contact_message', p.data.id, { status: p.data.status });
 		return ok(`Marked ${p.data.status}`);
 	},

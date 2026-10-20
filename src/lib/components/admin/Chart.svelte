@@ -132,7 +132,10 @@
 							x: {
 								stacked,
 								grid: { display: false },
-								ticks: { color: text, ...(horizontal ? { callback: (v: string | number) => fmt(Number(v)) } : {}) }
+								ticks: {
+									color: text,
+									...(horizontal ? { callback: (v: string | number) => fmt(Number(v)) } : {})
+								}
 							},
 							y: {
 								stacked,
@@ -164,11 +167,16 @@
 	const empty = $derived(datasets.every((d) => d.data.every((v) => !v)));
 </script>
 
-<div class="relative" style="height:{height}px" role="img" aria-label={datasets.map((d) => d.label).join(', ')}>
+<div
+	class="relative"
+	style="height:{height}px"
+	role="img"
+	aria-label={datasets.map((d) => d.label).join(', ')}
+>
 	<canvas bind:this={canvas}></canvas>
 	{#if empty}
 		<div
-			class="text-muted-foreground bg-card/70 absolute inset-0 flex items-center justify-center text-sm"
+			class="absolute inset-0 flex items-center justify-center bg-card/70 text-sm text-muted-foreground"
 		>
 			No data for this period
 		</div>

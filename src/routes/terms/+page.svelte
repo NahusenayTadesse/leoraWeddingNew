@@ -36,8 +36,8 @@
 			services and pricing.
 		</li>
 		<li>
-			Couple subscription plans (Golden, Platinum) are one-time purchases. Vendor subscription
-			plans renew automatically until cancelled from <a href="/account">Account Settings</a>.
+			Couple subscription plans (Golden, Platinum) are one-time purchases. Vendor subscription plans
+			renew automatically until cancelled from <a href="/account">Account Settings</a>.
 		</li>
 	</ul>
 

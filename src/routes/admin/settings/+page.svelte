@@ -35,7 +35,14 @@
 	>
 		<form method="POST" action="?/commission" use:enhance class="space-y-1">
 			<Errors allErrors={$allErrors} />
-			<InputComp {form} {errors} name="type" label="Commission type" type="select" items={typeItems} />
+			<InputComp
+				{form}
+				{errors}
+				name="type"
+				label="Commission type"
+				type="select"
+				items={typeItems}
+			/>
 			<InputComp {form} {errors} name="value" label="Value" type="number" min={0} required />
 			<Button type="submit" class="mt-4" disabled={$delayed}>
 				{#if $delayed}<LoadingBtn name="Saving" />{:else}Save{/if}
@@ -88,17 +95,41 @@
 
 		<ActionForm action="?/addAccount" class="grid gap-3 sm:grid-cols-2">
 			{#snippet children({ busy })}
-				<input name="bankName" required placeholder="Bank (e.g. Commercial Bank of Ethiopia)" class="h-10 rounded-md border bg-background px-3" />
-				<input name="accountName" required placeholder="Account name" class="h-10 rounded-md border bg-background px-3" />
-				<input name="accountNumber" required inputmode="numeric" placeholder="Account number" class="h-10 rounded-md border bg-background px-3" />
-				<input name="sortOrder" type="number" min="0" value="0" aria-label="Sort order" class="h-10 rounded-md border bg-background px-3" />
+				<input
+					name="bankName"
+					required
+					placeholder="Bank (e.g. Commercial Bank of Ethiopia)"
+					class="h-10 rounded-md border bg-background px-3"
+				/>
+				<input
+					name="accountName"
+					required
+					placeholder="Account name"
+					class="h-10 rounded-md border bg-background px-3"
+				/>
+				<input
+					name="accountNumber"
+					required
+					inputmode="numeric"
+					placeholder="Account number"
+					class="h-10 rounded-md border bg-background px-3"
+				/>
+				<input
+					name="sortOrder"
+					type="number"
+					min="0"
+					value="0"
+					aria-label="Sort order"
+					class="h-10 rounded-md border bg-background px-3"
+				/>
 				<Button type="submit" class="sm:col-span-2" disabled={!!busy}>Add account</Button>
 			{/snippet}
 		</ActionForm>
 	</FormCard>
 
-	<p class="text-muted-foreground text-sm">
-		Subscription plan prices live under <a href="/admin/subscriptions" class="underline">Subscriptions</a>;
-		coupons under <a href="/admin/coupons" class="underline">Coupons</a>.
+	<p class="text-sm text-muted-foreground">
+		Subscription plan prices live under <a href="/admin/subscriptions" class="underline"
+			>Subscriptions</a
+		>; coupons under <a href="/admin/coupons" class="underline">Coupons</a>.
 	</p>
 </div>

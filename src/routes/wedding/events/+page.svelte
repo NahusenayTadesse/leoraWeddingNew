@@ -195,8 +195,7 @@
 								name="notes"
 								rows="3"
 								maxlength="2000"
-								class="w-full rounded-md border bg-background p-2"
-								>{current?.notes ?? ''}</textarea
+								class="w-full rounded-md border bg-background p-2">{current?.notes ?? ''}</textarea
 							>
 						</label>
 						<Dialog.Footer>

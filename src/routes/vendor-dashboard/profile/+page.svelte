@@ -31,7 +31,7 @@
 	<div class="flex flex-wrap items-center justify-between gap-3">
 		<div>
 			<h1 class="text-2xl font-semibold tracking-tight">Business profile</h1>
-			<p class="text-muted-foreground text-sm">
+			<p class="text-sm text-muted-foreground">
 				This is what couples see on your public Leora Events listing.
 			</p>
 		</div>
@@ -40,7 +40,10 @@
 		</Badge>
 	</div>
 
-	<FormCard title="Business details" description="Keep this accurate — it builds trust with couples.">
+	<FormCard
+		title="Business details"
+		description="Keep this accurate — it builds trust with couples."
+	>
 		<form method="POST" use:enhance class="space-y-1">
 			<Errors allErrors={$allErrors} />
 

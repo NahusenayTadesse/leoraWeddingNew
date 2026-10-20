@@ -147,7 +147,9 @@ export function contentCrud<T extends AnyTable, A extends AnySchema, E extends A
 				// `values` is a dynamic subset of T's columns assembled at runtime —
 				// drizzle's insert type wants every column keyed and typed exactly,
 				// which a generically-built object can't satisfy statically.
-				await db.insert(table).values({ ...values, createdBy: locals.user?.id } as T['$inferInsert']);
+				await db
+					.insert(table)
+					.values({ ...values, createdBy: locals.user?.id } as T['$inferInsert']);
 				return message(form, { type: 'success', text: `${label} added` });
 			} catch (err) {
 				console.error(`Failed to add ${label}:`, err);

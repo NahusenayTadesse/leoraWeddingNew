@@ -52,16 +52,16 @@
 		<!-- Keyed: the detail keeps the chosen package/image in local state, which must reset
 		     when navigating from one service to another. -->
 		{#key data?.service.serviceId}
-		<ServiceDetail
-			{...data?.service}
-			priceList={data?.priceList}
-			subs={data?.subs}
-			images={data?.images}
-			vendorRating={data?.vendor.avgRating}
-			vendorReviewCount={data?.vendor.reviewCount}
-			vendorCity={data?.vendor.cityName ?? data?.vendor.city}
-			isFavorite={data?.isFavorite}
-		/>
+			<ServiceDetail
+				{...data?.service}
+				priceList={data?.priceList}
+				subs={data?.subs}
+				images={data?.images}
+				vendorRating={data?.vendor.avgRating}
+				vendorReviewCount={data?.vendor.reviewCount}
+				vendorCity={data?.vendor.cityName ?? data?.vendor.city}
+				isFavorite={data?.isFavorite}
+			/>
 		{/key}
 	</section>
 	{#if data?.images?.length}
@@ -73,12 +73,12 @@
 						A detailed look at {data?.service?.serviceName || 'this service'}.
 					</p>
 				</div>
-				<span class="text-muted-foreground text-xs font-medium tracking-widest uppercase">
+				<span class="text-xs font-medium tracking-widest text-muted-foreground uppercase">
 					{data?.images?.length || 0} Images
 				</span>
 			</div>
 
-			<div class="bg-card ring-border rounded-xl p-2 shadow-sm ring-1">
+			<div class="rounded-xl bg-card p-2 shadow-sm ring-1 ring-border">
 				<Gallery images={data?.images} title={data?.service?.serviceName} />
 			</div>
 		</div>

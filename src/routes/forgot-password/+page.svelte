@@ -28,7 +28,9 @@
 	<form method="POST" use:enhance>
 		<InputComp {form} {errors} name="email" label={m.auth_email()} type="email" required />
 		<Button type="submit" class="h-11 w-full">
-			{#if $delayed}<LoadingBtn name={m.auth_forgot_sending()} />{:else}{m.auth_forgot_submit()}{/if}
+			{#if $delayed}<LoadingBtn
+					name={m.auth_forgot_sending()}
+				/>{:else}{m.auth_forgot_submit()}{/if}
 		</Button>
 	</form>
 	<p class="mt-5 text-center"><a class="auth-link" href="/login">{m.auth_back_to_login()}</a></p>

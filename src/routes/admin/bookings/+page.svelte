@@ -80,7 +80,8 @@
 
 <FormDialog
 	title="Cancel booking #{cancelling?.id ?? ''}"
-	description="{cancelling?.couple ?? ''} with {cancelling?.vendor ?? ''}. The couple and the vendor both see the reason."
+	description="{cancelling?.couple ?? ''} with {cancelling?.vendor ??
+		''}. The couple and the vendor both see the reason."
 	action="?/cancel"
 	data={data.cancelForm}
 	schema={bookingCancelSchema}

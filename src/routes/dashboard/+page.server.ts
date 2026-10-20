@@ -80,11 +80,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 				})
 				.from(tasks)
 				.where(
-					and(
-						eq(tasks.coupleId, coupleId),
-						isNull(tasks.deletedAt),
-						sql`${tasks.status} <> 'done'`
-					)
+					and(eq(tasks.coupleId, coupleId), isNull(tasks.deletedAt), sql`${tasks.status} <> 'done'`)
 				)
 				// NULL due dates sort last rather than first.
 				.orderBy(sql`${tasks.dueDate} IS NULL`, asc(tasks.dueDate))

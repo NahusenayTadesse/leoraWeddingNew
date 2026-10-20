@@ -19,7 +19,11 @@ import type { Actions, PageServerLoad } from './$types';
 const FILTERS = ['rating'] as const;
 type Filter = (typeof FILTERS)[number];
 
-const SORTS = { vendor: vendors.businessName, rating: vendorReviews.rating, createdAt: vendorReviews.createdAt };
+const SORTS = {
+	vendor: vendors.businessName,
+	rating: vendorReviews.rating,
+	createdAt: vendorReviews.createdAt
+};
 
 const spec: WhereSpec<Filter> = {
 	base: [isNull(vendorReviews.deletedAt)],
@@ -77,7 +81,10 @@ export const load: PageServerLoad = async ({ url }) => {
 		})
 	]);
 
-	return { rows, server: { pagination: pagination(query, total), facets, filters: currentQuery(query) } };
+	return {
+		rows,
+		server: { pagination: pagination(query, total), facets, filters: currentQuery(query) }
+	};
 };
 
 export const actions = {

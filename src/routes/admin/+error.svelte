@@ -4,7 +4,7 @@
 </script>
 
 <div class="flex h-full w-full flex-col items-center justify-center gap-2 py-24 text-center">
-	<h1 class="text-destructive text-5xl font-bold">{page.status}</h1>
-	<h3 class="text-muted-foreground max-w-md text-lg">{page.error?.message}</h3>
+	<h1 class="text-5xl font-bold text-destructive">{page.status}</h1>
+	<h3 class="max-w-md text-lg text-muted-foreground">{page.error?.message}</h3>
 	<Button href="/admin" class="mt-4">Back to Dashboard</Button>
 </div>

@@ -279,7 +279,10 @@ export const authActions = {
 			// signUpEmail commits on its own, outside the transaction above. If the workspace could
 			// not be created, remove the half-made account so the couple can simply try again.
 			if (createdUserId) {
-				await db.delete(user).where(eq(user.id, createdUserId)).catch(() => {});
+				await db
+					.delete(user)
+					.where(eq(user.id, createdUserId))
+					.catch(() => {});
 			}
 			console.error('Couple signup failed:', error);
 			const text =

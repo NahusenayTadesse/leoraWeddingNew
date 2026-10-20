@@ -52,7 +52,10 @@ export function notifyByEmail(mail: Mail): void {
 }
 
 const escapeHtml = (s: string) =>
-	s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+	s.replace(
+		/[&<>"']/g,
+		(c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!
+	);
 
 /**
  * One layout for every message: heading, paragraphs, an optional button. Inline styles only,

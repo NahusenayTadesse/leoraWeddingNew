@@ -1,16 +1,13 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 
-	let {
-		title,
-		updated,
-		children
-	}: { title: string; updated: string; children: Snippet } = $props();
+	let { title, updated, children }: { title: string; updated: string; children: Snippet } =
+		$props();
 </script>
 
 <article class="mx-auto max-w-[760px] px-5 py-16 sm:px-8">
 	<h1 class="font-display text-3xl font-extrabold sm:text-4xl">{title}</h1>
-	<p class="text-muted-foreground mt-2 text-[13.5px]">Last updated: {updated}</p>
+	<p class="mt-2 text-[13.5px] text-muted-foreground">Last updated: {updated}</p>
 
 	<div class="legal mt-10">
 		{@render children()}

@@ -45,7 +45,12 @@ async function setup(agreed = 30000) {
 	const couple = await makeCoupleWithWedding();
 	const booking = await makeBooking(couple.weddingPlanId, vendor.id, agreed);
 	const accountId = await makeBankAccount();
-	const payer = { id: couple.userId, name: 'Selam Dawit', email: couple.user.email, phone: '0911223344' };
+	const payer = {
+		id: couple.userId,
+		name: 'Selam Dawit',
+		email: couple.user.email,
+		phone: '0911223344'
+	};
 	const pay = (amount: number, extra: Partial<Parameters<typeof submitBookingTransfer>[0]> = {}) =>
 		submitBookingTransfer({
 			booking,
@@ -61,7 +66,10 @@ async function setup(agreed = 30000) {
 }
 
 const walletOf = async (vendorId: number) =>
-	Number((await db.select().from(vendorWallets).where(eq(vendorWallets.vendorId, vendorId)))[0]?.balance ?? 0);
+	Number(
+		(await db.select().from(vendorWallets).where(eq(vendorWallets.vendorId, vendorId)))[0]
+			?.balance ?? 0
+	);
 
 const lastBookingPayment = async () =>
 	(await db.select().from(bookingPayments).orderBy(bookingPayments.id)).at(-1)!;
@@ -148,7 +156,13 @@ describe('Chapa on bookings', () => {
 	async function startChapa(amount = 5000) {
 		const s = await setup();
 		const url = await startBookingChapa(
-			{ booking: s.booking, weddingPlanId: s.couple.weddingPlanId, payer: s.payer, amount, paymentType: 'advance' },
+			{
+				booking: s.booking,
+				weddingPlanId: s.couple.weddingPlanId,
+				payer: s.payer,
+				amount,
+				paymentType: 'advance'
+			},
 			ORIGIN
 		);
 		const p = await lastBookingPayment();
@@ -182,7 +196,10 @@ describe('Chapa on bookings', () => {
 		expect(await verify(a.txRef)).toMatchObject({ status: 'pending', retryable: true });
 		chapa.failed(a.txRef);
 		expect((await verify(a.txRef)).status).toBe('failed');
-		const [row] = await db.select().from(bookingPayments).where(eq(bookingPayments.transactionReference, a.txRef));
+		const [row] = await db
+			.select()
+			.from(bookingPayments)
+			.where(eq(bookingPayments.transactionReference, a.txRef));
 		expect(row.status).toBe('failed');
 	});
 
@@ -220,7 +237,12 @@ describe('refunds', () => {
 		await confirmTransfer('booking', p.id, couple.userId);
 		const [r] = await db
 			.insert(refunds)
-			.values({ bookingPaymentId: p.id, amount: '10000.00', reason: 'cancelled', status: 'pending' })
+			.values({
+				bookingPaymentId: p.id,
+				amount: '10000.00',
+				reason: 'cancelled',
+				status: 'pending'
+			})
 			.$returningId();
 		await approveRefund(r.id);
 		const [row] = await db.select().from(bookingPayments).where(eq(bookingPayments.id, p.id));
@@ -244,11 +266,19 @@ describe('plans and coupons', () => {
 		const couple = await makeCoupleWithWedding();
 		await makeCoupon('FREE', 'percent', 100);
 		const started = await startPlanChapa(
-			{ coupleId: couple.coupleId, planId: 2, payer: { id: couple.userId, name: 'S', email: 'a@example.com' }, couponCode: 'FREE' },
+			{
+				coupleId: couple.coupleId,
+				planId: 2,
+				payer: { id: couple.userId, name: 'S', email: 'a@example.com' },
+				couponCode: 'FREE'
+			},
 			ORIGIN
 		);
 		expect(started.kind).toBe('activated');
-		const subs = await db.select().from(subscriptions).where(eq(subscriptions.coupleId, couple.coupleId));
+		const subs = await db
+			.select()
+			.from(subscriptions)
+			.where(eq(subscriptions.coupleId, couple.coupleId));
 		expect(subs.filter((s) => s.status === 'active')).toHaveLength(1);
 		const [c] = await db.select().from(coupons).where(eq(coupons.code, 'FREE'));
 		expect(c.usesCount).toBe(1);
@@ -257,7 +287,11 @@ describe('plans and coupons', () => {
 	it('settling a plan twice activates it once', async () => {
 		const couple = await makeCoupleWithWedding();
 		const started = await startPlanChapa(
-			{ coupleId: couple.coupleId, planId: 2, payer: { id: couple.userId, name: 'S', email: 'a@example.com' } },
+			{
+				coupleId: couple.coupleId,
+				planId: 2,
+				payer: { id: couple.userId, name: 'S', email: 'a@example.com' }
+			},
 			ORIGIN
 		);
 		expect(started.kind).toBe('checkout');
@@ -273,7 +307,11 @@ describe('plans and coupons', () => {
 	it('a vendor buying the Featured plan gets a featured promotion for the period', async () => {
 		const vendor = await makeVendor();
 		const started = await startVendorPlanChapa(
-			{ vendorId: vendor.id, planId: 5, payer: { id: vendor.userId, name: 'V', email: 'v@example.com' } },
+			{
+				vendorId: vendor.id,
+				planId: 5,
+				payer: { id: vendor.userId, name: 'V', email: 'v@example.com' }
+			},
 			ORIGIN
 		);
 		expect(started.kind).toBe('checkout');

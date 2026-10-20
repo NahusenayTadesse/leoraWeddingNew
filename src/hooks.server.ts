@@ -36,7 +36,10 @@ export const handleError: HandleServerError = ({ error, event, status }) => {
 function withThemeScriptNonce(html: string): string {
 	const nonce = html.match(/<script nonce="([^"]+)"/)?.[1];
 	if (!nonce) return html;
-	return html.replace('<script>(function setInitialMode', `<script nonce="${nonce}">(function setInitialMode`);
+	return html.replace(
+		'<script>(function setInitialMode',
+		`<script nonce="${nonce}">(function setInitialMode`
+	);
 }
 
 /** The visitor's language (cookie, else Accept-Language) for `m.*` and `<html lang>`. */
@@ -44,7 +47,8 @@ const handleParaglide: Handle = ({ event, resolve }) =>
 	paraglideMiddleware(event.request, ({ request, locale }) => {
 		event.request = request;
 		return resolve(event, {
-			transformPageChunk: ({ html }) => withThemeScriptNonce(html.replace('%paraglide.lang%', locale))
+			transformPageChunk: ({ html }) =>
+				withThemeScriptNonce(html.replace('%paraglide.lang%', locale))
 		});
 	});
 
@@ -69,7 +73,8 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	// better-auth only stores `banned`; nothing enforces it without its admin
 	// plugin, so a banned account would otherwise keep a working session.
 	const banned =
-		session?.user.banned && (!session.user.banExpires || new Date(session.user.banExpires) > new Date());
+		session?.user.banned &&
+		(!session.user.banExpires || new Date(session.user.banExpires) > new Date());
 
 	if (session && !banned) {
 		event.locals.session = session.session;
@@ -84,7 +89,13 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
  * `+server.ts`, so without this an anonymous POST reached their actions (and crashed on
  * `locals.user!`). Page views go to the login page; everything else gets a 401.
  */
-const SIGNED_IN_AREAS = ['/wedding', '/dashboard', '/vendor-dashboard', '/vendor-onboarding', '/account'];
+const SIGNED_IN_AREAS = [
+	'/wedding',
+	'/dashboard',
+	'/vendor-dashboard',
+	'/vendor-onboarding',
+	'/account'
+];
 
 const handleSignedInAreas: Handle = ({ event, resolve }) => {
 	const path = event.url.pathname;
@@ -92,7 +103,8 @@ const handleSignedInAreas: Handle = ({ event, resolve }) => {
 	// Client-side navigation data runs the same loads, which redirect signed-out visitors.
 	const isPageData = event.request.method === 'GET' && event.isDataRequest;
 	if (guarded && !event.locals.user && !isPageData) {
-		const isPageView = event.request.method === 'GET' && event.request.headers.get('accept')?.includes('text/html');
+		const isPageView =
+			event.request.method === 'GET' && event.request.headers.get('accept')?.includes('text/html');
 		if (isPageView) {
 			const to = encodeURIComponent(path + event.url.search);
 			return new Response(null, { status: 303, headers: { location: `/login?redirectTo=${to}` } });
@@ -130,7 +142,10 @@ const handleStaffTwoFactor: Handle = ({ event, resolve }) => {
 		(event.locals.isSuperAdmin || event.locals.permList?.length) &&
 		!(event.locals.user as { twoFactorEnabled?: boolean }).twoFactorEnabled
 	) {
-		return new Response(null, { status: 303, headers: { location: '/account/security?required=1' } });
+		return new Response(null, {
+			status: 303,
+			headers: { location: '/account/security?required=1' }
+		});
 	}
 	return resolve(event);
 };

@@ -49,7 +49,12 @@
 
 	/** The plan step's cards: the free Starter tier (`0`), then the paid plans. */
 	const planItems = $derived([
-		{ value: 0, name: 'Starter — Free', description: 'Basic listing, up to 1 package', meta: 'ETB 0' },
+		{
+			value: 0,
+			name: 'Starter — Free',
+			description: 'Basic listing, up to 1 package',
+			meta: 'ETB 0'
+		},
 		...data.plans.map((plan) => ({
 			value: plan.id,
 			name: plan.name,
@@ -229,7 +234,12 @@
 
 			{#if step !== 'success'}
 				<div class="actions-row">
-					<Button type="button" variant="outline" onclick={back} style={stepIndex === 0 ? 'visibility:hidden' : ''}>
+					<Button
+						type="button"
+						variant="outline"
+						onclick={back}
+						style={stepIndex === 0 ? 'visibility:hidden' : ''}
+					>
 						Back
 					</Button>
 					{#if step === 'review'}
@@ -337,7 +347,6 @@
 		display: flex;
 		gap: 14px;
 	}
-
 
 	.fine-print {
 		font-size: 12.5px;

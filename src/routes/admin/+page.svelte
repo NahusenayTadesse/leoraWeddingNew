@@ -24,31 +24,91 @@
 	const s = $derived(data.stats);
 
 	const queue = $derived([
-		{ label: 'Vendors awaiting approval', n: s.queue.pendingVendors, href: '/admin/vendors', icon: Hourglass },
+		{
+			label: 'Vendors awaiting approval',
+			n: s.queue.pendingVendors,
+			href: '/admin/vendors',
+			icon: Hourglass
+		},
 		{ label: 'Open disputes', n: s.queue.openDisputes, href: '/admin/disputes', icon: Gavel },
 		{ label: 'Payout requests', n: s.queue.pendingPayouts, href: '/admin/payouts', icon: Landmark },
-		{ label: 'Refund requests', n: s.queue.pendingRefunds, href: '/admin/payments', icon: RotateCcw },
-		{ label: 'Messages (7 days)', n: s.queue.messagesThisWeek, href: '/admin/messages', icon: MessageSquare },
-		{ label: 'New reviews (7 days)', n: s.queue.reviewsThisWeek, href: '/admin/reviews', icon: Star }
+		{
+			label: 'Refund requests',
+			n: s.queue.pendingRefunds,
+			href: '/admin/payments',
+			icon: RotateCcw
+		},
+		{
+			label: 'Messages (7 days)',
+			n: s.queue.messagesThisWeek,
+			href: '/admin/messages',
+			icon: MessageSquare
+		},
+		{
+			label: 'New reviews (7 days)',
+			n: s.queue.reviewsThisWeek,
+			href: '/admin/reviews',
+			icon: Star
+		}
 	]);
 </script>
 
 <div class="space-y-6">
-	<PageHeader title="Overview" description="Marketplace health, revenue and what needs your attention." />
+	<PageHeader
+		title="Overview"
+		description="Marketplace health, revenue and what needs your attention."
+	/>
 
 	<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-		<Kpi label="Platform revenue" value={formatETBWhole(s.platformRevenue)} hint="Subscriptions + commission" icon={TrendingUp} href="/admin/reports" />
-		<Kpi label="Gross bookings value" value={formatETBWhole(s.gmv)} hint="Confirmed vendor payments" icon={Wallet} href="/admin/payments" />
+		<Kpi
+			label="Platform revenue"
+			value={formatETBWhole(s.platformRevenue)}
+			hint="Subscriptions + commission"
+			icon={TrendingUp}
+			href="/admin/reports"
+		/>
+		<Kpi
+			label="Gross bookings value"
+			value={formatETBWhole(s.gmv)}
+			hint="Confirmed vendor payments"
+			icon={Wallet}
+			href="/admin/payments"
+		/>
 		<Kpi label="Couples" value={s.couples} icon={Heart} href="/admin/users" />
-		<Kpi label="Vendors" value={s.vendors} hint="{s.queue.pendingVendors} pending" icon={Building2} href="/admin/vendors" />
-		<Kpi label="Subscription revenue" value={formatETBWhole(s.subscriptionRevenue)} icon={CreditCard} href="/admin/subscriptions" />
-		<Kpi label="Commission earned" value={formatETBWhole(s.commissionRevenue)} icon={Landmark} href="/admin/reports" />
-		<Kpi label="Active subscribers" value={s.activeSubscribers} icon={Users} href="/admin/subscriptions" />
+		<Kpi
+			label="Vendors"
+			value={s.vendors}
+			hint="{s.queue.pendingVendors} pending"
+			icon={Building2}
+			href="/admin/vendors"
+		/>
+		<Kpi
+			label="Subscription revenue"
+			value={formatETBWhole(s.subscriptionRevenue)}
+			icon={CreditCard}
+			href="/admin/subscriptions"
+		/>
+		<Kpi
+			label="Commission earned"
+			value={formatETBWhole(s.commissionRevenue)}
+			icon={Landmark}
+			href="/admin/reports"
+		/>
+		<Kpi
+			label="Active subscribers"
+			value={s.activeSubscribers}
+			icon={Users}
+			href="/admin/subscriptions"
+		/>
 		<Kpi label="User accounts" value={s.users} icon={Users} href="/admin/users" />
 	</div>
 
 	<div class="grid gap-4 lg:grid-cols-3">
-		<ChartCard class="lg:col-span-2" title="Revenue, last 12 months" description="Platform income in ETB">
+		<ChartCard
+			class="lg:col-span-2"
+			title="Revenue, last 12 months"
+			description="Platform income in ETB"
+		>
 			<Chart
 				type="bar"
 				stacked
@@ -67,9 +127,18 @@
 			</Card.Header>
 			<Card.Content class="space-y-1">
 				{#each queue as q (q.label)}
-					<a href={q.href} class="hover:bg-muted flex items-center justify-between rounded-md px-2 py-2 text-sm">
-						<span class="flex items-center gap-2"><q.icon class="text-muted-foreground size-4" />{q.label}</span>
-						<span class="font-semibold {q.n > 0 && q.label.match(/approval|disputes|Payout|Refund/) ? 'text-amber-600' : ''}">{q.n}</span>
+					<a
+						href={q.href}
+						class="flex items-center justify-between rounded-md px-2 py-2 text-sm hover:bg-muted"
+					>
+						<span class="flex items-center gap-2"
+							><q.icon class="size-4 text-muted-foreground" />{q.label}</span
+						>
+						<span
+							class="font-semibold {q.n > 0 && q.label.match(/approval|disputes|Payout|Refund/)
+								? 'text-amber-600'
+								: ''}">{q.n}</span
+						>
 					</a>
 				{/each}
 			</Card.Content>
@@ -88,43 +157,80 @@
 			/>
 		</ChartCard>
 		<ChartCard title="Vendor bookings" description="Requests created per month">
-			<Chart type="bar" labels={data.bookings.labels} datasets={[{ label: 'Bookings', data: data.bookings.bookings }]} />
+			<Chart
+				type="bar"
+				labels={data.bookings.labels}
+				datasets={[{ label: 'Bookings', data: data.bookings.bookings }]}
+			/>
 		</ChartCard>
 	</div>
 
 	<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
 		<ChartCard title="Booking status">
-			<Chart type="doughnut" height={200} labels={data.mix.bookingStatus.labels} datasets={[{ label: 'Bookings', data: data.mix.bookingStatus.values }]} />
+			<Chart
+				type="doughnut"
+				height={200}
+				labels={data.mix.bookingStatus.labels}
+				datasets={[{ label: 'Bookings', data: data.mix.bookingStatus.values }]}
+			/>
 		</ChartCard>
 		<ChartCard title="Vendor status">
-			<Chart type="doughnut" height={200} labels={data.mix.vendorStatus.labels} datasets={[{ label: 'Vendors', data: data.mix.vendorStatus.values }]} />
+			<Chart
+				type="doughnut"
+				height={200}
+				labels={data.mix.vendorStatus.labels}
+				datasets={[{ label: 'Vendors', data: data.mix.vendorStatus.values }]}
+			/>
 		</ChartCard>
 		<ChartCard title="Payment methods">
-			<Chart type="doughnut" height={200} labels={data.mix.paymentMethods.labels} datasets={[{ label: 'Payments', data: data.mix.paymentMethods.values }]} />
+			<Chart
+				type="doughnut"
+				height={200}
+				labels={data.mix.paymentMethods.labels}
+				datasets={[{ label: 'Payments', data: data.mix.paymentMethods.values }]}
+			/>
 		</ChartCard>
 		<ChartCard title="Couple plans">
-			<Chart type="doughnut" height={200} labels={data.mix.planMix.labels} datasets={[{ label: 'Active', data: data.mix.planMix.values }]} />
+			<Chart
+				type="doughnut"
+				height={200}
+				labels={data.mix.planMix.labels}
+				datasets={[{ label: 'Active', data: data.mix.planMix.values }]}
+			/>
 		</ChartCard>
 	</div>
 
 	<div class="grid gap-4 lg:grid-cols-2">
 		<ChartCard title="Vendors by category" description="Top 10">
-			<Chart type="bar" horizontal labels={data.mix.vendorCategories.labels} datasets={[{ label: 'Vendors', data: data.mix.vendorCategories.values }]} />
+			<Chart
+				type="bar"
+				horizontal
+				labels={data.mix.vendorCategories.labels}
+				datasets={[{ label: 'Vendors', data: data.mix.vendorCategories.values }]}
+			/>
 		</ChartCard>
 		<Card.Root>
 			<Card.Header>
 				<Card.Title class="text-base">Recent admin activity</Card.Title>
-				<Card.Description><a href="/admin/activity" class="underline">View full log</a></Card.Description>
+				<Card.Description
+					><a href="/admin/activity" class="underline">View full log</a></Card.Description
+				>
 			</Card.Header>
 			<Card.Content>
 				{#if data.recent.length === 0}
-					<p class="text-muted-foreground text-sm">Nothing logged yet.</p>
+					<p class="text-sm text-muted-foreground">Nothing logged yet.</p>
 				{:else}
 					<ul class="divide-y text-sm">
 						{#each data.recent as r (r.id)}
 							<li class="flex justify-between gap-3 py-2">
-								<span><span class="font-medium">{r.who ?? 'System'}</span> · {r.action}{r.entityType ? ` (${r.entityType}${r.entityId ? ' #' + r.entityId : ''})` : ''}</span>
-								<span class="text-muted-foreground shrink-0">{new Date(r.createdAt).toLocaleDateString()}</span>
+								<span
+									><span class="font-medium">{r.who ?? 'System'}</span> · {r.action}{r.entityType
+										? ` (${r.entityType}${r.entityId ? ' #' + r.entityId : ''})`
+										: ''}</span
+								>
+								<span class="shrink-0 text-muted-foreground"
+									>{new Date(r.createdAt).toLocaleDateString()}</span
+								>
 							</li>
 						{/each}
 					</ul>

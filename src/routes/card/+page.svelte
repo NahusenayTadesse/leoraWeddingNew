@@ -8,7 +8,8 @@
 
 	// The ceremony date drives the countdown; fall back to the plan's date.
 	const weddingDate = $derived(
-		data.ceremony?.eventDate ?? (data.plan?.weddingDate ? `${data.plan.weddingDate}T16:00:00` : null)
+		data.ceremony?.eventDate ??
+			(data.plan?.weddingDate ? `${data.plan.weddingDate}T16:00:00` : null)
 	);
 
 	let now = $state(Date.now());
@@ -98,13 +99,13 @@
 <section class="mx-auto max-w-[1180px] px-5 pt-14 pb-10 sm:px-8">
 	<div class="grid items-center gap-12 lg:grid-cols-[1fr_0.85fr]">
 		<div>
-			<p class="text-accent-foreground text-[12.5px] font-bold tracking-[0.08em] uppercase">
+			<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">
 				The Leora Card
 			</p>
-			<h1 class="font-display mt-2 text-4xl font-extrabold text-balance sm:text-5xl">
+			<h1 class="mt-2 font-display text-4xl font-extrabold text-balance sm:text-5xl">
 				An invitation worth sharing
 			</h1>
-			<p class="text-muted-foreground mt-4 max-w-xl text-[15.5px] leading-relaxed">
+			<p class="mt-4 max-w-xl text-[15.5px] leading-relaxed text-muted-foreground">
 				Every Leora Card comes with a live countdown, interactive map, guest RSVP flow and a
 				personal QR check-in — wrapped in a design your guests will want to screenshot.
 			</p>
@@ -120,7 +121,7 @@
 		</div>
 
 		<!-- ---------------- The card preview ---------------- -->
-		<Card.Root class="from-leora-royal to-leora-navy overflow-hidden border-0 bg-linear-160">
+		<Card.Root class="overflow-hidden border-0 bg-linear-160 from-leora-royal to-leora-navy">
 			<Card.Content class="relative px-7 py-12 text-center">
 				<div class="pointer-events-none absolute inset-0 bg-(image:--hero-glow)"></div>
 				<div class="relative">
@@ -128,7 +129,7 @@
 						You're Invited
 					</p>
 
-					<p class="font-display mt-4 text-3xl font-extrabold text-white sm:text-4xl">
+					<p class="mt-4 font-display text-3xl font-extrabold text-white sm:text-4xl">
 						{coupleNames ?? 'Your names here'}
 					</p>
 
@@ -148,7 +149,7 @@
 					<div class="mt-7 grid grid-cols-4 gap-2">
 						{#each [['Days', countdown?.days], ['Hrs', countdown?.hours], ['Min', countdown?.mins], ['Sec', countdown?.secs]] as [label, value] (label)}
 							<div class="rounded-xl border border-white/10 bg-white/5 py-3">
-								<span class="font-display block text-xl font-extrabold text-white tabular-nums">
+								<span class="block font-display text-xl font-extrabold text-white tabular-nums">
 									{value ?? '--'}
 								</span>
 								<span class="mt-0.5 block text-[10px] tracking-wider text-white/50 uppercase">
@@ -192,9 +193,9 @@
 		{#each features as [num, title, body] (num)}
 			<Card.Root class="h-full">
 				<Card.Content>
-					<span class="font-display text-primary text-2xl font-extrabold">{num}</span>
+					<span class="font-display text-2xl font-extrabold text-primary">{num}</span>
 					<h2 class="mt-2 text-base font-bold">{title}</h2>
-					<p class="text-muted-foreground mt-1.5 text-[13.5px] leading-relaxed">{body}</p>
+					<p class="mt-1.5 text-[13.5px] leading-relaxed text-muted-foreground">{body}</p>
 				</Card.Content>
 			</Card.Root>
 		{/each}
@@ -204,13 +205,13 @@
 		{#each highlights as { icon: Icon, title, body } (title)}
 			<div class="flex gap-3.5">
 				<span
-					class="bg-accent text-accent-foreground grid size-10 shrink-0 place-items-center rounded-xl"
+					class="grid size-10 shrink-0 place-items-center rounded-xl bg-accent text-accent-foreground"
 				>
 					<Icon class="size-4.5" />
 				</span>
 				<span>
 					<span class="block text-[13.5px] font-bold">{title}</span>
-					<span class="text-muted-foreground mt-1 block text-[12.5px] leading-relaxed">{body}</span>
+					<span class="mt-1 block text-[12.5px] leading-relaxed text-muted-foreground">{body}</span>
 				</span>
 			</div>
 		{/each}
@@ -218,8 +219,8 @@
 
 	{#if !data.couple}
 		<div class="mt-12 text-center">
-			<Badge variant="secondary" class="text-accent-foreground mb-4">Included with Golden</Badge>
-			<p class="text-muted-foreground mx-auto max-w-md text-[14px]">
+			<Badge variant="secondary" class="mb-4 text-accent-foreground">Included with Golden</Badge>
+			<p class="mx-auto max-w-md text-[14px] text-muted-foreground">
 				The Leora Card comes with the Golden plan, or as a custom design on Platinum.
 			</p>
 			<Button href="/pricing" class="mt-5">See plans</Button>

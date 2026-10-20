@@ -45,7 +45,8 @@
 		return (errors as { _errors?: string[] } | undefined)?._errors?.[0];
 	}
 
-	const cycle = (c: string) => (c === 'monthly' ? '/ month' : c === 'yearly' ? '/ year' : 'one-time');
+	const cycle = (c: string) =>
+		c === 'monthly' ? '/ month' : c === 'yearly' ? '/ year' : 'one-time';
 </script>
 
 <div class="space-y-6">
@@ -76,13 +77,16 @@
 					</div>
 					<p class="text-3xl font-bold">
 						{formatETB(plan.price)}
-						<span class="text-sm font-normal text-muted-foreground">{cycle(plan.billingCycle)}</span>
+						<span class="text-sm font-normal text-muted-foreground">{cycle(plan.billingCycle)}</span
+						>
 					</p>
 				</Card.Header>
 				<Card.Content class="flex-1">
 					<ul class="space-y-2 text-sm">
 						{#each plan.features ?? [] as feature, i (i)}
-							<li class="flex gap-2"><CheckIcon class="mt-0.5 size-4 text-green-600" />{feature}</li>
+							<li class="flex gap-2">
+								<CheckIcon class="mt-0.5 size-4 text-green-600" />{feature}
+							</li>
 						{/each}
 					</ul>
 				</Card.Content>
@@ -101,7 +105,9 @@
 		{#if checkout}
 			<Dialog.Header>
 				<Dialog.Title>{checkout.name}</Dialog.Title>
-				<Dialog.Description>{formatETB(checkout.price)} {cycle(checkout.billingCycle)}</Dialog.Description>
+				<Dialog.Description
+					>{formatETB(checkout.price)} {cycle(checkout.billingCycle)}</Dialog.Description
+				>
 			</Dialog.Header>
 			<Tabs.Root bind:value={payMode}>
 				<Tabs.List class="grid w-full grid-cols-2">
@@ -134,7 +140,12 @@
 								accountError={firstError($transferErrors.bankAccountId)}
 								receiptError={firstError($transferErrors.receipt)}
 							/>
-							<InputComp label={m.pay_reference()} form={transferData} errors={transferErrors} name="reference" />
+							<InputComp
+								label={m.pay_reference()}
+								form={transferData}
+								errors={transferErrors}
+								name="reference"
+							/>
 							<Button type="submit" class="w-full" disabled={$submitting}>
 								{#if $submitting}<Loader2Icon class="mr-2 size-4 animate-spin" />{/if}
 								{m.pay_transfer_submit()}

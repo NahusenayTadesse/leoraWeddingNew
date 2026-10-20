@@ -56,7 +56,10 @@
 	);
 
 	/** A money column with its total under it. */
-	const amountColumn = (key: 'plannedAmount' | 'actualAmount', header: string): ColumnDef<Item> => ({
+	const amountColumn = (
+		key: 'plannedAmount' | 'actualAmount',
+		header: string
+	): ColumnDef<Item> => ({
 		id: key,
 		accessorKey: key,
 		header: sortable(header),
@@ -76,7 +79,12 @@
 			meta: { align: 'right' },
 			cell: ({ row }) => renderSnippet(differenceCell, row.original)
 		},
-		{ id: 'notes', accessorKey: 'notes', header: 'Notes', cell: ({ row }) => longText(row.original.notes) },
+		{
+			id: 'notes',
+			accessorKey: 'notes',
+			header: 'Notes',
+			cell: ({ row }) => longText(row.original.notes)
+		},
 		{ id: 'actions', header: '', cell: ({ row }) => renderSnippet(actionsCell, row.original) }
 	];
 </script>
@@ -94,7 +102,12 @@
 
 {#snippet actionsCell(item: Item)}
 	<div class="flex justify-end gap-1">
-		<Button variant="ghost" size="icon" onclick={() => openEdit(item)} aria-label="Edit {item.name}">
+		<Button
+			variant="ghost"
+			size="icon"
+			onclick={() => openEdit(item)}
+			aria-label="Edit {item.name}"
+		>
 			<Pencil class="size-4" />
 		</Button>
 		<Button
@@ -128,19 +141,19 @@
 	<Card.Root class="p-5">
 		<div class="grid gap-4 sm:grid-cols-4">
 			<div>
-				<p class="text-muted-foreground text-xs">Total budget</p>
+				<p class="text-xs text-muted-foreground">Total budget</p>
 				<p class="text-xl font-semibold">{etb(data.totalBudget)}</p>
 			</div>
 			<div>
-				<p class="text-muted-foreground text-xs">Planned</p>
+				<p class="text-xs text-muted-foreground">Planned</p>
 				<p class="text-xl font-semibold">{etb(totalPlanned)}</p>
 			</div>
 			<div>
-				<p class="text-muted-foreground text-xs">Spent</p>
+				<p class="text-xs text-muted-foreground">Spent</p>
 				<p class="text-xl font-semibold">{etb(totalActual)}</p>
 			</div>
 			<div>
-				<p class="text-muted-foreground text-xs">Unallocated</p>
+				<p class="text-xs text-muted-foreground">Unallocated</p>
 				<p class="text-xl font-semibold" class:text-destructive={remaining < 0}>
 					{etb(remaining)}
 				</p>
@@ -149,14 +162,14 @@
 
 		<div class="mt-5 space-y-2">
 			<Progress value={spentPct} class="h-2" />
-			<p class="text-muted-foreground text-xs">
+			<p class="text-xs text-muted-foreground">
 				{etb(totalActual)} of {etb(data.totalBudget)} ETB spent ({Math.round(spentPct)}%)
 			</p>
 		</div>
 
 		{#if overAllocated}
 			<div
-				class="text-destructive border-destructive/30 bg-destructive/5 mt-4 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+				class="mt-4 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
 			>
 				<TriangleAlert class="size-4 shrink-0" />
 				Your planned amounts exceed your total budget by {etb(Math.abs(remaining))} ETB.
@@ -166,14 +179,14 @@
 
 	{#if data.categoryItems.length === 0}
 		<Card.Root>
-			<Card.Content class="text-muted-foreground p-6 text-center text-sm">
+			<Card.Content class="p-6 text-center text-sm text-muted-foreground">
 				No budget categories exist yet. Ask an admin to add some before you can plan.
 			</Card.Content>
 		</Card.Root>
 	{:else if data.items.length === 0}
 		<Card.Root>
 			<Card.Content class="p-10 text-center">
-				<p class="text-muted-foreground text-sm">Nothing budgeted yet.</p>
+				<p class="text-sm text-muted-foreground">Nothing budgeted yet.</p>
 				<Button variant="outline" class="mt-4" onclick={openCreate}>
 					<Plus class="size-4" /> Add your first line item
 				</Button>
@@ -214,8 +227,22 @@
 			placeholder="Choose a category"
 		/>
 		<div class="grid gap-1 sm:grid-cols-2">
-			<InputComp {form} {errors} name="plannedAmount" label="Planned amount (ETB)" type="number" min={0} />
-			<InputComp {form} {errors} name="actualAmount" label="Actual amount (ETB)" type="number" min={0} />
+			<InputComp
+				{form}
+				{errors}
+				name="plannedAmount"
+				label="Planned amount (ETB)"
+				type="number"
+				min={0}
+			/>
+			<InputComp
+				{form}
+				{errors}
+				name="actualAmount"
+				label="Actual amount (ETB)"
+				type="number"
+				min={0}
+			/>
 		</div>
 		<InputComp
 			{form}
@@ -231,7 +258,8 @@
 
 <FormDialog
 	title="Remove this line item?"
-	description="{removing?.name ?? ''} will be permanently removed from your budget. This can't be undone."
+	description="{removing?.name ??
+		''} will be permanently removed from your budget. This can't be undone."
 	action="?/delete"
 	data={data.deleteForm}
 	schema={deleteItemSchema}

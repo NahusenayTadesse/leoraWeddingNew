@@ -206,7 +206,9 @@ export async function startBookingChapa(input: BookingPayInput, origin: string):
 		await db
 			.update(bookingPayments)
 			.set({ status: 'failed', verifyPayload: String((err as Error).message).slice(0, 2000) })
-			.where(and(eq(bookingPayments.transactionReference, txRef), eq(bookingPayments.status, 'pending')));
+			.where(
+				and(eq(bookingPayments.transactionReference, txRef), eq(bookingPayments.status, 'pending'))
+			);
 		throw new PaymentStartError(err);
 	}
 }
@@ -511,14 +513,23 @@ async function priceVendorPlan(planId: number) {
 }
 
 /** Starts paying for a vendor plan; a free plan is activated straight away. */
-export async function startVendorPlanChapa(input: VendorPlanInput, origin: string): Promise<PlanStart> {
+export async function startVendorPlanChapa(
+	input: VendorPlanInput,
+	origin: string
+): Promise<PlanStart> {
 	const { plan, price } = await priceVendorPlan(input.planId);
 	const txRef = newTxRef('vendor_plan', input.vendorId);
 
 	if (price <= 0) {
 		const [row] = await db
 			.insert(payments)
-			.values({ vendorId: input.vendorId, subscriptionPlanId: plan.id, amount: '0.00', status: 'pending', transactionRef: txRef })
+			.values({
+				vendorId: input.vendorId,
+				subscriptionPlanId: plan.id,
+				amount: '0.00',
+				status: 'pending',
+				transactionRef: txRef
+			})
 			.$returningId();
 		await settleVendorPlan(row.id, { verifyPayload: 'Free plan' });
 		return { kind: 'activated' };
@@ -594,10 +605,17 @@ export async function settleVendorPlan(
 			.update(payments)
 			.set({ status: 'completed', paidAt: now, verifiedAt: now, ...extra })
 			.where(eq(payments.id, p.id));
-		return { vendorId: p.vendorId, planName: activated?.planName ?? 'your plan', endsAt: activated?.endsAt };
+		return {
+			vendorId: p.vendorId,
+			planName: activated?.planName ?? 'your plan',
+			endsAt: activated?.endsAt
+		};
 	});
 	if (settled) {
-		const [v] = await db.select({ userId: vendors.userId }).from(vendors).where(eq(vendors.id, settled.vendorId));
+		const [v] = await db
+			.select({ userId: vendors.userId })
+			.from(vendors)
+			.where(eq(vendors.id, settled.vendorId));
 		await notify(v?.userId, {
 			type: 'plan_activated',
 			title: 'Your vendor plan is active',
@@ -672,7 +690,8 @@ export async function verify(txRef: string): Promise<VerifyOutcome> {
 	if (!kind) return { status: 'pending', kind, returnPath, retryable: false };
 
 	const row = await attemptFor(kind, txRef);
-	if (!row || row.method !== 'chapa') return { status: 'pending', kind, returnPath, retryable: false };
+	if (!row || row.method !== 'chapa')
+		return { status: 'pending', kind, returnPath, retryable: false };
 	if (row.settled) return { status: 'paid', kind, returnPath };
 	if (row.status !== 'pending') return { status: 'failed', kind, returnPath };
 
@@ -785,7 +804,11 @@ export async function rejectTransfer(
 			.update(payments)
 			.set(values)
 			.where(
-				and(eq(payments.id, id), eq(payments.status, 'pending'), eq(payments.paymentMethod, 'bank_transfer'))
+				and(
+					eq(payments.id, id),
+					eq(payments.status, 'pending'),
+					eq(payments.paymentMethod, 'bank_transfer')
+				)
 			);
 		if (!res[0].affectedRows) throw new PaymentRefused('This payment is no longer pending.');
 		const [row] = await db

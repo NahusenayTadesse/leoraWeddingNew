@@ -20,7 +20,12 @@
 	];
 
 	const columns: ColumnDef<Row>[] = [
-		{ id: 'code', accessorKey: 'code', header: sortable('Code'), meta: { class: 'font-mono font-medium' } },
+		{
+			id: 'code',
+			accessorKey: 'code',
+			header: sortable('Code'),
+			meta: { class: 'font-mono font-medium' }
+		},
 		{
 			id: 'type',
 			accessorKey: 'type',
@@ -88,7 +93,14 @@
 				<InputComp {form} {errors} name="code" label="Code" placeholder="WELCOME20" required />
 				<InputComp {form} {errors} name="type" label="Type" type="select" items={typeItems} />
 				<InputComp {form} {errors} name="value" label="Value" type="number" min={0} required />
-				<InputComp {form} {errors} name="maxUses" label="Max uses (empty for unlimited)" type="number" min={1} />
+				<InputComp
+					{form}
+					{errors}
+					name="maxUses"
+					label="Max uses (empty for unlimited)"
+					type="number"
+					min={1}
+				/>
 				<InputComp
 					{form}
 					{errors}

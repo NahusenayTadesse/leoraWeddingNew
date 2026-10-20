@@ -113,7 +113,9 @@ export async function confirmBookingPayment(
 		await tx
 			.insert(vendorWallets)
 			.values({ vendorId: p.payeeVendorId, balance: fromMoney(net) })
-			.onDuplicateKeyUpdate({ set: { balance: sql`${vendorWallets.balance} + ${fromMoney(net)}` } });
+			.onDuplicateKeyUpdate({
+				set: { balance: sql`${vendorWallets.balance} + ${fromMoney(net)}` }
+			});
 
 		await tx.insert(walletTransactions).values({
 			vendorId: p.payeeVendorId,
@@ -146,13 +148,22 @@ export async function failBookingPayment(
 		eq(bookingPayments.status, 'pending'),
 		isNull(bookingPayments.deletedAt)
 	];
-	if (opts.onlyVendorId !== undefined) conditions.push(eq(bookingPayments.payeeVendorId, opts.onlyVendorId));
+	if (opts.onlyVendorId !== undefined)
+		conditions.push(eq(bookingPayments.payeeVendorId, opts.onlyVendorId));
 
-	const res = await db.update(bookingPayments).set({ status: 'failed' }).where(and(...conditions));
-	return res[0].affectedRows ? { ok: true, commission: 0, net: 0 } : { ok: false, reason: 'not_pending' };
+	const res = await db
+		.update(bookingPayments)
+		.set({ status: 'failed' })
+		.where(and(...conditions));
+	return res[0].affectedRows
+		? { ok: true, commission: 0, net: 0 }
+		: { ok: false, reason: 'not_pending' };
 }
 
-export const paymentFailureMessage: Record<Exclude<PaymentOutcome, { ok: true }>['reason'], string> = {
+export const paymentFailureMessage: Record<
+	Exclude<PaymentOutcome, { ok: true }>['reason'],
+	string
+> = {
 	not_found: 'Payment not found',
 	not_pending: 'This payment is no longer pending',
 	no_vendor: 'This payment has no vendor to credit',
@@ -192,7 +203,10 @@ export async function approveRefund(
 			.from(refunds)
 			.where(and(eq(refunds.bookingPaymentId, payment.id), eq(refunds.status, 'approved')));
 		if (toMoney(approved?.total) + 0.005 >= toMoney(payment.amount)) {
-			await tx.update(bookingPayments).set({ status: 'refunded' }).where(eq(bookingPayments.id, payment.id));
+			await tx
+				.update(bookingPayments)
+				.set({ status: 'refunded' })
+				.where(eq(bookingPayments.id, payment.id));
 		}
 
 		let debited = 0;

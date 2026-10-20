@@ -97,7 +97,10 @@ async function initializeOnce(params: InitializeParams): Promise<string> {
 				? data.message
 				: data?.message
 					? Object.entries(data.message)
-							.map(([field, msgs]) => `${field}: ${([] as string[]).concat(msgs as string[]).join(', ')}`)
+							.map(
+								([field, msgs]) =>
+									`${field}: ${([] as string[]).concat(msgs as string[]).join(', ')}`
+							)
 							.join('; ')
 					: `HTTP ${res.status}`;
 		throw new Error(`Chapa could not start the payment: ${detail}`);

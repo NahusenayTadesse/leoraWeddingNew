@@ -10,11 +10,11 @@ Several also have their own `status` enum. They mean different things and a
 query that checks one while ignoring the others will silently disagree with the
 next query:
 
-| Flag | Meaning | Set by | Reversible |
-|---|---|---|---|
-| `deletedAt` | Gone. Retained only for audit and FK integrity. | User or admin deleting the record | Not through the UI |
-| `isActive` | Temporarily hidden — "paused", "off", "draft". | Owner toggling visibility | Yes |
-| `status` | Where the row sits in its own workflow (`pending` → `approved`, `todo` → `done`). | Domain logic | Yes, per workflow |
+| Flag        | Meaning                                                                           | Set by                            | Reversible         |
+| ----------- | --------------------------------------------------------------------------------- | --------------------------------- | ------------------ |
+| `deletedAt` | Gone. Retained only for audit and FK integrity.                                   | User or admin deleting the record | Not through the UI |
+| `isActive`  | Temporarily hidden — "paused", "off", "draft".                                    | Owner toggling visibility         | Yes                |
+| `status`    | Where the row sits in its own workflow (`pending` → `approved`, `todo` → `done`). | Domain logic                      | Yes, per workflow  |
 
 **The rule for every read:** filter `isNull(deletedAt)` always. Add `isActive`
 only where a user can pause the thing. Add `status` only where the workflow
@@ -22,11 +22,13 @@ matters.
 
 ```ts
 // public vendor listing — all three apply
-where(and(
-  isNull(vendors.deletedAt),
-  eq(vendors.isActive, true),
-  eq(vendors.status, 'approved')   // isVerified is a badge, NOT a gate
-))
+where(
+	and(
+		isNull(vendors.deletedAt),
+		eq(vendors.isActive, true),
+		eq(vendors.status, 'approved') // isVerified is a badge, NOT a gate
+	)
+);
 ```
 
 `status = 'approved'` on a row with `isActive = false` is legal and means
@@ -44,8 +46,8 @@ So affected tables carry a generated `aliveKey` column, and it goes **last** in
 the unique key:
 
 ```ts
-aliveKey  // = coalesce(deleted_at, '1970-01-01'), stored
-unique('couples_partner1_uq').on(table.partner1UserId, table.aliveKey)
+aliveKey; // = coalesce(deleted_at, '1970-01-01'), stored
+unique('couples_partner1_uq').on(table.partner1UserId, table.aliveKey);
 ```
 
 Live rows share the sentinel, so only one may exist. Deleted rows each carry
@@ -69,7 +71,7 @@ Deleting a couple must not erase money. `booking_payments`, `payments`,
 `CASCADE` — a single `DELETE FROM couples` previously destroyed a settled
 50,000 ETB payment and its commission row without an error.
 
-Planning data (guests, tasks, budget, events, seating) *does* cascade from
+Planning data (guests, tasks, budget, events, seating) _does_ cascade from
 `couples`; that is intentional.
 
 ## Denormalised counters

@@ -88,7 +88,9 @@
 	const filters = $derived(data.filters);
 
 	const activeFilters = $derived([
-		...(filters.q ? [{ key: 'q', label: '"' + filters.q + '"', clear: () => apply({ q: null }) }] : []),
+		...(filters.q
+			? [{ key: 'q', label: '"' + filters.q + '"', clear: () => apply({ q: null }) }]
+			: []),
 		...filters.catIds.map((id) => ({
 			key: 'cat-' + id,
 			label: facets.categories.find((c) => c.id === id)?.name ?? 'Category ' + id,
@@ -103,7 +105,11 @@
 			? [
 					{
 						key: 'price',
-						label: (filters.minPrice ?? bounds.floor) + ' – ' + (filters.maxPrice ?? bounds.ceiling) + ' ETB',
+						label:
+							(filters.minPrice ?? bounds.floor) +
+							' – ' +
+							(filters.maxPrice ?? bounds.ceiling) +
+							' ETB',
 						clear: () => apply({ min: null, max: null })
 					}
 				]
@@ -277,10 +283,13 @@
 										checked={filters.catIds.includes(category.id)}
 										onCheckedChange={() => toggleId('cat', category.id)}
 									/>
-									<Label for={'cat-' + category.id} class="flex-1 cursor-pointer text-sm font-normal">
+									<Label
+										for={'cat-' + category.id}
+										class="flex-1 cursor-pointer text-sm font-normal"
+									>
 										{category.name}
 									</Label>
-									<span class="text-xs tabular-nums text-muted-foreground">{category.count}</span>
+									<span class="text-xs text-muted-foreground tabular-nums">{category.count}</span>
 								</div>
 							{/each}
 						</section>
@@ -299,7 +308,7 @@
 									<Label for={'sub-' + sub.id} class="flex-1 cursor-pointer text-sm font-normal">
 										{sub.name}
 									</Label>
-									<span class="text-xs tabular-nums text-muted-foreground">{sub.count}</span>
+									<span class="text-xs text-muted-foreground tabular-nums">{sub.count}</span>
 								</div>
 							{/each}
 						</section>
@@ -371,7 +380,9 @@
 						</nav>
 					{/if}
 				{:else}
-					<div class="flex flex-col items-center justify-center rounded-lg border border-dashed py-20">
+					<div
+						class="flex flex-col items-center justify-center rounded-lg border border-dashed py-20"
+					>
 						<SearchIcon class="mb-4 size-12 text-muted-foreground/30" />
 						<h2 class="mb-1 text-lg font-semibold">Nothing matches these filters</h2>
 						<p class="max-w-sm text-center text-sm text-muted-foreground">

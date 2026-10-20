@@ -56,7 +56,8 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 
 export const actions: Actions = {
 	favorite: async ({ request, locals, url }) => {
-		if (!locals.user) throw redirect(302, `/login?redirectTo=${encodeURIComponent(url.pathname + url.search)}`);
+		if (!locals.user)
+			throw redirect(302, `/login?redirectTo=${encodeURIComponent(url.pathname + url.search)}`);
 
 		const form = await superValidate(request, zod4(favoriteSchema), { id: 'favorite' });
 		if (!form.valid) return fail(400, { form });

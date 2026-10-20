@@ -39,9 +39,7 @@ export const specialPermissions = mysqlTable(
 			.references(() => permissions.id, { onDelete: 'cascade' }),
 		...secureFields
 	},
-	(table) => [
-		unique('special_permissions_user_permission_uq').on(table.userId, table.permissionId)
-	]
+	(table) => [unique('special_permissions_user_permission_uq').on(table.userId, table.permissionId)]
 );
 
 export const rolesRelations = relations(roles, ({ many }) => ({

@@ -14,7 +14,10 @@ export const addUser = z.object({
 	phone: z.string('Phone is Required').min(10).max(15),
 	phone2: z.string('Phone is Required').min(10).max(15).optional(),
 	email: z.email('Email is Required'),
-	password: z.string('Password is required!').min(8, { error: 'Password must be at least 8 characters' }).max(128)
+	password: z
+		.string('Password is required!')
+		.min(8, { error: 'Password must be at least 8 characters' })
+		.max(128)
 });
 export type SignupSchema = typeof addUser;
 

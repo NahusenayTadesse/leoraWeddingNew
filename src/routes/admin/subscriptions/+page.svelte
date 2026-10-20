@@ -34,9 +34,24 @@
 
 	const columns: ColumnDef<Subscriber>[] = [
 		{ id: 'name', accessorKey: 'name', header: sortable('Name') },
-		{ id: 'email', accessorKey: 'email', header: 'Email', cell: ({ row }) => row.original.email ?? '—' },
-		{ id: 'kind', accessorKey: 'kind', header: 'Account', cell: ({ row }) => words(row.original.kind) },
-		{ id: 'status', accessorKey: 'status', header: 'Status', cell: ({ row }) => status(row.original.status) },
+		{
+			id: 'email',
+			accessorKey: 'email',
+			header: 'Email',
+			cell: ({ row }) => row.original.email ?? '—'
+		},
+		{
+			id: 'kind',
+			accessorKey: 'kind',
+			header: 'Account',
+			cell: ({ row }) => words(row.original.kind)
+		},
+		{
+			id: 'status',
+			accessorKey: 'status',
+			header: 'Status',
+			cell: ({ row }) => status(row.original.status)
+		},
 		{
 			id: 'startedAt',
 			accessorKey: 'startedAt',
@@ -57,7 +72,10 @@
 </script>
 
 <div class="space-y-6">
-	<PageHeader title="Subscriptions" description="Edit plan pricing and see who's subscribed to each." />
+	<PageHeader
+		title="Subscriptions"
+		description="Edit plan pricing and see who's subscribed to each."
+	/>
 
 	<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 		{#each data.plans as plan (plan.id)}
@@ -66,7 +84,9 @@
 				<Card.Header>
 					<Card.Title class="flex items-baseline justify-between gap-2">
 						<span>{plan.name}</span>
-						<span class="text-primary text-lg font-bold whitespace-nowrap">{formatETB(plan.price)}</span>
+						<span class="text-lg font-bold whitespace-nowrap text-primary"
+							>{formatETB(plan.price)}</span
+						>
 					</Card.Title>
 					<Card.Description class="capitalize">
 						{plan.billingCycle.replace('_', ' ')} · {plan.audience}
@@ -87,7 +107,8 @@
 							size="sm"
 							onclick={() => (subscribersFor = { id: plan.id, name: plan.name })}
 						>
-							<Users class="mr-2 size-4" /> {subscriberCount} subscriber{subscriberCount === 1 ? '' : 's'}
+							<Users class="mr-2 size-4" />
+							{subscriberCount} subscriber{subscriberCount === 1 ? '' : 's'}
 						</Button>
 						<Button variant="ghost" size="icon" onclick={() => openEdit(plan)}>
 							<Pencil class="size-4" />
@@ -128,8 +149,22 @@
 		<InputComp {form} {errors} name="id" type="hidden" />
 		<InputComp {form} {errors} name="name" label="Plan name" />
 		<InputComp {form} {errors} name="price" label="Price (ETB)" type="number" min={0} />
-		<InputComp {form} {errors} name="billingCycle" label="Billing cycle" type="select" items={billingItems} />
-		<InputComp {form} {errors} name="features" label="Features (one per line)" type="textarea" rows={5} />
+		<InputComp
+			{form}
+			{errors}
+			name="billingCycle"
+			label="Billing cycle"
+			type="select"
+			items={billingItems}
+		/>
+		<InputComp
+			{form}
+			{errors}
+			name="features"
+			label="Features (one per line)"
+			type="textarea"
+			rows={5}
+		/>
 	{/snippet}
 </FormDialog>
 
@@ -140,7 +175,9 @@
 			<Dialog.Title>Subscribers — {subscribersFor?.name}</Dialog.Title>
 		</Dialog.Header>
 		{#if subscribersForPlan.length === 0}
-			<p class="text-muted-foreground py-8 text-center text-sm">No one is subscribed to this plan yet.</p>
+			<p class="py-8 text-center text-sm text-muted-foreground">
+				No one is subscribed to this plan yet.
+			</p>
 		{:else}
 			<DataTable
 				data={subscribersForPlan}

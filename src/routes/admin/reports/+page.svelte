@@ -50,7 +50,9 @@
 		meta: { align: 'right' },
 		cell: ({ row }) => formatETB(row.original[key] as number),
 		footer: ({ table }) =>
-			formatETB(table.getCoreRowModel().rows.reduce((sum, r) => sum + (r.original[key] as number), 0))
+			formatETB(
+				table.getCoreRowModel().rows.reduce((sum, r) => sum + (r.original[key] as number), 0)
+			)
 	});
 	const countColumn = (key: keyof Month & string, header: string): ColumnDef<Month> => ({
 		id: key,
@@ -74,7 +76,12 @@
 
 	const vendorColumns: ColumnDef<TopVendor>[] = [
 		{ id: 'name', accessorKey: 'name', header: sortable('Vendor') },
-		{ id: 'payments', accessorKey: 'payments', header: sortable('Payments'), meta: { align: 'right' } },
+		{
+			id: 'payments',
+			accessorKey: 'payments',
+			header: sortable('Payments'),
+			meta: { align: 'right' }
+		},
 		{
 			id: 'gross',
 			accessorKey: 'gross',
@@ -93,7 +100,10 @@
 </script>
 
 <div class="space-y-6">
-	<PageHeader title="Reports" description="Revenue, growth and vendor performance for a date range." />
+	<PageHeader
+		title="Reports"
+		description="Revenue, growth and vendor performance for a date range."
+	/>
 
 	<Card.Root>
 		<Card.Content class="flex flex-wrap items-end gap-3 py-4">
@@ -118,10 +128,20 @@
 
 	<div class="grid gap-4 lg:grid-cols-2">
 		<ChartCard title="Platform revenue">
-			<Chart type="line" money labels={data.revenue.labels} datasets={[{ label: 'Platform revenue', data: data.revenue.platform }]} />
+			<Chart
+				type="line"
+				money
+				labels={data.revenue.labels}
+				datasets={[{ label: 'Platform revenue', data: data.revenue.platform }]}
+			/>
 		</ChartCard>
 		<ChartCard title="Booking volume (GMV)">
-			<Chart type="bar" money labels={data.revenue.labels} datasets={[{ label: 'GMV', data: data.revenue.gmv, color: '#3b82c4' }]} />
+			<Chart
+				type="bar"
+				money
+				labels={data.revenue.labels}
+				datasets={[{ label: 'GMV', data: data.revenue.gmv, color: '#3b82c4' }]}
+			/>
 		</ChartCard>
 		<ChartCard title="Growth">
 			<Chart
@@ -134,7 +154,13 @@
 			/>
 		</ChartCard>
 		<ChartCard title="Top vendors by volume" description="Confirmed payments in range">
-			<Chart type="bar" horizontal money labels={data.vendors.map((v) => v.name)} datasets={[{ label: 'Gross', data: data.vendors.map((v) => v.gross), color: '#2a9d8f' }]} />
+			<Chart
+				type="bar"
+				horizontal
+				money
+				labels={data.vendors.map((v) => v.name)}
+				datasets={[{ label: 'Gross', data: data.vendors.map((v) => v.gross), color: '#2a9d8f' }]}
+			/>
 		</ChartCard>
 	</div>
 
@@ -165,7 +191,7 @@
 					fileName="leora-top-vendors-{data.from}_{data.to}"
 				/>
 			{:else}
-				<p class="text-muted-foreground py-6 text-center text-sm">No payments in this range.</p>
+				<p class="py-6 text-center text-sm text-muted-foreground">No payments in this range.</p>
 			{/if}
 		</Card.Content>
 	</Card.Root>

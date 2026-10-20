@@ -1,5 +1,11 @@
 import { db } from '$lib/server/db';
-import { vendorBookings, vendors, vendorServices, bookingPayments, vendorQuotes } from '$lib/server/db/schema';
+import {
+	vendorBookings,
+	vendors,
+	vendorServices,
+	bookingPayments,
+	vendorQuotes
+} from '$lib/server/db/schema';
 import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { contractsForBookings } from '$lib/server/contracts';
 
@@ -147,14 +153,16 @@ export async function listBookings(weddingPlanId: number) {
 
 /** Active, verified vendors available to book. */
 export async function listBookableVendors() {
-	return db
-		.select({ id: vendors.id, name: vendors.businessName })
-		.from(vendors)
-		// `status` is the gate, `isVerified` only a badge (docs/schema-conventions.md).
-		.where(
-			and(eq(vendors.isActive, true), eq(vendors.status, 'approved'), isNull(vendors.deletedAt))
-		)
-		.orderBy(asc(vendors.businessName));
+	return (
+		db
+			.select({ id: vendors.id, name: vendors.businessName })
+			.from(vendors)
+			// `status` is the gate, `isVerified` only a badge (docs/schema-conventions.md).
+			.where(
+				and(eq(vendors.isActive, true), eq(vendors.status, 'approved'), isNull(vendors.deletedAt))
+			)
+			.orderBy(asc(vendors.businessName))
+	);
 }
 
 export async function listVendorServices(vendorId: number) {
@@ -244,7 +252,10 @@ export async function respondToQuote(quoteId: number, weddingPlanId: number, acc
 			.set({ status: accept ? 'accepted' : 'rejected' })
 			.where(eq(vendorQuotes.id, q.id));
 		if (accept) {
-			await tx.update(vendorBookings).set({ agreedPrice: q.price }).where(eq(vendorBookings.id, q.bookingId));
+			await tx
+				.update(vendorBookings)
+				.set({ agreedPrice: q.price })
+				.where(eq(vendorBookings.id, q.bookingId));
 			await tx
 				.update(vendorQuotes)
 				.set({ status: 'rejected' })

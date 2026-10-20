@@ -28,7 +28,9 @@
 	<meta property="og:description" content={m.about_meta_description()} />
 </svelte:head>
 
-<section class="bg-linear-to-br from-(--leora-gold-soft) via-background to-background px-4 py-20 sm:py-28">
+<section
+	class="bg-linear-to-br from-(--leora-gold-soft) via-background to-background px-4 py-20 sm:py-28"
+>
 	<div class="mx-auto max-w-4xl space-y-6 text-center">
 		<p class="text-sm font-semibold tracking-wide text-(--leora-gold-dark) uppercase">
 			{m.about_eyebrow()}

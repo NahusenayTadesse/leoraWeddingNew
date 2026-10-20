@@ -418,7 +418,9 @@
 					{/if}
 
 					{#each booking.quotes as quote (quote.id)}
-						<div class="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-(--leora-gold) bg-(--leora-gold-soft) p-3 text-sm">
+						<div
+							class="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-(--leora-gold) bg-(--leora-gold-soft) p-3 text-sm"
+						>
 							<div>
 								<p class="font-medium">Quote: {etb(quote.proposedPrice)} ETB</p>
 								{#if quote.notes}<p class="text-muted-foreground">{quote.notes}</p>{/if}
@@ -426,7 +428,9 @@
 							<div class="flex gap-2">
 								<ActionForm action="?/respondQuote" fields={{ quoteId: quote.id, accept: 'no' }}>
 									{#snippet children({ busy })}
-										<Button type="submit" variant="ghost" size="sm" disabled={!!busy}>Decline</Button>
+										<Button type="submit" variant="ghost" size="sm" disabled={!!busy}
+											>Decline</Button
+										>
 									{/snippet}
 								</ActionForm>
 								<ActionForm action="?/respondQuote" fields={{ quoteId: quote.id, accept: 'yes' }}>
@@ -745,7 +749,9 @@
 						></textarea>
 					</label>
 					<Dialog.Footer>
-						<Button type="button" variant="outline" onclick={() => (refundFor = null)}>Cancel</Button>
+						<Button type="button" variant="outline" onclick={() => (refundFor = null)}
+							>Cancel</Button
+						>
 						<Button type="submit" disabled={!!busy}>Send request</Button>
 					</Dialog.Footer>
 				{/snippet}
@@ -760,8 +766,8 @@
 		<Dialog.Header>
 			<Dialog.Title>Report a problem</Dialog.Title>
 			<Dialog.Description>
-				{#if disputeFor}With {disputeFor.label}. {/if}Tell us what happened — our team will contact
-				you and the vendor.
+				{#if disputeFor}With {disputeFor.label}.
+				{/if}Tell us what happened — our team will contact you and the vendor.
 			</Dialog.Description>
 		</Dialog.Header>
 		{#if disputeFor}
@@ -782,7 +788,9 @@
 						class="w-full rounded-md border bg-background p-2 text-sm"
 					></textarea>
 					<Dialog.Footer>
-						<Button type="button" variant="outline" onclick={() => (disputeFor = null)}>Cancel</Button>
+						<Button type="button" variant="outline" onclick={() => (disputeFor = null)}
+							>Cancel</Button
+						>
 						<Button type="submit" disabled={!!busy}>Send</Button>
 					</Dialog.Footer>
 				{/snippet}

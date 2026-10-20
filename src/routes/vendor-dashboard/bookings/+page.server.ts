@@ -100,7 +100,11 @@ export const actions: Actions = {
 		const vendor = await requireVendor(locals);
 		const form = await superValidate(request, zod4(vendorBookingAddSchema), { id: 'add' });
 		if (!form.valid) {
-			return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
+			return message(
+				form,
+				{ type: 'error', text: 'Please check the form for errors' },
+				{ status: 400 }
+			);
 		}
 
 		const allowed = await listCouplesForBooking(vendor.id);
@@ -134,11 +138,16 @@ export const actions: Actions = {
 		const vendor = await requireVendor(locals);
 		const form = await superValidate(request, zod4(vendorBookingEditSchema), { id: 'edit' });
 		if (!form.valid) {
-			return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
+			return message(
+				form,
+				{ type: 'error', text: 'Please check the form for errors' },
+				{ status: 400 }
+			);
 		}
 
 		const before = await getVendorBooking(vendor.id, form.data.id);
-		if (!before) return message(form, { type: 'error', text: 'Booking not found' }, { status: 404 });
+		if (!before)
+			return message(form, { type: 'error', text: 'Booking not found' }, { status: 404 });
 
 		try {
 			const [result] = await db
@@ -195,10 +204,12 @@ export const actions: Actions = {
 	confirm: async ({ request, locals }) => {
 		const vendor = await requireVendor(locals);
 		const form = await superValidate(request, zod4(confirmSchema), { id: 'confirm' });
-		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form' }, { status: 400 });
+		if (!form.valid)
+			return message(form, { type: 'error', text: 'Please check the form' }, { status: 400 });
 
 		const booking = await getVendorBooking(vendor.id, form.data.id);
-		if (!booking) return message(form, { type: 'error', text: 'Booking not found' }, { status: 404 });
+		if (!booking)
+			return message(form, { type: 'error', text: 'Booking not found' }, { status: 404 });
 
 		const eventDate = booking.eventDate;
 		if (!form.data.allowOverlap && eventDate) {
@@ -206,7 +217,10 @@ export const actions: Actions = {
 			if (conflict) {
 				return message(
 					form,
-					{ type: 'error', text: 'You already have a confirmed booking on that date. Confirm again to allow it anyway.' },
+					{
+						type: 'error',
+						text: 'You already have a confirmed booking on that date. Confirm again to allow it anyway.'
+					},
 					{ status: 409 }
 				);
 			}
@@ -233,10 +247,12 @@ export const actions: Actions = {
 	cancel: async ({ request, locals }) => {
 		const vendor = await requireVendor(locals);
 		const form = await superValidate(request, zod4(cancelSchema), { id: 'cancel' });
-		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form' }, { status: 400 });
+		if (!form.valid)
+			return message(form, { type: 'error', text: 'Please check the form' }, { status: 400 });
 
 		const booking = await getVendorBooking(vendor.id, form.data.id);
-		if (!booking) return message(form, { type: 'error', text: 'Booking not found' }, { status: 404 });
+		if (!booking)
+			return message(form, { type: 'error', text: 'Booking not found' }, { status: 404 });
 
 		await db
 			.update(vendorBookings)
@@ -261,10 +277,12 @@ export const actions: Actions = {
 	quote: async ({ request, locals }) => {
 		const vendor = await requireVendor(locals);
 		const form = await superValidate(request, zod4(quoteSchema), { id: 'quote' });
-		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form' }, { status: 400 });
+		if (!form.valid)
+			return message(form, { type: 'error', text: 'Please check the form' }, { status: 400 });
 
 		const booking = await getVendorBooking(vendor.id, form.data.id);
-		if (!booking) return message(form, { type: 'error', text: 'Booking not found' }, { status: 404 });
+		if (!booking)
+			return message(form, { type: 'error', text: 'Booking not found' }, { status: 404 });
 
 		await db.insert(vendorQuotes).values({
 			bookingId: booking.id,
@@ -286,17 +304,22 @@ export const actions: Actions = {
 	reschedule: async ({ request, locals }) => {
 		const vendor = await requireVendor(locals);
 		const form = await superValidate(request, zod4(rescheduleSchema), { id: 'reschedule' });
-		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form' }, { status: 400 });
+		if (!form.valid)
+			return message(form, { type: 'error', text: 'Please check the form' }, { status: 400 });
 
 		const booking = await getVendorBooking(vendor.id, form.data.id);
-		if (!booking) return message(form, { type: 'error', text: 'Booking not found' }, { status: 404 });
+		if (!booking)
+			return message(form, { type: 'error', text: 'Booking not found' }, { status: 404 });
 
 		if (!form.data.allowOverlap && booking.status === 'confirmed') {
 			const conflict = await hasConfirmedConflict(vendor.id, form.data.eventDate, booking.id);
 			if (conflict) {
 				return message(
 					form,
-					{ type: 'error', text: 'You already have a confirmed booking on that date. Reschedule again to allow it anyway.' },
+					{
+						type: 'error',
+						text: 'You already have a confirmed booking on that date. Reschedule again to allow it anyway.'
+					},
 					{ status: 409 }
 				);
 			}
@@ -313,7 +336,8 @@ export const actions: Actions = {
 	reply: async ({ request, locals }) => {
 		const vendor = await requireVendor(locals);
 		const form = await superValidate(request, zod4(replySchema), { id: 'reply' });
-		if (!form.valid) return message(form, { type: 'error', text: 'Write a reply first' }, { status: 400 });
+		if (!form.valid)
+			return message(form, { type: 'error', text: 'Write a reply first' }, { status: 400 });
 
 		const [couple] = await db
 			.select({ partner1UserId: couples.partner1UserId, partner2UserId: couples.partner2UserId })
@@ -323,7 +347,11 @@ export const actions: Actions = {
 
 		const receiverId = couple?.partner1UserId ?? couple?.partner2UserId;
 		if (!receiverId) {
-			return message(form, { type: 'error', text: 'This couple has no linked account to message' }, { status: 400 });
+			return message(
+				form,
+				{ type: 'error', text: 'This couple has no linked account to message' },
+				{ status: 400 }
+			);
 		}
 
 		await db.insert(messages).values({
@@ -352,7 +380,11 @@ export const actions: Actions = {
 			request,
 			zv4.object({
 				id: zv4.coerce.number().int().positive(),
-				reason: zv4.string().trim().min(10, 'Tell us a little more (at least 10 characters)').max(2000)
+				reason: zv4
+					.string()
+					.trim()
+					.min(10, 'Tell us a little more (at least 10 characters)')
+					.max(2000)
 			})
 		);
 		if ('error' in p) return p.error;
@@ -372,7 +404,10 @@ export const actions: Actions = {
 		const vendor = await requireVendor(locals);
 		const data = await request.formData();
 		const id = Number(data.get('id'));
-		const title = String(data.get('title') ?? '').trim().slice(0, 150) || 'Service agreement';
+		const title =
+			String(data.get('title') ?? '')
+				.trim()
+				.slice(0, 150) || 'Service agreement';
 		const file = data.get('document');
 		if (!(file instanceof File) || file.size === 0) return bad('Attach the contract as a PDF.');
 		if (file.type !== 'application/pdf') return bad('Contracts must be PDF files.');

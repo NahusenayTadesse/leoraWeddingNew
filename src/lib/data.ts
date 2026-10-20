@@ -96,7 +96,7 @@ export const testimonials = [
 	{
 		name: 'Sara & Michael',
 		quote:
-			"We found our dream venue through Leora in 20 minutes. The entire process was smooth and the support team is wonderful.",
+			'We found our dream venue through Leora in 20 minutes. The entire process was smooth and the support team is wonderful.',
 		image: 'https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=100&h=100&fit=crop',
 		date: 'January 2024'
 	},

@@ -10,7 +10,9 @@ import { db } from '$lib/server/db';
 configureKit({ db, loginPath: '/login' });
 
 beforeAll(async () => {
-	const [rows] = (await db.execute(sql`SELECT DATABASE() AS name`)) as unknown as [{ name: string }[]];
+	const [rows] = (await db.execute(sql`SELECT DATABASE() AS name`)) as unknown as [
+		{ name: string }[]
+	];
 	const name = rows[0]?.name ?? '';
 	if (!name.endsWith('_test')) {
 		throw new Error(`DB tests are connected to "${name}", not a _test database. Aborting.`);

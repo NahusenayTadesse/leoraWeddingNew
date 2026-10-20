@@ -1,4 +1,11 @@
-import { revenueSeries, signupSeries, bookingSeries, topVendors, lastMonths, type Range } from '$lib/server/adminStats';
+import {
+	revenueSeries,
+	signupSeries,
+	bookingSeries,
+	topVendors,
+	lastMonths,
+	type Range
+} from '$lib/server/adminStats';
 import type { PageServerLoad } from './$types';
 
 function parse(s: string | null): Date | null {

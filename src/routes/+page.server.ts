@@ -35,7 +35,13 @@ export const load: PageServerLoad = async () => {
 			.from(vendorCategories)
 			.leftJoin(vendors, and(eq(vendors.categoryId, vendorCategories.id), isPublicVendor))
 			.where(eq(vendorCategories.listable, true))
-			.groupBy(vendorCategories.id, vendorCategories.name, vendorCategories.slug, vendorCategories.icon, vendorCategories.sortOrder)
+			.groupBy(
+				vendorCategories.id,
+				vendorCategories.name,
+				vendorCategories.slug,
+				vendorCategories.icon,
+				vendorCategories.sortOrder
+			)
 			.orderBy(vendorCategories.sortOrder),
 
 		db
@@ -59,7 +65,10 @@ export const load: PageServerLoad = async () => {
 
 		db.select({ total: count() }).from(vendors).where(isPublicVendor),
 
-		db.select({ total: countDistinct(vendors.city) }).from(vendors).where(isPublicVendor),
+		db
+			.select({ total: countDistinct(vendors.city) })
+			.from(vendors)
+			.where(isPublicVendor),
 
 		db
 			.select({

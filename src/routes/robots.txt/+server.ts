@@ -20,5 +20,10 @@ export const GET: RequestHandler = ({ url }) =>
 			`Sitemap: ${url.origin}/sitemap.xml`,
 			''
 		].join('\n'),
-		{ headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=3600' } }
+		{
+			headers: {
+				'content-type': 'text/plain; charset=utf-8',
+				'cache-control': 'public, max-age=3600'
+			}
+		}
 	);

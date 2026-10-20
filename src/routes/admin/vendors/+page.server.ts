@@ -23,7 +23,11 @@ import type { Actions, PageServerLoad } from './$types';
 const FILTERS = ['status', 'categoryId'] as const;
 type Filter = (typeof FILTERS)[number];
 
-const SORTS = { businessName: vendors.businessName, city: vendors.city, createdAt: vendors.createdAt };
+const SORTS = {
+	businessName: vendors.businessName,
+	city: vendors.city,
+	createdAt: vendors.createdAt
+};
 
 const spec: WhereSpec<Filter> = {
 	base: [isNull(vendors.deletedAt)],
@@ -88,7 +92,10 @@ export const load: PageServerLoad = async ({ url }) => {
 		})
 	]);
 
-	return { rows, server: { pagination: pagination(query, total), facets, filters: currentQuery(query) } };
+	return {
+		rows,
+		server: { pagination: pagination(query, total), facets, filters: currentQuery(query) }
+	};
 };
 
 /** What a vendor is told when an admin changes their listing's status. */
@@ -122,7 +129,10 @@ export const actions = {
 		if (!before) return bad('Vendor not found', 404);
 
 		await db.update(vendors).set({ status: p.data.status }).where(eq(vendors.id, p.data.id));
-		await audit(event, 'vendor.status', 'vendor', p.data.id, { from: before.status, to: p.data.status });
+		await audit(event, 'vendor.status', 'vendor', p.data.id, {
+			from: before.status,
+			to: p.data.status
+		});
 
 		if (before.status !== p.data.status) {
 			const message = VENDOR_STATUS_MESSAGE[p.data.status];

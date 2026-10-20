@@ -14,17 +14,17 @@
 </script>
 
 <svelte:head>
-	<title>{isNotFound ? "Page Not Found" : `Error ${page.status}`} — Leora Events</title>
+	<title>{isNotFound ? 'Page Not Found' : `Error ${page.status}`} — Leora Events</title>
 </svelte:head>
 
 <section class="mx-auto flex max-w-[640px] flex-col items-center px-5 py-24 text-center sm:px-8">
-	<p class="font-display text-primary text-7xl font-extrabold sm:text-8xl">{page.status}</p>
+	<p class="font-display text-7xl font-extrabold text-primary sm:text-8xl">{page.status}</p>
 
-	<h1 class="font-display mt-4 text-2xl font-extrabold text-balance sm:text-3xl">
+	<h1 class="mt-4 font-display text-2xl font-extrabold text-balance sm:text-3xl">
 		{isNotFound ? "This page couldn't be found" : 'Something went wrong'}
 	</h1>
 
-	<p class="text-muted-foreground mt-3 max-w-md text-[15px] leading-relaxed">
+	<p class="mt-3 max-w-md text-[15px] leading-relaxed text-muted-foreground">
 		{#if isNotFound}
 			The link may be broken, or the page may have moved. Let's get you back to planning your
 			perfect day.
@@ -38,10 +38,12 @@
 		<Button href="/vendors" variant="outline" size="lg">Browse Marketplace</Button>
 	</div>
 
-	<nav class="text-muted-foreground mt-10 flex flex-wrap items-center justify-center gap-x-2 text-[13px]">
+	<nav
+		class="mt-10 flex flex-wrap items-center justify-center gap-x-2 text-[13px] text-muted-foreground"
+	>
 		{#each quickLinks as [label, href], i (href)}
 			{#if i > 0}<span aria-hidden="true">·</span>{/if}
-			<a {href} class="hover:text-foreground transition-colors">{label}</a>
+			<a {href} class="transition-colors hover:text-foreground">{label}</a>
 		{/each}
 	</nav>
 </section>

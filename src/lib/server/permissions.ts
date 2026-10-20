@@ -2,7 +2,13 @@ import { error } from '@sveltejs/kit';
 import { and, eq, isNull } from 'drizzle-orm';
 import type { Grant } from '@nahu/admin-kit/server/hooks';
 import { db } from '$lib/server/db';
-import { permissions, rolePermissions, roles, specialPermissions, user } from '$lib/server/db/schema';
+import {
+	permissions,
+	rolePermissions,
+	roles,
+	specialPermissions,
+	user
+} from '$lib/server/db/schema';
 import { ADMIN_PERMISSION, PERM } from '$lib/access';
 
 export const NO_GRANT: Grant = { permList: [], isSuperAdmin: false };
@@ -52,9 +58,14 @@ export async function loadGrant(userId: string): Promise<Grant> {
 	// Only staff permissions count. The Vendor role's seeded payment.view/order.view are for its
 	// own portal and must not open the admin console.
 	const staff = new Set<string>(Object.values(PERM));
-	const names = [...new Set([...fromRole, ...personal].map((p) => p.name))].filter((n) => staff.has(n));
-	const permList = row.roleName === 'Vendor' ? personal.map((p) => p.name).filter((n) => staff.has(n)) : names;
-	return permList.length ? { permList: [ADMIN_PERMISSION, ...permList], isSuperAdmin: false } : NO_GRANT;
+	const names = [...new Set([...fromRole, ...personal].map((p) => p.name))].filter((n) =>
+		staff.has(n)
+	);
+	const permList =
+		row.roleName === 'Vendor' ? personal.map((p) => p.name).filter((n) => staff.has(n)) : names;
+	return permList.length
+		? { permList: [ADMIN_PERMISSION, ...permList], isSuperAdmin: false }
+		: NO_GRANT;
 }
 
 /** For actions that need more than the page's own permission. Super admins pass. */

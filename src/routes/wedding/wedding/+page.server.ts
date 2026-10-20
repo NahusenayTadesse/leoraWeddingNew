@@ -53,7 +53,12 @@ export const actions: Actions = {
 
 		const userId = locals.user!.id;
 		const form = await superValidate(request, zod4(weddingSchema));
-		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
+		if (!form.valid)
+			return message(
+				form,
+				{ type: 'error', text: 'Please check the form for errors' },
+				{ status: 400 }
+			);
 
 		const existing = await getWeddingByCoupleId(couple.id);
 
@@ -79,6 +84,9 @@ export const actions: Actions = {
 			});
 		}
 
-		return message(form, { type: 'success', text: existing ? 'Wedding details updated.' : 'Your wedding is set up!' });
+		return message(form, {
+			type: 'success',
+			text: existing ? 'Wedding details updated.' : 'Your wedding is set up!'
+		});
 	}
 };

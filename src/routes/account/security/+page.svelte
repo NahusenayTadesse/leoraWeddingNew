@@ -22,7 +22,9 @@
 	<h1 class="text-2xl font-bold">{m.sec_title()}</h1>
 
 	{#if data.required && !data.twoFactorEnabled}
-		<p class="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+		<p
+			class="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100"
+		>
 			{m.sec_required()}
 		</p>
 	{/if}
@@ -41,7 +43,13 @@
 		{#if setup}
 			<div class="space-y-3">
 				<p class="text-sm">{m.sec_scan()}</p>
-				<img src={setup.qr} alt="QR code" width="220" height="220" class="rounded-md border bg-white p-2" />
+				<img
+					src={setup.qr}
+					alt="QR code"
+					width="220"
+					height="220"
+					class="rounded-md border bg-white p-2"
+				/>
 				<p class="text-xs break-all text-muted-foreground">{setup.uri}</p>
 				<div>
 					<p class="font-medium">{m.sec_backup_title()}</p>

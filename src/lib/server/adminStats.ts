@@ -288,7 +288,12 @@ export async function overview() {
 				.where(sql`${disputes.status} in ('open','under_review')`)
 		),
 		one(db.select({ n: count() }).from(vendorPayouts).where(eq(vendorPayouts.status, 'requested'))),
-		one(db.select({ n: count() }).from(refunds).where(and(eq(refunds.status, 'pending'), isNull(refunds.deletedAt)))),
+		one(
+			db
+				.select({ n: count() })
+				.from(refunds)
+				.where(and(eq(refunds.status, 'pending'), isNull(refunds.deletedAt)))
+		),
 		one(
 			db
 				.select({ n: count() })
@@ -300,7 +305,10 @@ export async function overview() {
 				.select({ n: count() })
 				.from(vendorReviews)
 				.where(
-					and(isNull(vendorReviews.deletedAt), gte(vendorReviews.createdAt, new Date(Date.now() - 7 * 864e5)))
+					and(
+						isNull(vendorReviews.deletedAt),
+						gte(vendorReviews.createdAt, new Date(Date.now() - 7 * 864e5))
+					)
 				)
 		)
 	]);

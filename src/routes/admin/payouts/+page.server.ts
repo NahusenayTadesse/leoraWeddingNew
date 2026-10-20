@@ -49,7 +49,8 @@ const SORTS = {
 };
 
 const spec: WhereSpec<Filter> = {
-	search: (term) => or(like(vendors.businessName, `%${term}%`), like(vendorPayouts.reference, `%${term}%`)),
+	search: (term) =>
+		or(like(vendors.businessName, `%${term}%`), like(vendorPayouts.reference, `%${term}%`)),
 	dateColumn: vendorPayouts.createdAt,
 	filters: {
 		status: (v) => eq(vendorPayouts.status, v as typeof vendorPayouts.status._.data),
@@ -92,12 +93,17 @@ export const load: PageServerLoad = async ({ url }) => {
 		joined(db.select({ total: count() }).from(vendorPayouts).$dynamic()).where(where),
 		facetCounts({
 			status: () =>
-				joined(db.select({ value: vendorPayouts.status, count: count() }).from(vendorPayouts).$dynamic())
+				joined(
+					db.select({ value: vendorPayouts.status, count: count() }).from(vendorPayouts).$dynamic()
+				)
 					.where(buildWhere(query, spec, { except: 'status' }))
 					.groupBy(vendorPayouts.status),
 			method: () =>
 				joined(
-					db.select({ value: vendorPayouts.payoutMethod, count: count() }).from(vendorPayouts).$dynamic()
+					db
+						.select({ value: vendorPayouts.payoutMethod, count: count() })
+						.from(vendorPayouts)
+						.$dynamic()
 				)
 					.where(buildWhere(query, spec, { except: 'method' }))
 					.groupBy(vendorPayouts.payoutMethod)
@@ -133,16 +139,24 @@ export const actions = {
 			.update(vendorPayouts)
 			.set({ status: 'rejected' })
 			.where(
-				and(eq(vendorPayouts.id, p.data.id), sql`${vendorPayouts.status} in ('requested','processing')`)
+				and(
+					eq(vendorPayouts.id, p.data.id),
+					sql`${vendorPayouts.status} in ('requested','processing')`
+				)
 			);
 		if (!res[0].affectedRows) return bad('Payout already settled');
 		await audit(event, 'payout.reject', 'vendor_payout', p.data.id);
-		await tellVendor(p.data.id, 'Payout request declined', (a) => `Your payout request for ${a} was declined. Contact us if you have questions.`);
+		await tellVendor(
+			p.data.id,
+			'Payout request declined',
+			(a) => `Your payout request for ${a} was declined. Contact us if you have questions.`
+		);
 		return ok('Payout rejected');
 	},
 	complete: async (event) => {
 		const form = await superValidate(event.request, zod4(payoutCompleteSchema));
-		if (!form.valid) return message(form, { type: 'error', text: 'Invalid request' }, { status: 400 });
+		if (!form.valid)
+			return message(form, { type: 'error', text: 'Invalid request' }, { status: 400 });
 		const p = { data: form.data };
 		const outcome = await db.transaction(async (tx) => {
 			const [payout] = await tx
@@ -150,7 +164,8 @@ export const actions = {
 				.from(vendorPayouts)
 				.where(eq(vendorPayouts.id, p.data.id))
 				.for('update');
-			if (!payout || !['requested', 'processing'].includes(payout.status)) return 'settled' as const;
+			if (!payout || !['requested', 'processing'].includes(payout.status))
+				return 'settled' as const;
 
 			const [wallet] = await tx
 				.select({ balance: vendorWallets.balance })
@@ -187,7 +202,12 @@ export const actions = {
 			);
 		}
 		await audit(event, 'payout.complete', 'vendor_payout', p.data.id);
-		await tellVendor(p.data.id, 'Payout sent', (a) => `We've sent your payout of ${a}${form.data.reference ? ` (reference ${form.data.reference})` : ''}.`);
+		await tellVendor(
+			p.data.id,
+			'Payout sent',
+			(a) =>
+				`We've sent your payout of ${a}${form.data.reference ? ` (reference ${form.data.reference})` : ''}.`
+		);
 		return message(form, { type: 'success', text: 'Payout completed and wallet debited' });
 	}
 } satisfies Actions;

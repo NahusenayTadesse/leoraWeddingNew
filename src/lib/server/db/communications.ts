@@ -1,12 +1,4 @@
-import {
-	mysqlTable,
-	varchar,
-	int,
-	text,
-	boolean,
-	timestamp,
-	index
-} from 'drizzle-orm/mysql-core';
+import { mysqlTable, varchar, int, text, boolean, timestamp, index } from 'drizzle-orm/mysql-core';
 import { secureFields, idMaker, userRef, user, jsonCol } from './common';
 import { couples } from './weddings';
 import { vendors } from './vendors';

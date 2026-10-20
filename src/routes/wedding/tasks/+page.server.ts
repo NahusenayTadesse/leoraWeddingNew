@@ -43,7 +43,12 @@ export const actions: Actions = {
 		const { couple } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(taskSchema), { id: 'task' });
-		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
+		if (!form.valid)
+			return message(
+				form,
+				{ type: 'error', text: 'Please check the form for errors' },
+				{ status: 400 }
+			);
 
 		const values = {
 			title: form.data.title,
@@ -52,7 +57,12 @@ export const actions: Actions = {
 		};
 
 		if (form.data.id) {
-			if (!(await assertTaskOwnership(form.data.id, couple!.id))) return message(form, { type: 'error', text: 'That is not yours to change.' }, { status: 403 });
+			if (!(await assertTaskOwnership(form.data.id, couple!.id)))
+				return message(
+					form,
+					{ type: 'error', text: 'That is not yours to change.' },
+					{ status: 403 }
+				);
 
 			await db
 				.update(tasksTable)
@@ -91,9 +101,19 @@ export const actions: Actions = {
 		const { couple } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(taskIdSchema), { id: 'delete' });
-		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
+		if (!form.valid)
+			return message(
+				form,
+				{ type: 'error', text: 'Please check the form for errors' },
+				{ status: 400 }
+			);
 
-		if (!(await assertTaskOwnership(form.data.id, couple!.id))) return message(form, { type: 'error', text: 'That is not yours to change.' }, { status: 403 });
+		if (!(await assertTaskOwnership(form.data.id, couple!.id)))
+			return message(
+				form,
+				{ type: 'error', text: 'That is not yours to change.' },
+				{ status: 403 }
+			);
 
 		await db
 			.delete(tasksTable)
@@ -106,10 +126,19 @@ export const actions: Actions = {
 		const { couple, wedding } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(generateSchema), { id: 'generate' });
-		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
+		if (!form.valid)
+			return message(
+				form,
+				{ type: 'error', text: 'Please check the form for errors' },
+				{ status: 400 }
+			);
 
 		if (!wedding.weddingDate) {
-			return message(form, { type: 'error', text: 'Set your wedding date first.' }, { status: 400 });
+			return message(
+				form,
+				{ type: 'error', text: 'Set your wedding date first.' },
+				{ status: 400 }
+			);
 		}
 
 		const [templates, existing] = await Promise.all([listTaskTemplates(), listTasks(couple!.id)]);
@@ -130,11 +159,17 @@ export const actions: Actions = {
 			}));
 
 		if (toInsert.length === 0) {
-			return message(form, { type: 'success', text: 'Your checklist already has every suggested task.' });
+			return message(form, {
+				type: 'success',
+				text: 'Your checklist already has every suggested task.'
+			});
 		}
 
 		await db.insert(tasksTable).values(toInsert);
 
-		return message(form, { type: 'success', text: `Added ${toInsert.length} task${toInsert.length === 1 ? '' : 's'}.` });
+		return message(form, {
+			type: 'success',
+			text: `Added ${toInsert.length} task${toInsert.length === 1 ? '' : 's'}.`
+		});
 	}
 };

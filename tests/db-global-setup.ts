@@ -8,7 +8,8 @@ import mysql from 'mysql2/promise';
 import { drizzle } from 'drizzle-orm/mysql2';
 import { migrate } from 'drizzle-orm/mysql2/migrator';
 
-export const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL ?? 'mysql://dev@localhost:3306/leora_test';
+export const TEST_DATABASE_URL =
+	process.env.TEST_DATABASE_URL ?? 'mysql://dev@localhost:3306/leora_test';
 
 export default async function setup() {
 	const url = new URL(TEST_DATABASE_URL);
@@ -23,7 +24,10 @@ export default async function setup() {
 	);
 	await server.end();
 
-	const connection = await mysql.createConnection({ uri: TEST_DATABASE_URL, multipleStatements: true });
+	const connection = await mysql.createConnection({
+		uri: TEST_DATABASE_URL,
+		multipleStatements: true
+	});
 	await migrate(drizzle(connection), { migrationsFolder: './drizzle' });
 	await connection.query(readFileSync('database/seed.sql', 'utf8'));
 	await connection.end();

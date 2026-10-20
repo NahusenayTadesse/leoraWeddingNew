@@ -63,7 +63,9 @@ export async function toggleBlocked(vendorId: number, day: string): Promise<'blo
 	if (await isBlocked(vendorId, day)) {
 		await db
 			.delete(vendorAvailability)
-			.where(and(eq(vendorAvailability.vendorId, vendorId), eq(vendorAvailability.availableDate, day)));
+			.where(
+				and(eq(vendorAvailability.vendorId, vendorId), eq(vendorAvailability.availableDate, day))
+			);
 		return 'free';
 	}
 	await db

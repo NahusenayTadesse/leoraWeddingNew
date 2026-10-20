@@ -82,7 +82,10 @@ export const load: PageServerLoad = async ({ url }) => {
 		facetCounts({
 			status: () =>
 				joined(
-					db.select({ value: vendorBookings.status, count: count() }).from(vendorBookings).$dynamic()
+					db
+						.select({ value: vendorBookings.status, count: count() })
+						.from(vendorBookings)
+						.$dynamic()
 				)
 					.where(buildWhere(query, spec, { except: 'status' }))
 					.groupBy(vendorBookings.status)
@@ -127,7 +130,9 @@ export const actions = {
 				{ status: 400 }
 			);
 		}
-		await audit(event, 'booking.cancel', 'vendor_booking', form.data.id, { reason: form.data.reason });
+		await audit(event, 'booking.cancel', 'vendor_booking', form.data.id, {
+			reason: form.data.reason
+		});
 		return message(form, { type: 'success', text: 'Booking cancelled' });
 	}
 } satisfies Actions;

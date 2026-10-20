@@ -17,11 +17,13 @@ export const load: PageServerLoad = async ({ parent, url, locals }) => {
 	const threads = await listThreadsForCouple(coupleId, userId);
 
 	const vendorParam = Number(url.searchParams.get('vendor'));
-	const activeVendorId = Number.isInteger(vendorParam) && vendorParam > 0
-		? vendorParam
-		: (threads[0]?.vendorId ?? null);
+	const activeVendorId =
+		Number.isInteger(vendorParam) && vendorParam > 0 ? vendorParam : (threads[0]?.vendorId ?? null);
 
-	let activeThread: { vendor: { vendorId: number; businessName: string; categoryName: string | null }; messages: Awaited<ReturnType<typeof getThreadMessages>> } | null = null;
+	let activeThread: {
+		vendor: { vendorId: number; businessName: string; categoryName: string | null };
+		messages: Awaited<ReturnType<typeof getThreadMessages>>;
+	} | null = null;
 
 	if (activeVendorId) {
 		const existing = threads.find((t) => t.vendorId === activeVendorId);

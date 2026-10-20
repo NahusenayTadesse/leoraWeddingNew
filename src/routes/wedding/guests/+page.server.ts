@@ -35,7 +35,12 @@ export const actions: Actions = {
 		const { couple } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(guestSchema), { id: 'guest' });
-		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
+		if (!form.valid)
+			return message(
+				form,
+				{ type: 'error', text: 'Please check the form for errors' },
+				{ status: 400 }
+			);
 
 		const values = {
 			fullName: form.data.fullName,
@@ -45,7 +50,12 @@ export const actions: Actions = {
 		};
 
 		if (form.data.id) {
-			if (!(await assertGuestOwnership(form.data.id, couple!.id))) return message(form, { type: 'error', text: 'That is not yours to change.' }, { status: 403 });
+			if (!(await assertGuestOwnership(form.data.id, couple!.id)))
+				return message(
+					form,
+					{ type: 'error', text: 'That is not yours to change.' },
+					{ status: 403 }
+				);
 
 			await db
 				.update(guestLists)
@@ -55,18 +65,30 @@ export const actions: Actions = {
 			await db.insert(guestLists).values({ ...values, coupleId: couple!.id });
 		}
 
-		return message(form, { type: 'success', text: form.data.id ? 'Guest updated.' : 'Guest added.' });
+		return message(form, {
+			type: 'success',
+			text: form.data.id ? 'Guest updated.' : 'Guest added.'
+		});
 	},
 
 	bulk: async ({ request, locals }) => {
 		const { couple } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(bulkGuestSchema), { id: 'bulk' });
-		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
+		if (!form.valid)
+			return message(
+				form,
+				{ type: 'error', text: 'Please check the form for errors' },
+				{ status: 400 }
+			);
 
 		const parsed = parseGuestLines(form.data.names);
 		if (parsed.length === 0) {
-			return message(form, { type: 'error', text: 'No usable names found in that list.' }, { status: 400 });
+			return message(
+				form,
+				{ type: 'error', text: 'No usable names found in that list.' },
+				{ status: 400 }
+			);
 		}
 
 		await db.insert(guestLists).values(
@@ -79,7 +101,10 @@ export const actions: Actions = {
 			}))
 		);
 
-		return message(form, { type: 'success', text: `Added ${parsed.length} guest${parsed.length === 1 ? '' : 's'}.` });
+		return message(form, {
+			type: 'success',
+			text: `Added ${parsed.length} guest${parsed.length === 1 ? '' : 's'}.`
+		});
 	},
 
 	toggle: async ({ request, locals }) => {
@@ -108,9 +133,19 @@ export const actions: Actions = {
 		const { couple } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(guestIdSchema), { id: 'delete' });
-		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
+		if (!form.valid)
+			return message(
+				form,
+				{ type: 'error', text: 'Please check the form for errors' },
+				{ status: 400 }
+			);
 
-		if (!(await assertGuestOwnership(form.data.id, couple!.id))) return message(form, { type: 'error', text: 'That is not yours to change.' }, { status: 403 });
+		if (!(await assertGuestOwnership(form.data.id, couple!.id)))
+			return message(
+				form,
+				{ type: 'error', text: 'That is not yours to change.' },
+				{ status: 403 }
+			);
 
 		await db
 			.delete(guestLists)

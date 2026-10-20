@@ -21,7 +21,11 @@ import type { Actions, PageServerLoad } from './$types';
 const FILTERS = ['status', 'raisedBy'] as const;
 type Filter = (typeof FILTERS)[number];
 
-const SORTS = { bookingId: disputes.bookingId, vendor: vendors.businessName, createdAt: disputes.createdAt };
+const SORTS = {
+	bookingId: disputes.bookingId,
+	vendor: vendors.businessName,
+	createdAt: disputes.createdAt
+};
 
 const spec: WhereSpec<Filter> = {
 	search: (term) => or(like(vendors.businessName, `%${term}%`), like(disputes.reason, `%${term}%`)),
@@ -89,7 +93,8 @@ export const load: PageServerLoad = async ({ url }) => {
 export const actions = {
 	update: async (event) => {
 		const form = await superValidate(event.request, zod4(disputeUpdateSchema));
-		if (!form.valid) return message(form, { type: 'error', text: 'Invalid request' }, { status: 400 });
+		if (!form.valid)
+			return message(form, { type: 'error', text: 'Invalid request' }, { status: 400 });
 		await db
 			.update(disputes)
 			.set({ status: form.data.status, resolutionNotes: form.data.notes || null })

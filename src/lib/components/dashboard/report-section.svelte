@@ -1,7 +1,13 @@
 <script lang="ts">
-	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@nahu/admin-kit/components/ui/card/index.js";
-	import { FileTextIcon } from "@lucide/svelte";
-	import type { Snippet } from "svelte";
+	import {
+		Card,
+		CardContent,
+		CardDescription,
+		CardHeader,
+		CardTitle
+	} from '@nahu/admin-kit/components/ui/card/index.js';
+	import { FileTextIcon } from '@lucide/svelte';
+	import type { Snippet } from 'svelte';
 
 	interface Props {
 		children: Snippet;
@@ -10,8 +16,8 @@
 	const { children }: Props = $props();
 </script>
 
-<div class="animate-in fade-in slide-in-from-bottom-4 duration-500" style="animation-delay: 200ms;">
-	<Card class="border-0 shadow-lg-lg">
+<div class="animate-in duration-500 fade-in slide-in-from-bottom-4" style="animation-delay: 200ms;">
+	<Card class="shadow-lg-lg border-0">
 		<CardHeader class="pb-3">
 			<div class="flex items-center justify-between">
 				<div class="space-y-1">

@@ -28,10 +28,11 @@ export const load: PageServerLoad = async () => {
 			expiresAt: c.expiresAt,
 			isActive: c.isActive,
 			/** What the status column shows and filters on. */
-			state: (c.expiresAt && c.expiresAt < new Date() ? 'expired' : c.isActive ? 'active' : 'paused') as
-				| 'expired'
-				| 'active'
-				| 'paused'
+			state: (c.expiresAt && c.expiresAt < new Date()
+				? 'expired'
+				: c.isActive
+					? 'active'
+					: 'paused') as 'expired' | 'active' | 'paused'
 		}))
 	};
 };
@@ -42,7 +43,11 @@ export const actions = {
 	create: async (event) => {
 		const form = await superValidate(event.request, zod4(couponCreateSchema));
 		if (!form.valid) {
-			return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
+			return message(
+				form,
+				{ type: 'error', text: 'Please check the form for errors' },
+				{ status: 400 }
+			);
 		}
 		const [dupe] = await db
 			.select({ id: coupons.id })
@@ -66,7 +71,10 @@ export const actions = {
 	toggle: async (event) => {
 		const p = await parse(event.request, idOnly);
 		if ('error' in p) return p.error;
-		const [c] = await db.select({ isActive: coupons.isActive }).from(coupons).where(eq(coupons.id, p.data.id));
+		const [c] = await db
+			.select({ isActive: coupons.isActive })
+			.from(coupons)
+			.where(eq(coupons.id, p.data.id));
 		if (!c) return bad('Coupon not found');
 		await db.update(coupons).set({ isActive: !c.isActive }).where(eq(coupons.id, p.data.id));
 		await audit(event, 'coupon.toggle', 'coupon', p.data.id, { isActive: !c.isActive });

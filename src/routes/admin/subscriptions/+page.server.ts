@@ -1,6 +1,12 @@
 import { desc, eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { subscriptionPlans, subscriptions, couples, vendorSubscriptions, vendors } from '$lib/server/db/schema';
+import {
+	subscriptionPlans,
+	subscriptions,
+	couples,
+	vendorSubscriptions,
+	vendors
+} from '$lib/server/db/schema';
 import { contentCrud } from '$lib/server/crud';
 import { subscriptionPlanAddSchema, subscriptionPlanEditSchema } from '$lib/schemas/admin';
 import { audit } from '$lib/server/auditLog';

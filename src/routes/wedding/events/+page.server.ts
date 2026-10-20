@@ -47,14 +47,16 @@ export const actions = {
 		const p = await parse(request, eventSchema.extend(idSchema.shape));
 		if ('error' in p) return p.error;
 		const { id, ...input } = p.data;
-		if (!(await updateEvent(couple.id, id, input, locals.user!.id))) return bad('Event not found', 404);
+		if (!(await updateEvent(couple.id, id, input, locals.user!.id)))
+			return bad('Event not found', 404);
 		return ok('Event updated');
 	},
 	remove: async ({ request, locals }) => {
 		const { couple } = await requireCoupleAndWedding(locals);
 		const p = await parse(request, idSchema);
 		if ('error' in p) return p.error;
-		if (!(await removeEvent(couple.id, p.data.id, locals.user!.id))) return bad('Event not found', 404);
+		if (!(await removeEvent(couple.id, p.data.id, locals.user!.id)))
+			return bad('Event not found', 404);
 		return ok('Event deleted');
 	}
 } satisfies Actions;

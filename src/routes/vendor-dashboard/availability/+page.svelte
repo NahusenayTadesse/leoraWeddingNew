@@ -27,7 +27,9 @@
 			});
 			const result = deserialize(await res.text());
 			if (result.type === 'failure') {
-				toast.error((result.data as { message?: { text: string } })?.message?.text ?? 'Could not save');
+				toast.error(
+					(result.data as { message?: { text: string } })?.message?.text ?? 'Could not save'
+				);
 			}
 			await invalidateAll();
 		} finally {

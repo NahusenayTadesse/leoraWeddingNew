@@ -48,8 +48,18 @@
 			header: 'Category',
 			cell: ({ row }) => row.original.category ?? '—'
 		},
-		{ id: 'city', accessorKey: 'city', header: sortable('City'), cell: ({ row }) => row.original.city ?? '—' },
-		{ id: 'status', accessorKey: 'status', header: 'Status', cell: ({ row }) => status(row.original.status) },
+		{
+			id: 'city',
+			accessorKey: 'city',
+			header: sortable('City'),
+			cell: ({ row }) => row.original.city ?? '—'
+		},
+		{
+			id: 'status',
+			accessorKey: 'status',
+			header: 'Status',
+			cell: ({ row }) => status(row.original.status)
+		},
 		{
 			id: 'createdAt',
 			accessorKey: 'createdAt',
@@ -64,11 +74,13 @@
 	<div class="flex items-center gap-2">
 		<span class="font-medium">{row.businessName}</span>
 		{#if row.isVerified}
-			<ShieldCheck class="text-success size-3.5" aria-label="Verified" />
+			<ShieldCheck class="size-3.5 text-success" aria-label="Verified" />
 		{/if}
 	</div>
 	{#if row.email || row.phone}
-		<span class="text-muted-foreground text-xs">{[row.email, row.phone].filter(Boolean).join(' · ')}</span>
+		<span class="text-xs text-muted-foreground"
+			>{[row.email, row.phone].filter(Boolean).join(' · ')}</span
+		>
 	{/if}
 {/snippet}
 

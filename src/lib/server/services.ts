@@ -1,10 +1,5 @@
 import { db } from '$lib/server/db';
-import {
-	prices,
-	vendorServices,
-	vendors,
-	serviceCategories
-} from '$lib/server/db/schema';
+import { prices, vendorServices, vendors, serviceCategories } from '$lib/server/db/schema';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 
 /**

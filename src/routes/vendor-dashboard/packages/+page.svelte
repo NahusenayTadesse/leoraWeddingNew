@@ -48,8 +48,8 @@
 	{#if data.rows.length === 0}
 		<Card.Root>
 			<Card.Content class="py-16 text-center">
-				<PackageOpen class="text-muted-foreground mx-auto size-8" />
-				<p class="text-muted-foreground mt-3 text-sm">You haven't published any packages yet.</p>
+				<PackageOpen class="mx-auto size-8 text-muted-foreground" />
+				<p class="mt-3 text-sm text-muted-foreground">You haven't published any packages yet.</p>
 				<Button class="mt-4" onclick={openCreate}>
 					<Plus class="size-4" /> Add your first package
 				</Button>
@@ -62,7 +62,7 @@
 					<Card.Header>
 						<Card.Title class="flex items-baseline justify-between gap-2">
 							<span>{pkg.name}</span>
-							<span class="text-primary text-lg font-bold whitespace-nowrap">
+							<span class="text-lg font-bold whitespace-nowrap text-primary">
 								{formatETB(pkg.price)}
 							</span>
 						</Card.Title>
@@ -82,7 +82,7 @@
 									</li>
 								{/each}
 								{#if pkg.inclusions.length > 4}
-									<li class="text-muted-foreground text-xs">
+									<li class="text-xs text-muted-foreground">
 										+{pkg.inclusions.length - 4} more
 									</li>
 								{/if}

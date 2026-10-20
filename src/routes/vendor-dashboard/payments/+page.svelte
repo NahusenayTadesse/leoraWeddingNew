@@ -17,7 +17,12 @@
 
 	const columns: ColumnDef<Row>[] = [
 		{ id: 'couple', accessorKey: 'couple', header: sortable('Couple') },
-		{ id: 'type', accessorKey: 'type', header: 'Type', cell: ({ row }) => words(row.original.type) },
+		{
+			id: 'type',
+			accessorKey: 'type',
+			header: 'Type',
+			cell: ({ row }) => words(row.original.type)
+		},
 		{
 			id: 'method',
 			accessorKey: 'method',

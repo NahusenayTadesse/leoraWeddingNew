@@ -36,9 +36,24 @@
 			header: 'Raised by',
 			cell: ({ row }) => words(row.original.raisedBy)
 		},
-		{ id: 'reason', accessorKey: 'reason', header: 'Reason', cell: ({ row }) => longText(row.original.reason) },
-		{ id: 'status', accessorKey: 'status', header: 'Status', cell: ({ row }) => status(row.original.status) },
-		{ id: 'notes', accessorKey: 'notes', header: 'Resolution notes', cell: ({ row }) => longText(row.original.notes) },
+		{
+			id: 'reason',
+			accessorKey: 'reason',
+			header: 'Reason',
+			cell: ({ row }) => longText(row.original.reason)
+		},
+		{
+			id: 'status',
+			accessorKey: 'status',
+			header: 'Status',
+			cell: ({ row }) => status(row.original.status)
+		},
+		{
+			id: 'notes',
+			accessorKey: 'notes',
+			header: 'Resolution notes',
+			cell: ({ row }) => longText(row.original.notes)
+		},
 		{
 			id: 'createdAt',
 			accessorKey: 'createdAt',

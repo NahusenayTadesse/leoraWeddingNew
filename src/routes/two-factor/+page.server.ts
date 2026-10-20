@@ -41,13 +41,18 @@ export const actions: Actions = {
 							headers: event.request.headers
 						})
 					: await auth.api.verifyTOTP({
-							body: { code: parsed.data.code.replace(/\s/g, ''), trustDevice: parsed.data.trustDevice },
+							body: {
+								code: parsed.data.code.replace(/\s/g, ''),
+								trustDevice: parsed.data.trustDevice
+							},
 							headers: event.request.headers
 						});
 			userId = (result as { user: { id: string } }).user.id;
 		} catch (err) {
 			const expired = err instanceof APIError && /cookie|session|expired/i.test(err.message);
-			return fail(400, { message: { type: 'error', text: expired ? m.tfa_expired() : m.tfa_invalid() } });
+			return fail(400, {
+				message: { type: 'error', text: expired ? m.tfa_expired() : m.tfa_invalid() }
+			});
 		}
 
 		const dest = safeRedirect(

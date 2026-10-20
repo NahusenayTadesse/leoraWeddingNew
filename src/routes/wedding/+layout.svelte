@@ -11,7 +11,9 @@
 		ListChecks,
 		Store,
 		Bookmark,
-		MessageSquare
+		MessageSquare,
+		Mail,
+		ScanLine
 	} from '@lucide/svelte';
 	import { m } from '$lib/paraglide/messages.js';
 	import { cn } from '$lib/utils';
@@ -28,6 +30,8 @@
 		{ href: '/wedding/budget', label: m.nav_budget(), icon: Wallet },
 		{ href: '/wedding/events', label: m.nav_events(), icon: CalendarRange },
 		{ href: '/wedding/guests', label: m.nav_guests(), icon: Users },
+		{ href: '/wedding/card', label: m.nav_card_editor(), icon: Mail },
+		{ href: '/wedding/check-in', label: m.nav_check_in(), icon: ScanLine },
 		{ href: '/wedding/seating', label: m.nav_seating(), icon: Armchair },
 		{ href: '/wedding/tasks', label: m.nav_tasks(), icon: ListChecks },
 		{ href: '/wedding/bookings', label: m.nav_bookings(), icon: Store },

@@ -8,6 +8,7 @@ import { listGuests, assertGuestOwnership, parseGuestLines } from '$lib/server/g
 import { requireCoupleAndWedding } from '$lib/server/weddings';
 import { parse, bad } from '$lib/server/adminAction';
 import { and, eq } from 'drizzle-orm';
+import { newInviteToken } from '$lib/server/cards';
 import type { Actions, PageServerLoad } from './$types';
 import { m } from '$lib/paraglide/messages.js';
 
@@ -55,7 +56,9 @@ export const actions: Actions = {
 				.set(values)
 				.where(and(eq(guestLists.id, form.data.id), eq(guestLists.coupleId, couple!.id)));
 		} else {
-			await db.insert(guestLists).values({ ...values, coupleId: couple!.id });
+			await db
+				.insert(guestLists)
+				.values({ ...values, coupleId: couple!.id, inviteToken: newInviteToken() });
 		}
 
 		return message(form, {
@@ -82,7 +85,8 @@ export const actions: Actions = {
 				fullName: g.fullName,
 				phone: g.phone,
 				side: form.data.side,
-				rsvpStatus: 'pending' as const
+				rsvpStatus: 'pending' as const,
+				inviteToken: newInviteToken()
 			}))
 		);
 

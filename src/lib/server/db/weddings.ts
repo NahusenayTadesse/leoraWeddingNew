@@ -11,8 +11,10 @@ import {
 	mysqlEnum,
 	boolean,
 	index,
-	unique
+	unique,
+	timestamp
 } from 'drizzle-orm/mysql-core';
+import { sql } from 'drizzle-orm';
 import { secureFields, idMaker, userRef, user, aliveKey } from './common';
 
 /**
@@ -184,13 +186,51 @@ export const guestLists = mysqlTable(
 			onDelete: 'set null'
 		}),
 		notes: varchar('notes', { length: 255 }),
+		/**
+		 * The guest's personal invitation link (`/i/<slug>/<token>`) and QR code. Random and
+		 * unguessable: it is the only thing that lets a guest RSVP or be checked in.
+		 */
+		inviteToken: varchar('invite_token', { length: 32 }),
+		/** When the guest last answered through their link, and what they said. */
+		rsvpAt: timestamp('rsvp_at', { fsp: 3 }),
+		/** People coming including the guest (1 + plus-ones they bring, up to `plusOnes`). */
+		rsvpPartySize: tinyint('rsvp_party_size', { unsigned: true }),
+		rsvpNote: varchar('rsvp_note', { length: 500 }),
+		checkedInAt: timestamp('checked_in_at', { fsp: 3 }),
+		checkedInBy: userRef('checked_in_by').references(() => user.id, { onDelete: 'set null' }),
 		...secureFields
 	},
 	(table) => [
 		index('guest_lists_couple_idx').on(table.coupleId),
-		index('guest_lists_rsvp_idx').on(table.rsvpStatus)
+		index('guest_lists_rsvp_idx').on(table.rsvpStatus),
+		unique('guest_lists_invite_token_uq').on(table.inviteToken)
 	]
 );
+
+/**
+ * The couple's digital invitation (the Leora Card): one per couple. Shown at `/i/<slug>` once
+ * published; guests RSVP through their personal links.
+ */
+export const weddingCards = mysqlTable('wedding_cards', {
+	id: idMaker(),
+	coupleId: int('couple_id')
+		.notNull()
+		.unique()
+		.references(() => couples.id, { onDelete: 'cascade' }),
+	theme: mysqlEnum('theme', ['habesha', 'royal', 'garden']).default('habesha').notNull(),
+	headline: varchar('headline', { length: 150 }),
+	message: text('message'),
+	/** Stored file name of the cover photo (public, like vendor images). */
+	coverImage: varchar('cover_image', { length: 255 }),
+	rsvpDeadline: date('rsvp_deadline', { mode: 'string' }),
+	mapUrl: varchar('map_url', { length: 500 }),
+	published: boolean('published').default(false).notNull(),
+	publishedAt: timestamp('published_at', { fsp: 3 }),
+	createdAt: timestamp('created_at', { fsp: 3 }).defaultNow().notNull(),
+	updatedAt: timestamp('updated_at', { fsp: 3 })
+		.default(sql`CURRENT_TIMESTAMP(3) on update CURRENT_TIMESTAMP(3)`)
+		.notNull()
+});
 
 export const taskCategories = mysqlTable('task_categories', {
 	id: idMaker(),

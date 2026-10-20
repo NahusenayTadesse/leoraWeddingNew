@@ -99,8 +99,8 @@
 			</p>
 			<div class="mt-7 flex flex-wrap gap-3">
 				{#if data.couple}
-					<Button href="/wedding/guests" size="lg">{m.cardp_manage()}</Button>
-					<Button href="/wedding/wedding" variant="outline" size="lg">{m.cardp_edit()}</Button>
+					<Button href="/wedding/card" size="lg">{m.cardp_design()}</Button>
+					<Button href="/wedding/guests" variant="outline" size="lg">{m.cardp_manage()}</Button>
 				{:else}
 					<Button href="/signup" size="lg">{m.cardp_create()}</Button>
 					<Button href="/pricing" variant="outline" size="lg">{m.cardp_included()}</Button>

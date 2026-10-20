@@ -21,7 +21,9 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 		'/wedding/tasks',
 		'/wedding/bookings',
 		'/wedding/events',
-		'/wedding/seating'
+		'/wedding/seating',
+		'/wedding/card',
+		'/wedding/check-in'
 	];
 	if (!wedding && needsWedding.some((p) => url.pathname.startsWith(p))) {
 		throw redirect(302, '/wedding/wedding');

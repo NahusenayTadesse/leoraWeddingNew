@@ -10,7 +10,7 @@ Updated 2026-10-20. Status of the original suggestions, then what's worth doing 
 
 **Reliability:** tests for money paths, CI (lint, type check, tests, build), zero type errors, local-database setup, origin-independent auth in dev, migrations instead of `push` (with a baseline script for existing databases), Docker image and compose file, central error logging with reference ids, security headers and CSP.
 
-**Product:** availability calendar (vendor and public), contracts with e-signatures, vendor quotes couples can accept, events timeline, seating plan, saved vendors with comparison, Amharic (public site and couple area), email verification and password reset, in-app notifications, SEO (sitemap, structured data, link previews), accessibility (Lighthouse 100 on key pages).
+**Product:** availability calendar (vendor and public), contracts with e-signatures, vendor quotes couples can accept, events timeline, seating plan, saved vendors with comparison, Amharic (public site and couple area), email verification and password reset, in-app notifications, SEO (sitemap, structured data, link previews), accessibility (Lighthouse 100 on key pages), the Leora Card (three themes, publish on Golden/Platinum, personal guest links with RSVP, QR entry passes and door check-in by camera or list).
 
 ## Next
 
@@ -22,5 +22,4 @@ Updated 2026-10-20. Status of the original suggestions, then what's worth doing 
 6. **Monitoring**: ship logs to a service (Sentry, Logtail) and alert on payment verify failures.
 7. **Telebirr / CBE Birr direct**, if Chapa fees matter at volume.
 8. **Couple invitations**: invite the second partner by link (`couples.partner2_user_id` exists; no UI yet).
-9. **Public wedding page / RSVP links** — the Leora Card page promises live RSVP; guests can't respond online yet.
-10. **Mobile pass on admin tables** (they scroll horizontally today).
+9. **Mobile pass on admin tables** (they scroll horizontally today).

@@ -64,6 +64,13 @@
       "when": 1792512809883,
       "tag": "0008_two_factor",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1792529999786,
+      "tag": "0009_wedding_cards",
+      "breakpoints": true
     }
   ]
 }

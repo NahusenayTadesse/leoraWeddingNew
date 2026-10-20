@@ -17,6 +17,9 @@ import {
 } from '$lib/server/db/schema';
 
 const TABLES = [
+	'wedding_cards',
+	'guest_lists',
+	'wedding_events',
 	'notifications',
 	'wallet_transactions',
 	'payment_commissions',

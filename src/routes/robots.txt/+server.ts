@@ -16,6 +16,8 @@ export const GET: RequestHandler = ({ url }) =>
 			'Disallow: /contracts/',
 			'Disallow: /payments/',
 			'Disallow: /notifications',
+			// Invitations name the couple and their guests; they are shared by link, not searched.
+			'Disallow: /i/',
 			'',
 			`Sitemap: ${url.origin}/sitemap.xml`,
 			''

@@ -62,7 +62,8 @@ const handleSecurityHeaders: Handle = async ({ event, resolve }) => {
 	h.set('X-Content-Type-Options', 'nosniff');
 	h.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 	h.set('X-Frame-Options', 'DENY');
-	h.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+	// The camera is used by the couple's check-in scanner (/wedding/check-in), on our origin only.
+	h.set('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()');
 	if (!dev) h.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 	return response;
 };

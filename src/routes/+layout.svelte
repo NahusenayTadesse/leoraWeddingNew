@@ -97,7 +97,10 @@
 	`data-site-type` keeps the admin kit's dashboard typography (its h1–h4 and p sizes) off the
 	public site, which sizes its own headings with Tailwind.
 -->
-{#if !page.url.pathname.startsWith('/vendor-dashboard') && !page.url.pathname.startsWith('/admin')}
+<!-- Invitations (/i/…) stand alone: no site header, footer or chat around a couple's card. -->
+{#if page.url.pathname.startsWith('/i/')}
+	{@render children()}
+{:else if !page.url.pathname.startsWith('/vendor-dashboard') && !page.url.pathname.startsWith('/admin')}
 	<div data-site-type>
 		<Header data={data?.user?.name ?? ''} />
 		<main id="content">

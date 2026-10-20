@@ -34,3 +34,4 @@ build*.zip
 src/lib/paraglide
 project.inlang/cache
 .playwright-mcp
+.tempFiles-test

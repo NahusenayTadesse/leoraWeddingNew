@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: '1'
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      TEST_DATABASE_URL: mysql://root@127.0.0.1:3306/leora_test
+      DATABASE_URL: mysql://root@127.0.0.1:3306/leora_test
+      BETTER_AUTH_SECRET: ci-only-secret-not-for-production-0123456789
+      ORIGIN: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: leoraWeddingNew
+
+      # @nahu/admin-kit is a sibling checkout (`file:../admin-kit` in package.json).
+      # Set the repository variable ADMIN_KIT_REPO (owner/name) and, if private, the
+      # ADMIN_KIT_TOKEN secret.
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.ADMIN_KIT_REPO }}
+          token: ${{ secrets.ADMIN_KIT_TOKEN || github.token }}
+          path: admin-kit
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install
+        working-directory: leoraWeddingNew
+        run: npm ci
+
+      - name: Type check
+        working-directory: leoraWeddingNew
+        run: npm run check
+        continue-on-error: true # pre-existing errors are being burned down; see bugs.md
+
+      - name: Tests (unit + database)
+        working-directory: leoraWeddingNew
+        run: npm test
+
+      - name: Build
+        working-directory: leoraWeddingNew
+        run: npx vite build

@@ -19,8 +19,19 @@ function expiryFor(billingCycle: string, from: Date): Date | null {
  * *active* subscription at a time, but old rows are kept (marked 'expired')
  * rather than overwritten, since they're the couple's billing history.
  */
-export async function activateSubscription(coupleId: number, planId: number) {
-	const [plan] = await db
+type Writer = Pick<typeof db, 'select' | 'update' | 'insert'>;
+
+/**
+ * Pass `tx` to activate inside the transaction that settles the payment, so a crash between the
+ * two cannot leave a paid payment without its plan (or the reverse).
+ */
+export async function activateSubscription(coupleId: number, planId: number, tx?: Writer) {
+	if (tx) return activateIn(tx, coupleId, planId);
+	return db.transaction((t) => activateIn(t, coupleId, planId));
+}
+
+async function activateIn(tx: Writer, coupleId: number, planId: number) {
+	const [plan] = await tx
 		.select()
 		.from(subscriptionPlans)
 		.where(eq(subscriptionPlans.id, planId))
@@ -31,17 +42,15 @@ export async function activateSubscription(coupleId: number, planId: number) {
 	const startedAt = new Date();
 	const expiresAt = expiryFor(plan.billingCycle, startedAt);
 
-	return db.transaction(async (tx) => {
-		await tx
-			.update(subscriptions)
-			.set({ status: 'expired' })
-			.where(and(eq(subscriptions.coupleId, coupleId), eq(subscriptions.status, 'active')));
+	await tx
+		.update(subscriptions)
+		.set({ status: 'expired' })
+		.where(and(eq(subscriptions.coupleId, coupleId), eq(subscriptions.status, 'active')));
 
-		const [row] = await tx
-			.insert(subscriptions)
-			.values({ coupleId, subscriptionPlanId: planId, status: 'active', startedAt, expiresAt })
-			.$returningId();
+	const [row] = await tx
+		.insert(subscriptions)
+		.values({ coupleId, subscriptionPlanId: planId, status: 'active', startedAt, expiresAt })
+		.$returningId();
 
-		return { subscriptionId: row.id, plan };
-	});
+	return { subscriptionId: row.id, plan };
 }

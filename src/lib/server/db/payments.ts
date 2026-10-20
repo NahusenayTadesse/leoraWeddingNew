@@ -99,6 +99,36 @@ export const subscriptions = mysqlTable(
 	]
 );
 
+/**
+ * Leora's own accounts that customers may transfer to (plans and vendor bookings alike — the
+ * platform collects, takes commission, and pays vendors out). Managed on the admin Settings page.
+ */
+export const bankAccounts = mysqlTable('bank_accounts', {
+	id: intPk(),
+	bankName: varchar('bank_name', { length: 100 }).notNull(),
+	accountName: varchar('account_name', { length: 150 }).notNull(),
+	accountNumber: varchar('account_number', { length: 50 }).notNull(),
+	sortOrder: int('sort_order').default(0).notNull(),
+	...secureFields
+});
+
+/**
+ * How a payment row is being settled, shared by both payment tables. A Chapa row is settled
+ * only by `verify` (server-to-server); a transfer only by staff checking the receipt.
+ */
+const settlementFields = () => ({
+	/** Chapa's hosted checkout for this attempt. */
+	checkoutUrl: text('checkout_url'),
+	/** Uploaded transfer receipt (stored file name). Served only to the payer, payee and staff. */
+	receiptFile: varchar('receipt_file', { length: 255 }),
+	bankAccountId: int('bank_account_id').references(() => bankAccounts.id, { onDelete: 'set null' }),
+	/** Chapa's verify response, or the reason a receipt was rejected. */
+	verifyPayload: text('verify_payload'),
+	verifiedAt: timestamp('verified_at', { fsp: 3 }),
+	/** Staff member who confirmed or rejected a transfer. */
+	reviewedBy: userRef('reviewed_by').references(() => user.id, { onDelete: 'set null' })
+});
+
 export const payments = mysqlTable(
 	'payments',
 	{
@@ -118,6 +148,13 @@ export const payments = mysqlTable(
 			'card',
 			'cash'
 		]),
+		/**
+		 * The plan being bought. Stored on the row so settling can never be pointed at a different
+		 * plan than the one priced (the old confirm link carried it in an editable token).
+		 */
+		subscriptionPlanId: int('subscription_plan_id').references(() => subscriptionPlans.id, {
+			onDelete: 'set null'
+		}),
 		couponId: int('coupon_id').references(() => coupons.id, { onDelete: 'set null' }),
 		discountAmount: decimal('discount_amount', { precision: 12, scale: 2 })
 			.default('0')
@@ -131,11 +168,13 @@ export const payments = mysqlTable(
 			.notNull(),
 		transactionRef: varchar('transaction_ref', { length: 100 }),
 		paidAt: timestamp('paid_at', { fsp: 3 }),
+		...settlementFields(),
 		...secureFields
 	},
 	(table) => [
 		index('payments_couple_idx').on(table.coupleId),
 		index('payments_status_idx').on(table.status),
+		index('payments_receipt_idx').on(table.receiptFile),
 		// The gateway's reference is the idempotency key: a retried or
 		// duplicated callback must not create a second completed payment.
 		unique('payments_transaction_ref_uq').on(table.transactionRef)
@@ -169,7 +208,8 @@ export const bookingPayments = mysqlTable(
 			'cash',
 			'bank_transfer',
 			'mobile_money',
-			'card'
+			'card',
+			'chapa'
 		]).notNull(),
 		paymentType: mysqlEnum('payment_type', ['advance', 'full', 'balance']).notNull(),
 		status: mysqlEnum('status', ['pending', 'confirmed', 'failed', 'refunded'])
@@ -177,9 +217,12 @@ export const bookingPayments = mysqlTable(
 			.notNull(),
 		transactionReference: varchar('transaction_reference', { length: 150 }),
 		paidAt: timestamp('paid_at', { fsp: 3 }),
+		...settlementFields(),
 		...secureFields
 	},
 	(table) => [
+		index('booking_payments_status_idx').on(table.status),
+		index('booking_payments_receipt_idx').on(table.receiptFile),
 		index('booking_payments_wedding_plan_idx').on(table.weddingPlanId),
 		index('booking_payments_booking_idx').on(table.bookingId),
 		index('booking_payments_payer_idx').on(table.payerId),

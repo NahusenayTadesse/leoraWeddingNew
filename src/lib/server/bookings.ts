@@ -51,7 +51,8 @@ export async function listBookings(weddingPlanId: number) {
 		.select({
 			bookingId: bookingPayments.bookingId,
 			confirmed: sql<string>`COALESCE(SUM(CASE WHEN ${bookingPayments.status} = 'confirmed' THEN ${bookingPayments.amount} ELSE 0 END), 0)`,
-			pending: sql<string>`COALESCE(SUM(CASE WHEN ${bookingPayments.status} = 'pending' THEN ${bookingPayments.amount} ELSE 0 END), 0)`
+			// Receipts waiting for review. Open Chapa attempts are left out: most are abandoned.
+			pending: sql<string>`COALESCE(SUM(CASE WHEN ${bookingPayments.status} = 'pending' AND ${bookingPayments.paymentMethod} <> 'chapa' THEN ${bookingPayments.amount} ELSE 0 END), 0)`
 		})
 		.from(bookingPayments)
 		.where(
@@ -64,6 +65,31 @@ export async function listBookings(weddingPlanId: number) {
 
 	const byBooking = new Map(totals.map((t) => [t.bookingId, t]));
 
+	// Each booking's payment history, newest first; abandoned Chapa attempts are noise.
+	const history = await db
+		.select({
+			id: bookingPayments.id,
+			bookingId: bookingPayments.bookingId,
+			amount: bookingPayments.amount,
+			method: bookingPayments.paymentMethod,
+			status: bookingPayments.status,
+			receiptFile: bookingPayments.receiptFile,
+			note: bookingPayments.verifyPayload,
+			createdAt: bookingPayments.createdAt
+		})
+		.from(bookingPayments)
+		.where(
+			and(
+				inArray(
+					bookingPayments.bookingId,
+					rows.map((r) => r.id)
+				),
+				isNull(bookingPayments.deletedAt),
+				sql`NOT (${bookingPayments.paymentMethod} = 'chapa' AND ${bookingPayments.status} IN ('pending', 'failed'))`
+			)
+		)
+		.orderBy(sql`${bookingPayments.createdAt} DESC`);
+
 	return rows.map((r) => {
 		const t = byBooking.get(r.id);
 		const agreed = Number(r.agreedPrice ?? 0);
@@ -75,7 +101,19 @@ export async function listBookings(weddingPlanId: number) {
 			agreedPrice: agreed,
 			paid,
 			pendingPaid: pending,
-			balance: Math.max(0, agreed - paid)
+			balance: Math.max(0, Math.round((agreed - paid - pending) * 100) / 100),
+			payments: history
+				.filter((h) => h.bookingId === r.id)
+				.map((h) => ({
+					id: h.id,
+					amount: Number(h.amount),
+					method: h.method,
+					status: h.status,
+					receiptFile: h.receiptFile,
+					// Only a rejection reason is the couple's business; Chapa payloads are not.
+					rejection: h.note?.startsWith('Rejected: ') ? h.note.slice(10) : null,
+					createdAt: h.createdAt
+				}))
 		};
 	});
 }
@@ -85,8 +123,9 @@ export async function listBookableVendors() {
 	return db
 		.select({ id: vendors.id, name: vendors.businessName })
 		.from(vendors)
+		// `status` is the gate, `isVerified` only a badge (docs/schema-conventions.md).
 		.where(
-			and(eq(vendors.isActive, true), eq(vendors.isVerified, true), isNull(vendors.deletedAt))
+			and(eq(vendors.isActive, true), eq(vendors.status, 'approved'), isNull(vendors.deletedAt))
 		)
 		.orderBy(asc(vendors.businessName));
 }

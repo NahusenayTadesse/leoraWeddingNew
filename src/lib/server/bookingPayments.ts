@@ -6,7 +6,8 @@ import {
 	walletTransactions,
 	vendorWallets,
 	vendorCommissions,
-	commissionSettings
+	commissionSettings,
+	refunds
 } from '$lib/server/db/schema';
 import { toMoney, fromMoney } from '$lib/money';
 
@@ -69,7 +70,11 @@ export type PaymentOutcome =
  */
 export async function confirmBookingPayment(
 	paymentId: number,
-	opts: { onlyVendorId?: number } = {}
+	opts: {
+		onlyVendorId?: number;
+		/** Extra columns to set with the confirmation (verify payload, reviewer…). */
+		extra?: Partial<typeof bookingPayments.$inferInsert>;
+	} = {}
 ): Promise<PaymentOutcome> {
 	return db.transaction(async (tx) => {
 		// Row lock: two simultaneous confirms serialise, and the loser sees
@@ -93,7 +98,7 @@ export async function confirmBookingPayment(
 
 		await tx
 			.update(bookingPayments)
-			.set({ status: 'confirmed', paidAt: new Date() })
+			.set({ status: 'confirmed', paidAt: new Date(), verifiedAt: new Date(), ...opts.extra })
 			.where(eq(bookingPayments.id, p.id));
 
 		await tx.insert(paymentCommissions).values({
@@ -153,3 +158,60 @@ export const paymentFailureMessage: Record<Exclude<PaymentOutcome, { ok: true }>
 	no_vendor: 'This payment has no vendor to credit',
 	forbidden: 'This payment is not addressed to you'
 };
+
+/**
+ * Approves a pending refund in one transaction: the refund becomes `approved`, the payment
+ * `refunded`, and — if the payment had been confirmed — the vendor's wallet gives back its share
+ * of the refunded amount (the platform gives back its commission share), with a `debit` ledger
+ * row. Without the debit, a refunded payment stayed spendable in the vendor's wallet.
+ *
+ * The money itself goes back to the couple outside the app (Chapa dashboard or bank transfer).
+ * The wallet may go negative if the vendor was already paid out; that is what they owe.
+ */
+export async function approveRefund(
+	refundId: number
+): Promise<{ ok: true; debited: number } | { ok: false; reason: string }> {
+	return db.transaction(async (tx) => {
+		const [refund] = await tx.select().from(refunds).where(eq(refunds.id, refundId)).for('update');
+		if (!refund || refund.status !== 'pending') {
+			return { ok: false, reason: 'Refund is no longer pending' } as const;
+		}
+		const [payment] = await tx
+			.select()
+			.from(bookingPayments)
+			.where(eq(bookingPayments.id, refund.bookingPaymentId))
+			.for('update');
+		if (!payment) return { ok: false, reason: 'Payment not found' } as const;
+
+		await tx.update(refunds).set({ status: 'approved' }).where(eq(refunds.id, refund.id));
+		await tx.update(bookingPayments).set({ status: 'refunded' }).where(eq(bookingPayments.id, payment.id));
+
+		let debited = 0;
+		if (payment.status === 'confirmed' && payment.payeeVendorId) {
+			const [commission] = await tx
+				.select()
+				.from(paymentCommissions)
+				.where(eq(paymentCommissions.bookingPaymentId, payment.id))
+				.limit(1);
+			const gross = toMoney(payment.amount);
+			const net = commission ? toMoney(commission.netAmount) : gross;
+			const refundAmount = Math.min(toMoney(refund.amount), gross);
+			debited = gross > 0 ? Math.round(((refundAmount * net) / gross) * 100) / 100 : 0;
+
+			if (debited > 0) {
+				await tx
+					.update(vendorWallets)
+					.set({ balance: sql`${vendorWallets.balance} - ${fromMoney(debited)}` })
+					.where(eq(vendorWallets.vendorId, payment.payeeVendorId));
+				await tx.insert(walletTransactions).values({
+					vendorId: payment.payeeVendorId,
+					bookingPaymentId: payment.id,
+					amount: fromMoney(debited),
+					transactionType: 'debit',
+					description: `Refund #${refund.id} on payment #${payment.id}`
+				});
+			}
+		}
+		return { ok: true, debited } as const;
+	});
+}

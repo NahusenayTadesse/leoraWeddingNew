@@ -389,6 +389,8 @@ export const vendorPayouts = mysqlTable(
 			.default('requested')
 			.notNull(),
 		reference: varchar('reference', { length: 150 }),
+		/** Where the vendor wants the money: bank and account number, or a phone for mobile money. */
+		destination: varchar('destination', { length: 255 }),
 		createdAt: timestamp('created_at', { fsp: 3 }).defaultNow().notNull()
 	},
 	(table) => [index('vendor_payouts_vendor_idx').on(table.vendorId)]

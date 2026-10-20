@@ -1,7 +1,10 @@
 <script lang="ts">
 	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
 	import { createForm } from '@nahu/admin-kit/forms/createForm';
-	import { bookingSchema, paymentSchema } from '$lib/schemas/booking';
+	import { bookingSchema } from '$lib/schemas/booking';
+	import { bookingTransferSchema } from '$lib/schemas/payment';
+	import TransferFields from '$lib/components/payments/TransferFields.svelte';
+	import { m } from '$lib/paraglide/messages.js';
 	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
 	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
 	import * as Dialog from '@nahu/admin-kit/components/ui/dialog/index.js';
@@ -24,23 +27,26 @@
 
 	let { data } = $props();
 
-	const METHOD_ITEMS = [
-		{ value: 'cash', name: 'Cash' },
-		{ value: 'bank_transfer', name: 'Bank transfer' },
-		{ value: 'mobile_money', name: 'Mobile money (telebirr, etc.)' },
-		{ value: 'card', name: 'Card' }
+	const TYPE_ITEMS = [
+		{ value: 'advance', name: m.pay_type_advance() },
+		{ value: 'balance', name: m.pay_type_balance() },
+		{ value: 'full', name: m.pay_type_full() }
 	];
 
-	const TYPE_ITEMS = [
-		{ value: 'advance', name: 'Advance / deposit' },
-		{ value: 'balance', name: 'Balance' },
-		{ value: 'full', name: 'Full payment' }
-	];
+	const PAYMENT_STATUS: Record<string, string> = {
+		pending: m.pay_status_pending(),
+		confirmed: m.pay_status_confirmed(),
+		failed: m.pay_status_failed(),
+		refunded: m.pay_status_refunded()
+	};
 
 	let bookingOpen = $state(false);
 	let paymentOpen = $state(false);
 	let pendingCancel = $state<{ id: number; label: string } | null>(null);
 	let payingFor = $state<{ id: number; label: string; balance: number } | null>(null);
+	let payMode = $state<'chapa' | 'transfer'>('chapa');
+	let chapaAmount = $state(0);
+	let chapaType = $state<'advance' | 'full' | 'balance'>('advance');
 	let serviceItems = $state<{ value: string; name: string }[]>([]);
 	let loadingServices = $state(false);
 	let statusTab = $state('active');
@@ -71,17 +77,23 @@
 
 	// svelte-ignore state_referenced_locally
 	const {
-		form: payData,
-		errors: payErrors,
-		enhance: payEnhance,
-		submitting: paying
-	} = createForm(data.paymentForm, paymentSchema, {
-		id: 'payment',
+		form: transferData,
+		errors: transferErrors,
+		enhance: transferEnhance,
+		submitting: sendingReceipt
+	} = createForm(data.transferForm, bookingTransferSchema, {
+		id: 'transfer',
 		resetForm: true,
 		onUpdated: ({ form }) => {
 			if (form.message?.type === 'success') paymentOpen = false;
 		}
 	});
+
+	/** superforms nests a file field's errors differently; this reads the first message of any. */
+	function firstError(errors: unknown): string | undefined {
+		if (Array.isArray(errors)) return errors[0];
+		return (errors as { _errors?: string[] } | undefined)?._errors?.[0];
+	}
 
 	// Refresh the service list whenever the chosen vendor changes.
 	$effect(() => {
@@ -173,11 +185,12 @@
 			label: booking.vendorName,
 			balance: booking.balance
 		};
-		$payData.bookingId = booking.id;
-		$payData.amount = booking.balance || 0;
-		$payData.paymentMethod = 'mobile_money';
-		$payData.paymentType = booking.paid > 0 ? 'balance' : 'advance';
-		$payData.transactionReference = '';
+		chapaAmount = booking.balance;
+		chapaType = booking.paid > 0 ? 'balance' : 'advance';
+		$transferData.bookingId = booking.id;
+		$transferData.amount = booking.balance;
+		$transferData.paymentType = chapaType;
+		payMode = 'chapa';
 		paymentOpen = true;
 	}
 
@@ -372,10 +385,56 @@
 							>
 								<Ban class="mr-2 size-4" /> Cancel
 							</Button>
-							<Button variant="outline" size="sm" onclick={() => openPayment(booking)}>
-								<CircleDollarSign class="mr-2 size-4" /> Log a payment
-							</Button>
+							{#if booking.status === 'confirmed' && booking.balance > 0}
+								<Button size="sm" onclick={() => openPayment(booking)}>
+									<CircleDollarSign class="mr-2 size-4" />
+									{m.pay_button()}
+								</Button>
+							{:else if booking.status === 'pending' && booking.agreedPrice > 0}
+								<p class="self-center text-xs text-muted-foreground">{m.pay_wait_vendor()}</p>
+							{/if}
 						</div>
+					{/if}
+
+					{#if booking.payments.length}
+						<details class="mt-3 text-sm">
+							<summary class="cursor-pointer text-xs font-medium text-muted-foreground">
+								{m.pay_history()} ({booking.payments.length})
+							</summary>
+							<ul class="mt-2 divide-y rounded-md border">
+								{#each booking.payments as p (p.id)}
+									<li class="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+										<span class="tabular-nums">{etb(p.amount)} ETB</span>
+										<span class="text-xs text-muted-foreground">
+											{p.method === 'chapa' ? 'Chapa' : m.pay_method_transfer()} ·
+											{new Date(p.createdAt).toLocaleDateString()}
+										</span>
+										<Badge
+											variant={p.status === 'confirmed'
+												? 'default'
+												: p.status === 'failed'
+													? 'destructive'
+													: 'secondary'}
+										>
+											{PAYMENT_STATUS[p.status] ?? p.status}
+										</Badge>
+										{#if p.receiptFile}
+											<a
+												class="text-xs underline"
+												href="/receipts/{p.receiptFile}"
+												target="_blank"
+												rel="noopener">{m.pay_view_receipt()}</a
+											>
+										{/if}
+										{#if p.rejection}
+											<p class="w-full text-xs text-destructive">
+												{m.pay_rejected_reason({ reason: p.rejection })}
+											</p>
+										{/if}
+									</li>
+								{/each}
+							</ul>
+						</details>
 					{/if}
 				</Card.Root>
 			{/each}
@@ -458,69 +517,115 @@
 	</Dialog.Content>
 </Dialog.Root>
 
-<!-- Log payment -->
+<!-- Pay: Chapa or bank transfer -->
 <Dialog.Root bind:open={paymentOpen}>
-	<Dialog.Content class="sm:max-w-md">
+	<Dialog.Content class="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
 		<Dialog.Header>
-			<Dialog.Title>Log a payment</Dialog.Title>
+			<Dialog.Title>{m.pay_title()}</Dialog.Title>
 			<Dialog.Description>
 				{#if payingFor}
-					To {payingFor.label}. This records the payment as pending until the vendor confirms it.
+					{payingFor.label} · {m.pay_due({ amount: `${etb(payingFor.balance)} ETB` })}
 				{/if}
 			</Dialog.Description>
 		</Dialog.Header>
 
-		<form method="POST" action="?/pay" use:payEnhance class="space-y-1">
-			<HiddenField name="bookingId" value={$payData.bookingId} />
+		<Tabs.Root bind:value={payMode}>
+			<Tabs.List class="grid w-full grid-cols-2">
+				<Tabs.Trigger value="chapa">{m.pay_method_chapa()}</Tabs.Trigger>
+				<Tabs.Trigger value="transfer">{m.pay_method_transfer()}</Tabs.Trigger>
+			</Tabs.List>
 
-			<InputComp
-				label="amount (ETB)"
-				form={payData}
-				errors={payErrors}
-				name="amount"
-				type="number"
-				min="0"
-				placeholder="10000"
-			/>
+			<Tabs.Content value="chapa" class="pt-3">
+				<p class="mb-4 text-sm text-muted-foreground">{m.pay_method_chapa_hint()}</p>
+				<!-- A plain post: the server answers with a redirect to Chapa, no JavaScript needed. -->
+				<form method="POST" action="?/payChapa" class="space-y-4">
+					<input type="hidden" name="bookingId" value={payingFor?.id ?? ''} />
+					<label class="block space-y-1.5 text-sm font-medium">
+						<span>{m.pay_amount()}</span>
+						<input
+							name="amount"
+							type="number"
+							min="1"
+							step="0.01"
+							max={payingFor?.balance}
+							required
+							bind:value={chapaAmount}
+							class="h-10 w-full rounded-md border bg-background px-3"
+						/>
+					</label>
+					<label class="block space-y-1.5 text-sm font-medium">
+						<span>{m.pay_type()}</span>
+						<select
+							name="paymentType"
+							bind:value={chapaType}
+							class="h-10 w-full rounded-md border bg-background px-3"
+						>
+							{#each TYPE_ITEMS as t (t.value)}
+								<option value={t.value}>{t.name}</option>
+							{/each}
+						</select>
+					</label>
+					<Button type="submit" class="w-full">
+						<Wallet class="mr-2 size-4" />
+						{m.pay_chapa_submit()}
+					</Button>
+				</form>
+			</Tabs.Content>
 
-			<InputComp
-				label="method"
-				form={payData}
-				errors={payErrors}
-				name="paymentMethod"
-				type="select"
-				items={METHOD_ITEMS}
-				placeholder="How did you pay?"
-			/>
-
-			<InputComp
-				label="type"
-				form={payData}
-				errors={payErrors}
-				name="paymentType"
-				type="select"
-				items={TYPE_ITEMS}
-				placeholder="What kind of payment?"
-			/>
-
-			<InputComp
-				label="reference (optional)"
-				form={payData}
-				errors={payErrors}
-				name="transactionReference"
-				type="text"
-				placeholder="Transaction or receipt number"
-			/>
-
-			<Dialog.Footer class="pt-4">
-				<Button type="button" variant="outline" onclick={() => (paymentOpen = false)}>Cancel</Button
-				>
-				<Button type="submit" disabled={$paying}>
-					{#if $paying}<Loader2 class="mr-2 size-4 animate-spin" />{/if}
-					<Wallet class="mr-2 size-4" /> Log payment
-				</Button>
-			</Dialog.Footer>
-		</form>
+			<Tabs.Content value="transfer" class="pt-3">
+				{#if data.accounts.length === 0}
+					<p class="text-sm text-muted-foreground">{m.pay_no_accounts()}</p>
+				{:else}
+					<form
+						method="POST"
+						action="?/payTransfer"
+						enctype="multipart/form-data"
+						use:transferEnhance
+						class="space-y-4"
+					>
+						<HiddenField name="bookingId" value={$transferData.bookingId} />
+						<div class="grid gap-3 sm:grid-cols-2">
+							<InputComp
+								label={m.pay_amount()}
+								form={transferData}
+								errors={transferErrors}
+								name="amount"
+								type="number"
+								min="1"
+							/>
+							<InputComp
+								label={m.pay_type()}
+								form={transferData}
+								errors={transferErrors}
+								name="paymentType"
+								type="select"
+								items={TYPE_ITEMS}
+							/>
+						</div>
+						<TransferFields
+							form={transferData}
+							accounts={data.accounts}
+							total={Number($transferData.amount) || 0}
+							accountError={firstError($transferErrors.bankAccountId)}
+							receiptError={firstError($transferErrors.receipt)}
+						/>
+						<InputComp
+							label={m.pay_reference()}
+							form={transferData}
+							errors={transferErrors}
+							name="reference"
+						/>
+						<Button type="submit" class="w-full" disabled={$sendingReceipt}>
+							{#if $sendingReceipt}
+								<Loader2 class="mr-2 size-4 animate-spin" />{m.pay_uploading()}
+							{:else}
+								{m.pay_transfer_submit()}
+							{/if}
+						</Button>
+					</form>
+				{/if}
+			</Tabs.Content>
+		</Tabs.Root>
 	</Dialog.Content>
 </Dialog.Root>
 

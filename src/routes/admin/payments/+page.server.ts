@@ -12,19 +12,125 @@ import {
 	type WhereSpec
 } from '@nahu/admin-kit/server/queryFilters';
 import { db } from '$lib/server/db';
-import { payments, bookingPayments, refunds, couples, vendors, paymentCommissions } from '$lib/server/db/schema';
+import {
+	payments,
+	bookingPayments,
+	refunds,
+	couples,
+	vendors,
+	paymentCommissions,
+	bankAccounts,
+	subscriptionPlans,
+	user
+} from '$lib/server/db/schema';
 import { parse, ok, bad } from '$lib/server/adminAction';
 import { audit } from '$lib/server/auditLog';
 import { toMoney } from '$lib/money';
-import { confirmBookingPayment, failBookingPayment, paymentFailureMessage } from '$lib/server/bookingPayments';
+import { approveRefund } from '$lib/server/bookingPayments';
+import {
+	confirmTransfer,
+	PaymentRefused,
+	reconcileStale,
+	rejectTransfer,
+	verify,
+	type PaymentKind
+} from '$lib/server/payments';
+import { reviewSchema } from '$lib/schemas/payment';
 import type { Actions, PageServerLoad } from './$types';
 
 /**
  * Three lists, one per tab. Each is a server-paged table and they share the URL's table
  * params, so the tab is in the URL too (`?tab=`) and only the open tab's list is loaded.
  */
-const TABS = ['vendor', 'plan', 'refunds'] as const;
+const TABS = ['review', 'vendor', 'plan', 'refunds'] as const;
 type Tab = (typeof TABS)[number];
+
+const coupleName = sql<string>`concat_ws(' & ', nullif(${couples.brideName}, ''), nullif(${couples.groomName}, ''))`;
+
+/* ---------- receipts waiting for review ---------- */
+
+/**
+ * Every manual payment still `pending`, from both tables: the work queue. Bounded by nature
+ * (each is a receipt someone has to look at), so not paged.
+ */
+async function reviewTab() {
+	const [bookingRows, planRows] = await Promise.all([
+		db
+			.select({
+				id: bookingPayments.id,
+				amount: bookingPayments.amount,
+				method: bookingPayments.paymentMethod,
+				type: bookingPayments.paymentType,
+				receiptFile: bookingPayments.receiptFile,
+				note: bookingPayments.verifyPayload,
+				createdAt: bookingPayments.createdAt,
+				payer: user.name,
+				payerEmail: user.email,
+				vendor: vendors.businessName,
+				bank: bankAccounts.bankName,
+				account: bankAccounts.accountNumber
+			})
+			.from(bookingPayments)
+			.leftJoin(user, eq(user.id, bookingPayments.payerId))
+			.leftJoin(vendors, eq(vendors.id, bookingPayments.payeeVendorId))
+			.leftJoin(bankAccounts, eq(bankAccounts.id, bookingPayments.bankAccountId))
+			.where(
+				and(
+					eq(bookingPayments.status, 'pending'),
+					sql`${bookingPayments.paymentMethod} <> 'chapa'`,
+					isNull(bookingPayments.deletedAt)
+				)
+			)
+			.orderBy(bookingPayments.createdAt),
+		db
+			.select({
+				id: payments.id,
+				amount: payments.amount,
+				method: payments.paymentMethod,
+				receiptFile: payments.receiptFile,
+				note: payments.verifyPayload,
+				createdAt: payments.createdAt,
+				couple: coupleName,
+				payerEmail: couples.email,
+				plan: subscriptionPlans.name,
+				bank: bankAccounts.bankName,
+				account: bankAccounts.accountNumber
+			})
+			.from(payments)
+			.leftJoin(couples, eq(couples.id, payments.coupleId))
+			.leftJoin(subscriptionPlans, eq(subscriptionPlans.id, payments.subscriptionPlanId))
+			.leftJoin(bankAccounts, eq(bankAccounts.id, payments.bankAccountId))
+			.where(and(eq(payments.status, 'pending'), eq(payments.paymentMethod, 'bank_transfer')))
+			.orderBy(payments.createdAt)
+	]);
+
+	return [
+		...bookingRows.map((r) => ({
+			kind: 'booking' as PaymentKind,
+			id: r.id,
+			amount: toMoney(r.amount),
+			payer: r.payer ?? '—',
+			payerEmail: r.payerEmail,
+			forWhat: `${r.vendor ?? 'Vendor'} (${r.type})`,
+			bank: r.bank ? `${r.bank} · ${r.account}` : '—',
+			receiptFile: r.receiptFile,
+			note: r.note,
+			createdAt: r.createdAt
+		})),
+		...planRows.map((r) => ({
+			kind: 'plan' as PaymentKind,
+			id: r.id,
+			amount: toMoney(r.amount),
+			payer: r.couple || '—',
+			payerEmail: r.payerEmail,
+			forWhat: `${r.plan ?? 'Plan'} plan`,
+			bank: r.bank ? `${r.bank} · ${r.account}` : '—',
+			receiptFile: r.receiptFile,
+			note: r.note,
+			createdAt: r.createdAt
+		}))
+	].sort((a, b) => +a.createdAt - +b.createdAt);
+}
 
 /* ---------- booking payments ---------- */
 
@@ -67,6 +173,7 @@ async function vendorTab(query: TableQuery<(typeof VENDOR_FILTERS)[number]>) {
 					type: bookingPayments.paymentType,
 					status: bookingPayments.status,
 					ref: bookingPayments.transactionReference,
+					receiptFile: bookingPayments.receiptFile,
 					paidAt: bookingPayments.paidAt,
 					createdAt: bookingPayments.createdAt,
 					vendor: vendors.businessName,
@@ -100,7 +207,6 @@ async function vendorTab(query: TableQuery<(typeof VENDOR_FILTERS)[number]>) {
 /* ---------- plan payments ---------- */
 
 const PLAN_FILTERS = ['status', 'method'] as const;
-const coupleName = sql<string>`concat_ws(' & ', nullif(${couples.brideName}, ''), nullif(${couples.groomName}, ''))`;
 const planSorts = { id: payments.id, couple: coupleName, amount: payments.amount, date: payments.createdAt };
 const planSpec: WhereSpec<(typeof PLAN_FILTERS)[number]> = {
 	search: (term) =>
@@ -128,6 +234,7 @@ async function planTab(query: TableQuery<(typeof PLAN_FILTERS)[number]>) {
 					method: payments.paymentMethod,
 					status: payments.status,
 					ref: payments.transactionRef,
+					receiptFile: payments.receiptFile,
 					paidAt: payments.paidAt,
 					createdAt: payments.createdAt,
 					couple: coupleName
@@ -205,7 +312,7 @@ async function refundsTab(query: TableQuery<(typeof REFUND_FILTERS)[number]>) {
 
 export const load: PageServerLoad = async ({ url }) => {
 	const asked = url.searchParams.get('tab');
-	const tab: Tab = (TABS as readonly string[]).includes(asked ?? '') ? (asked as Tab) : 'vendor';
+	const tab: Tab = (TABS as readonly string[]).includes(asked ?? '') ? (asked as Tab) : 'review';
 
 	// The tab badge counts pending refunds whichever tab is open.
 	const pendingRefunds = db
@@ -214,52 +321,72 @@ export const load: PageServerLoad = async ({ url }) => {
 		.where(and(eq(refunds.status, 'pending'), isNull(refunds.deletedAt)))
 		.then(([r]) => r.n);
 
-	const [pending, vendor, plan, refundList] = await Promise.all([
+	const [pending, review, vendor, plan, refundList] = await Promise.all([
 		pendingRefunds,
+		reviewTab(),
 		tab === 'vendor' ? vendorTab(parseTableQuery(url, VENDOR_FILTERS, 20, Object.keys(vendorSorts))) : null,
 		tab === 'plan' ? planTab(parseTableQuery(url, PLAN_FILTERS, 20, Object.keys(planSorts))) : null,
 		tab === 'refunds' ? refundsTab(parseTableQuery(url, REFUND_FILTERS, 20, Object.keys(refundSorts))) : null
 	]);
 
-	return { tab, pendingRefunds: pending, vendor, plan, refunds: refundList };
+	return { tab, pendingRefunds: pending, review, vendor, plan, refunds: refundList };
 };
 
 const idOnly = z.object({ id: z.coerce.number().int().positive() });
 
 export const actions = {
-	confirmPayment: async (event) => {
-		const p = await parse(event.request, idOnly);
+	/** The receipt matches the bank statement: settle it (commission and wallet, or the plan). */
+	confirmTransfer: async (event) => {
+		const p = await parse(event.request, reviewSchema);
 		if ('error' in p) return p.error;
-		const r = await confirmBookingPayment(p.data.id);
-		if (!r.ok) return bad(paymentFailureMessage[r.reason]);
-		await audit(event, 'payment.confirm', 'booking_payment', p.data.id, { commission: r.commission, net: r.net });
-		return ok(`Payment confirmed. Commission ${r.commission.toFixed(2)} ETB, vendor credited ${r.net.toFixed(2)} ETB.`);
+		try {
+			await confirmTransfer(p.data.kind, p.data.id, event.locals.user!.id);
+		} catch (err) {
+			if (err instanceof PaymentRefused) return bad(err.message);
+			throw err;
+		}
+		await audit(event, 'payment.confirm', `${p.data.kind}_payment`, p.data.id);
+		return ok('Payment confirmed. The payer has been notified.');
 	},
-	failPayment: async (event) => {
-		const p = await parse(event.request, idOnly);
+	/** The receipt doesn't match: fail it with a reason the payer is told. */
+	rejectTransfer: async (event) => {
+		const p = await parse(event.request, reviewSchema);
 		if ('error' in p) return p.error;
-		const r = await failBookingPayment(p.data.id);
-		if (!r.ok) return bad(paymentFailureMessage[r.reason]);
-		await audit(event, 'payment.fail', 'booking_payment', p.data.id);
-		return ok('Payment marked as not received');
+		if (!p.data.reason) return bad('Give a reason — the payer will see it.');
+		try {
+			await rejectTransfer(p.data.kind, p.data.id, p.data.reason, event.locals.user!.id);
+		} catch (err) {
+			if (err instanceof PaymentRefused) return bad(err.message);
+			throw err;
+		}
+		await audit(event, 'payment.reject', `${p.data.kind}_payment`, p.data.id, { reason: p.data.reason });
+		return ok('Receipt rejected. The payer has been told why.');
+	},
+	/** Asks Chapa again about one pending online payment. */
+	recheckChapa: async (event) => {
+		const p = await parse(event.request, z.object({ ref: z.string().min(3).max(150) }));
+		if ('error' in p) return p.error;
+		const outcome = await verify(p.data.ref);
+		return outcome.status === 'paid'
+			? ok('Chapa confirmed the payment; it is now settled.')
+			: outcome.status === 'failed'
+				? ok('Chapa says this payment failed.')
+				: bad('Chapa has not confirmed this payment yet.');
+	},
+	/** Runs the reconcile job now instead of waiting for the next tick. */
+	reconcile: async () => {
+		const settled = await reconcileStale(50);
+		return ok(`Checked open Chapa payments: ${settled} newly settled.`);
 	},
 	approveRefund: async (event) => {
 		const p = await parse(event.request, idOnly);
 		if ('error' in p) return p.error;
-		const result = await db.transaction(async (tx) => {
-			// Conditional update = the lock: a double-click can't approve twice.
-			const res = await tx
-				.update(refunds)
-				.set({ status: 'approved' })
-				.where(and(eq(refunds.id, p.data.id), eq(refunds.status, 'pending')));
-			if (!res[0].affectedRows) return false;
-			const [r] = await tx.select({ pid: refunds.bookingPaymentId }).from(refunds).where(eq(refunds.id, p.data.id));
-			await tx.update(bookingPayments).set({ status: 'refunded' }).where(eq(bookingPayments.id, r.pid));
-			return true;
-		});
-		if (!result) return bad('Refund is no longer pending');
-		await audit(event, 'refund.approve', 'refund', p.data.id);
-		return ok('Refund approved — remember to send the money back through the gateway.');
+		const result = await approveRefund(p.data.id);
+		if (!result.ok) return bad(result.reason);
+		await audit(event, 'refund.approve', 'refund', p.data.id, { debited: result.debited });
+		return ok(
+			`Refund approved${result.debited ? ` and ${result.debited.toFixed(2)} ETB taken back from the vendor's wallet` : ''}. Send the money back through Chapa or by transfer.`
+		);
 	},
 	rejectRefund: async (event) => {
 		const p = await parse(event.request, idOnly);

@@ -40,6 +40,7 @@
 			cell: ({ row }) => money(row.original.balance)
 		},
 		{ id: 'method', accessorKey: 'method', header: 'Method', cell: ({ row }) => words(row.original.method) },
+		{ id: 'destination', accessorKey: 'destination', header: 'Send to', cell: ({ row }) => row.original.destination ?? '—' },
 		{ id: 'status', accessorKey: 'status', header: 'Status', cell: ({ row }) => status(row.original.status) },
 		{
 			id: 'reference',

@@ -1,9 +1,20 @@
-import { redirect } from '@sveltejs/kit';
-import { superValidate, message } from 'sveltekit-superforms';
+import { fail, redirect } from '@sveltejs/kit';
+import { superValidate, message, withFiles } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { db } from '$lib/server/db';
-import { vendorBookings, bookingPayments, messages } from '$lib/server/db/schema';
-import { bookingSchema, bookingIdSchema, paymentSchema } from '$lib/schemas/booking';
+import { vendorBookings, messages } from '$lib/server/db/schema';
+import { bookingSchema, bookingIdSchema } from '$lib/schemas/booking';
+import { bookingPaySchema, bookingTransferSchema } from '$lib/schemas/payment';
+import { saveUploadedFile, UploadRefused } from '@nahu/admin-kit/server/files';
+import {
+	PaymentRefused,
+	PaymentStartError,
+	startBookingChapa,
+	submitBookingTransfer,
+	transferAccounts
+} from '$lib/server/payments';
+import { LIMITS, takeToken } from '$lib/server/rateLimit';
+import { m } from '$lib/paraglide/messages.js';
 import {
 	listBookings,
 	listBookableVendors,
@@ -33,12 +44,13 @@ export const load: PageServerLoad = async ({ parent }) => {
 	const { wedding } = await parent();
 	if (!wedding) throw redirect(302, '/wedding/wedding');
 
-	const [bookings, vendorList, form, cancelForm, paymentForm] = await Promise.all([
+	const [bookings, vendorList, form, cancelForm, transferForm, accounts] = await Promise.all([
 		listBookings(wedding.id),
 		listBookableVendors(),
 		superValidate(zod4(bookingSchema), { id: 'booking' }),
 		superValidate(zod4(bookingIdSchema), { id: 'cancel' }),
-		superValidate(zod4(paymentSchema), { id: 'payment' })
+		superValidate(zod4(bookingTransferSchema), { id: 'transfer' }),
+		transferAccounts()
 	]);
 
 	return {
@@ -47,7 +59,8 @@ export const load: PageServerLoad = async ({ parent }) => {
 		weddingDate: toDateInput(wedding.weddingDate),
 		form,
 		cancelForm,
-		paymentForm
+		transferForm,
+		accounts
 	};
 };
 
@@ -119,32 +132,87 @@ export const actions: Actions = {
 		return message(form, { type: 'success', text: 'Booking cancelled.' });
 	},
 
-	pay: async ({ request, locals }) => {
-		const { wedding } = await requireCoupleAndWedding(locals);
-
-		const form = await superValidate(request, zod4(paymentSchema), { id: 'payment' });
-		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
-
-		const booking = await getBookingForWedding(form.data.bookingId, wedding.id);
-		if (!booking) return message(form, { type: 'error', text: 'That is not yours to change.' }, { status: 403 });
-
-		if (booking.status === 'cancelled') {
-			return message(form, { type: 'error', text: "You can't record a payment on a cancelled booking." }, { status: 400 });
+	/**
+	 * Pay online: a plain form post (no JavaScript needed) that answers with a 303 to Chapa's
+	 * checkout. Amount and booking are re-checked against the database in `startBookingChapa`.
+	 */
+	payChapa: async ({ request, locals, url, getClientAddress }) => {
+		const { couple, wedding } = await requireCoupleAndWedding(locals);
+		if (!takeToken(`pay:${getClientAddress()}`, LIMITS.payment)) {
+			return fail(429, { message: { type: 'error', text: m.auth_too_many() } });
 		}
 
-		await db.insert(bookingPayments).values({
-			weddingPlanId: wedding.id,
-			bookingId: booking.id,
-			payerId: locals.user!.id,
-			payeeVendorId: booking.vendorId,
-			amount: form.data.amount.toFixed(2),
-			currency: 'ETB',
-			paymentMethod: form.data.paymentMethod,
-			paymentType: form.data.paymentType,
-			status: 'pending',
-			transactionReference: form.data.transactionReference || null
-		});
+		const form = await superValidate(request, zod4(bookingPaySchema));
+		if (!form.valid) {
+			return fail(400, { message: { type: 'error', text: m.auth_form_invalid() } });
+		}
 
-		return message(form, { type: 'success', text: 'Payment logged. It shows as pending until the vendor confirms it.' });
+		const booking = await getBookingForWedding(form.data.bookingId, wedding.id);
+		if (!booking) return fail(403, { message: { type: 'error', text: 'That is not yours to change.' } });
+
+		let checkoutUrl: string;
+		try {
+			checkoutUrl = await startBookingChapa(
+				{
+					booking,
+					weddingPlanId: wedding.id,
+					payer: {
+						id: locals.user!.id,
+						name: locals.user!.name,
+						email: locals.user!.email,
+						phone: couple.phone
+					},
+					amount: form.data.amount,
+					paymentType: form.data.paymentType
+				},
+				url.origin
+			);
+		} catch (err) {
+			if (err instanceof PaymentRefused) {
+				return fail(409, { message: { type: 'error', text: err.message } });
+			}
+			if (err instanceof PaymentStartError) {
+				console.error('Chapa start failed:', err.cause);
+				return fail(502, { message: { type: 'error', text: m.pay_unavailable() } });
+			}
+			throw err;
+		}
+		redirect(303, checkoutUrl);
+	},
+
+	/** Paid by bank transfer: the receipt is saved and waits for staff to match it. */
+	payTransfer: async ({ request, locals, getClientAddress }) => {
+		const { couple, wedding } = await requireCoupleAndWedding(locals);
+		const form = await superValidate(request, zod4(bookingTransferSchema), { id: 'transfer' });
+		if (!takeToken(`pay:${getClientAddress()}`, LIMITS.payment)) {
+			return message(withFiles(form), { type: 'error', text: m.auth_too_many() }, { status: 429 });
+		}
+		if (!form.valid) return fail(400, withFiles({ form }));
+
+		const booking = await getBookingForWedding(form.data.bookingId, wedding.id);
+		if (!booking) {
+			return message(withFiles(form), { type: 'error', text: 'That is not yours to change.' }, { status: 403 });
+		}
+
+		try {
+			const receiptFile = await saveUploadedFile(form.data.receipt);
+			await submitBookingTransfer({
+				booking,
+				weddingPlanId: wedding.id,
+				payer: { id: locals.user!.id, name: locals.user!.name, email: locals.user!.email, phone: couple.phone },
+				amount: form.data.amount,
+				paymentType: form.data.paymentType,
+				bankAccountId: form.data.bankAccountId,
+				reference: form.data.reference || undefined,
+				receiptFile
+			});
+		} catch (err) {
+			if (err instanceof PaymentRefused || err instanceof UploadRefused) {
+				return message(withFiles(form), { type: 'error', text: err.message }, { status: 409 });
+			}
+			throw err;
+		}
+
+		return message(withFiles(form), { type: 'success', text: m.pay_transfer_received() });
 	}
 };

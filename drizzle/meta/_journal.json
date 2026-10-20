@@ -22,6 +22,20 @@
       "when": 1792509708539,
       "tag": "0002_vendors_fulltext",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1792509797623,
+      "tag": "0003_payment_settlement",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1792510522004,
+      "tag": "0004_payouts_receipts",
+      "breakpoints": true
     }
   ]
 }

@@ -1,25 +1,62 @@
 <script lang="ts">
 	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
+	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
+	import * as Dialog from '@nahu/admin-kit/components/ui/dialog/index.js';
+	import * as Tabs from '@nahu/admin-kit/components/ui/tabs/index.js';
 	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
 	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
 	import * as Accordion from '$lib/components/ui/accordion';
 	import { Badge } from '@nahu/admin-kit/components/ui/badge/index.js';
 	import { Check, Loader2 } from '@lucide/svelte';
-	import { toMoney } from '$lib/money';
+	import { formatETB, toMoney } from '$lib/money';
 	import { createForm } from '@nahu/admin-kit/forms/createForm';
-	import { subscribeSchema } from '$lib/schemas/subscribe';
+	import { enhance as kitEnhance } from '$app/forms';
+	import { planTransferSchema } from '$lib/schemas/payment';
+	import TransferFields from '$lib/components/payments/TransferFields.svelte';
+	import { m } from '$lib/paraglide/messages.js';
 
 	let { data } = $props();
 
-	// `createForm` toasts the result; a successful subscribe also carries the checkout to go to.
+	type Plan = (typeof data.plans)[number];
+
+	let checkoutPlan = $state<Plan | null>(null);
+	let payMode = $state<'chapa' | 'transfer'>('chapa');
+	let couponCode = $state('');
+	let quote = $state<{ discount: number; total: number; code: string } | null>(null);
+	let quoteError = $state('');
+
+	const planPrice = $derived(checkoutPlan ? toMoney(checkoutPlan.price) : 0);
+	const total = $derived(quote ? quote.total : planPrice);
+
 	// svelte-ignore state_referenced_locally
-	const { enhance, delayed } = createForm(data.subscribeForm, subscribeSchema, {
-		onUpdated: ({ form: f }) => {
-			if (f.message?.type === 'success' && f.message.checkoutUrl) {
-				window.location.href = f.message.checkoutUrl;
-			}
+	const {
+		form: transferData,
+		errors: transferErrors,
+		enhance: transferEnhance,
+		submitting: sendingReceipt
+	} = createForm(data.transferForm, planTransferSchema, {
+		id: 'plan-transfer',
+		resetForm: true,
+		onUpdated: ({ form }) => {
+			if (form.message?.type === 'success') checkoutPlan = null;
 		}
 	});
+
+	function openCheckout(plan: Plan) {
+		checkoutPlan = plan;
+		payMode = 'chapa';
+		couponCode = '';
+		quote = null;
+		quoteError = '';
+		$transferData.planId = plan.id;
+		$transferData.couponCode = '';
+	}
+
+	/** superforms nests a file field's errors differently; this reads the first message of any. */
+	function firstError(errors: unknown): string | undefined {
+		if (Array.isArray(errors)) return errors[0];
+		return (errors as { _errors?: string[] } | undefined)?._errors?.[0];
+	}
 
 	/** Golden is the recommended tier in the PHP pricing page. */
 	const HIGHLIGHTED = 'golden';
@@ -45,11 +82,11 @@
 		],
 		[
 			'Do you take a cut of what I pay vendors?',
-			'No. Couples pay vendors directly; Leora charges vendors a listing commission, not you.'
+			"No. You pay the vendor's agreed price through Leora; our commission comes out of the vendor's share, not yours."
 		],
 		[
 			'Which payment methods work?',
-			'Telebirr, CBE Birr and bank transfer, plus card payments through our payment partner.'
+			'Telebirr, CBE Birr, M-Pesa and cards through Chapa, or a bank transfer with your receipt.'
 		]
 	];
 </script>
@@ -130,20 +167,13 @@
 								Complete your profile to upgrade
 							</Button>
 						{:else}
-							<form method="POST" action="?/subscribe" use:enhance class="w-full">
-								<HiddenField name="planId" value={plan.id} />
-								<Button
-									type="submit"
-									variant={highlighted ? 'default' : 'outline'}
-									class="w-full"
-									disabled={$delayed}
-								>
-									{#if $delayed}
-										<Loader2 class="mr-2 size-4 animate-spin" />
-									{/if}
-									Upgrade to {plan.name}
-								</Button>
-							</form>
+							<Button
+								variant={highlighted ? 'default' : 'outline'}
+								class="w-full"
+								onclick={() => openCheckout(plan)}
+							>
+								Upgrade to {plan.name}
+							</Button>
 						{/if}
 					</Card.Footer>
 				</Card.Root>
@@ -174,3 +204,104 @@
 		{/each}
 	</Accordion.Root>
 </section>
+
+<Dialog.Root open={!!checkoutPlan} onOpenChange={(open) => !open && (checkoutPlan = null)}>
+	<Dialog.Content class="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+		{#if checkoutPlan}
+			<Dialog.Header>
+				<Dialog.Title>Upgrade to {checkoutPlan.name}</Dialog.Title>
+				<Dialog.Description>
+					{#if quote}
+						<span class="line-through">{formatETB(planPrice)}</span>
+						<strong class="ml-1">{formatETB(total)}</strong> ({quote.code})
+					{:else}
+						{formatETB(planPrice)}
+					{/if}
+				</Dialog.Description>
+			</Dialog.Header>
+
+			<form
+				method="POST"
+				action="?/quote"
+				class="flex items-end gap-2"
+				use:kitEnhance={() =>
+					async ({ result }) => {
+						if (result.type === 'success') {
+							quote = (result.data as { quote: typeof quote }).quote;
+							quoteError = '';
+						} else if (result.type === 'failure') {
+							quote = null;
+							quoteError = (result.data as { quoteError?: string })?.quoteError ?? '';
+						}
+					}}
+			>
+				<input type="hidden" name="planId" value={checkoutPlan.id} />
+				<label class="flex-1 space-y-1.5 text-sm font-medium">
+					<span>{m.pay_coupon()}</span>
+					<input
+						name="couponCode"
+						bind:value={couponCode}
+						oninput={() => (quote = null)}
+						class="h-10 w-full rounded-md border bg-background px-3 uppercase"
+					/>
+				</label>
+				<Button type="submit" variant="outline">{m.pay_coupon_apply()}</Button>
+			</form>
+			{#if quoteError}<p class="text-sm text-destructive">{quoteError}</p>{/if}
+
+			<Tabs.Root bind:value={payMode} class="mt-2">
+				<Tabs.List class="grid w-full grid-cols-2">
+					<Tabs.Trigger value="chapa">{m.pay_method_chapa()}</Tabs.Trigger>
+					<Tabs.Trigger value="transfer">{m.pay_method_transfer()}</Tabs.Trigger>
+				</Tabs.List>
+
+				<Tabs.Content value="chapa" class="pt-3">
+					<p class="mb-4 text-sm text-muted-foreground">{m.pay_method_chapa_hint()}</p>
+					<!-- A plain post: the server answers with a 303 to Chapa. -->
+					<form method="POST" action="?/subscribe">
+						<input type="hidden" name="planId" value={checkoutPlan.id} />
+						<input type="hidden" name="couponCode" value={quote ? couponCode : ''} />
+						<Button type="submit" class="w-full">{m.pay_chapa_submit()}</Button>
+					</form>
+				</Tabs.Content>
+
+				<Tabs.Content value="transfer" class="pt-3">
+					{#if data.accounts.length === 0}
+						<p class="text-sm text-muted-foreground">{m.pay_no_accounts()}</p>
+					{:else}
+						<form
+							method="POST"
+							action="?/transfer"
+							enctype="multipart/form-data"
+							use:transferEnhance
+							class="space-y-4"
+						>
+							<HiddenField name="planId" value={checkoutPlan.id} />
+							<HiddenField name="couponCode" value={quote ? couponCode : ''} />
+							<TransferFields
+								form={transferData}
+								accounts={data.accounts}
+								{total}
+								accountError={firstError($transferErrors.bankAccountId)}
+								receiptError={firstError($transferErrors.receipt)}
+							/>
+							<InputComp
+								label={m.pay_reference()}
+								form={transferData}
+								errors={transferErrors}
+								name="reference"
+							/>
+							<Button type="submit" class="w-full" disabled={$sendingReceipt}>
+								{#if $sendingReceipt}
+									<Loader2 class="mr-2 size-4 animate-spin" />{m.pay_uploading()}
+								{:else}
+									{m.pay_transfer_submit()}
+								{/if}
+							</Button>
+						</form>
+					{/if}
+				</Tabs.Content>
+			</Tabs.Root>
+		{/if}
+	</Dialog.Content>
+</Dialog.Root>

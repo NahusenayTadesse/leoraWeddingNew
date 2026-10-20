@@ -1,12 +1,23 @@
-import { fail } from '@sveltejs/kit';
-import { superValidate, message } from 'sveltekit-superforms';
+import { fail, redirect } from '@sveltejs/kit';
+import { superValidate, message, withFiles } from 'sveltekit-superforms';
+import { redirect as flashRedirect } from 'sveltekit-flash-message/server';
+import { saveUploadedFile, UploadRefused } from '@nahu/admin-kit/server/files';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { subscriptionPlans, subscriptions, payments } from '$lib/server/db/schema';
+import { subscriptionPlans, subscriptions } from '$lib/server/db/schema';
 import { findCouple } from '$lib/server/db/queries/wedding';
-import { subscribeSchema } from '$lib/schemas/subscribe';
-import { chapa, encodeCheckoutToken, normalizeEthiopianPhone } from '$lib/server/chapa';
+import { planPaySchema, planTransferSchema } from '$lib/schemas/payment';
+import {
+	PaymentRefused,
+	PaymentStartError,
+	quoteCoupon,
+	startPlanChapa,
+	submitPlanTransfer,
+	transferAccounts
+} from '$lib/server/payments';
+import { LIMITS, takeToken } from '$lib/server/rateLimit';
+import { m } from '$lib/paraglide/messages.js';
 import { toMoney } from '$lib/money';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -51,111 +62,134 @@ export const load: PageServerLoad = async ({ locals }) => {
 				.then((r) => r[0]?.slug ?? 'free')
 		: null;
 
-	const subscribeForm = await superValidate(zod4(subscribeSchema));
+	const [transferForm, accounts] = await Promise.all([
+		superValidate(zod4(planTransferSchema), { id: 'plan-transfer' }),
+		couple ? transferAccounts() : []
+	]);
 
 	return {
 		plans,
 		currentPlanSlug,
 		hasUser: !!locals.user,
 		hasCouple: !!couple,
-		subscribeForm
+		transferForm,
+		accounts
 	};
 };
 
+async function payerFor(locals: App.Locals) {
+	const couple = await findCouple(locals);
+	if (!locals.user || !couple) return null;
+	return {
+		couple,
+		payer: { id: locals.user.id, name: locals.user.name, email: locals.user.email, phone: couple.phone }
+	};
+}
+
 export const actions: Actions = {
-	subscribe: async ({ request, locals, url }) => {
-		const form = await superValidate(request, zod4(subscribeSchema));
-
+	/**
+	 * Pay online: a plain form post answered with a 303 to Chapa (or straight to the planner when
+	 * a coupon covers the whole price). The price is read from the database in `startPlanChapa`.
+	 */
+	subscribe: async (event) => {
+		const { request, locals, url, getClientAddress } = event;
 		if (!locals.user) {
-			return message(form, { type: 'error', text: 'Please sign in to upgrade your plan.' }, { status: 401 });
+			return fail(401, { message: { type: 'error', text: 'Please sign in to upgrade your plan.' } });
 		}
-		if (!form.valid) return fail(400, { form });
+		if (!takeToken(`pay:${getClientAddress()}`, LIMITS.payment)) {
+			return fail(429, { message: { type: 'error', text: m.auth_too_many() } });
+		}
+		const form = await superValidate(request, zod4(planPaySchema));
+		if (!form.valid) return fail(400, { message: { type: 'error', text: m.auth_form_invalid() } });
 
-		const couple = await findCouple(locals);
-		if (!couple) {
+		const who = await payerFor(locals);
+		if (!who) {
+			return fail(400, { message: { type: 'error', text: 'Add your couple details before upgrading.' } });
+		}
+
+		let started;
+		try {
+			started = await startPlanChapa(
+				{
+					coupleId: who.couple.id,
+					planId: form.data.planId,
+					payer: who.payer,
+					couponCode: form.data.couponCode || null
+				},
+				url.origin
+			);
+		} catch (err) {
+			if (err instanceof PaymentRefused) {
+				return fail(409, { message: { type: 'error', text: err.message } });
+			}
+			if (err instanceof PaymentStartError) {
+				console.error('Chapa start failed:', err.cause);
+				return fail(502, { message: { type: 'error', text: m.pay_unavailable() } });
+			}
+			throw err;
+		}
+
+		if (started.kind === 'activated') {
+			flashRedirect('/wedding', { type: 'success', message: m.pay_plan_activated() }, event);
+		}
+		redirect(303, started.url);
+	},
+
+	/** Prices a plan with a coupon so the checkout can show the discount before paying. */
+	quote: async ({ request, locals }) => {
+		if (!locals.user) return fail(401, { quoteError: 'Please sign in.' });
+		const data = await request.formData();
+		const planId = Number(data.get('planId'));
+		const code = String(data.get('couponCode') ?? '').trim();
+		const [plan] = await db
+			.select({ price: subscriptionPlans.price })
+			.from(subscriptionPlans)
+			.where(and(eq(subscriptionPlans.id, planId), isNull(subscriptionPlans.deletedAt)))
+			.limit(1);
+		if (!plan || !code) return fail(400, { quoteError: 'Enter a coupon code.' });
+		try {
+			const quote = await quoteCoupon(code, toMoney(plan.price));
+			return { quote: { ...quote, planId } };
+		} catch (err) {
+			if (err instanceof PaymentRefused) return fail(400, { quoteError: err.message });
+			throw err;
+		}
+	},
+
+	/** Paid by bank transfer: the receipt waits for staff; the plan activates on confirmation. */
+	transfer: async ({ request, locals, getClientAddress }) => {
+		const form = await superValidate(request, zod4(planTransferSchema), { id: 'plan-transfer' });
+		if (!takeToken(`pay:${getClientAddress()}`, LIMITS.payment)) {
+			return message(withFiles(form), { type: 'error', text: m.auth_too_many() }, { status: 429 });
+		}
+		if (!form.valid) return fail(400, withFiles({ form }));
+
+		const who = await payerFor(locals);
+		if (!who) {
 			return message(
-				form,
+				withFiles(form),
 				{ type: 'error', text: 'Add your couple details before upgrading.' },
 				{ status: 400 }
 			);
 		}
 
-		const [plan] = await db
-			.select()
-			.from(subscriptionPlans)
-			.where(
-				and(
-					eq(subscriptionPlans.id, form.data.planId),
-					eq(subscriptionPlans.audience, 'couple'),
-					eq(subscriptionPlans.isActive, true),
-					isNull(subscriptionPlans.deletedAt)
-				)
-			)
-			.limit(1);
-
-		if (!plan) {
-			return message(form, { type: 'error', text: 'This plan is no longer available.' }, { status: 404 });
-		}
-
-		const amount = toMoney(plan.price);
-		if (amount <= 0) {
-			return message(form, { type: 'error', text: "That plan is free — there's nothing to pay." }, { status: 400 });
-		}
-
-		const tx_ref = chapa.genTxRef();
-
-		// Recorded as 'pending' before we ever talk to Chapa — a payment that
-		// never got a checkout_url must still be visible for reconciliation,
-		// not silently dropped.
-		await db.insert(payments).values({
-			coupleId: couple.id,
-			amount: amount.toFixed(2),
-			currency: 'ETB',
-			paymentMethod: 'chapa',
-			status: 'pending',
-			transactionRef: tx_ref
-		});
-
 		try {
-			const [firstName, ...rest] = (locals.user.name || 'Guest Customer').trim().split(/\s+/);
-			const token = encodeCheckoutToken(tx_ref, plan.id);
-
-			const init = await chapa.initialize({
-				amount: amount.toFixed(2),
-				currency: 'ETB',
-				email: locals.user.email,
-				first_name: firstName,
-				last_name: rest.join(' ') || 'Customer',
-				phone_number: normalizeEthiopianPhone(couple.phone),
-				tx_ref,
-				return_url: `${url.origin}/pricing/confirm/${token}`,
-				customization: {
-					title: 'Leora Events',
-					// Chapa only accepts letters, numbers, hyphens, underscores, spaces
-					// and dots here.
-					description: `Upgrade to ${plan.name}`.replace(/[^a-zA-Z0-9 .-]/g, '')
-				}
-			});
-
-			if (!init?.data?.checkout_url) {
-				throw new Error(init?.message || 'Payment initialization failed');
-			}
-
-			return message(form, {
-				type: 'success',
-				text: 'Redirecting you to Chapa to complete payment…',
-				checkoutUrl: init.data.checkout_url
+			const receiptFile = await saveUploadedFile(form.data.receipt);
+			await submitPlanTransfer({
+				coupleId: who.couple.id,
+				planId: form.data.planId,
+				payer: who.payer,
+				couponCode: form.data.couponCode || null,
+				bankAccountId: form.data.bankAccountId,
+				reference: form.data.reference || undefined,
+				receiptFile
 			});
 		} catch (err) {
-			console.error('Chapa subscription initialize error:', err);
-			return message(
-				form,
-				{
-					type: 'error',
-					text: 'Could not start payment. Please try again or contact support.'
-				},
-				{ status: 502 }
-			);
+			if (err instanceof PaymentRefused || err instanceof UploadRefused) {
+				return message(withFiles(form), { type: 'error', text: err.message }, { status: 409 });
+			}
+			throw err;
 		}
+		return message(withFiles(form), { type: 'success', text: m.pay_transfer_received() });
 	}
 };

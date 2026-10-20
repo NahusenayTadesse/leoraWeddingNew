@@ -17,7 +17,25 @@ import { db } from '$lib/server/db';
 import { vendorPayouts, vendors, vendorWallets, walletTransactions } from '$lib/server/db/schema';
 import { parse, ok, bad } from '$lib/server/adminAction';
 import { audit } from '$lib/server/auditLog';
-import { toMoney, fromMoney } from '$lib/money';
+import { toMoney, fromMoney, formatETB } from '$lib/money';
+import { notify } from '$lib/server/notify';
+
+/** Tells the vendor what happened to their payout request. */
+async function tellVendor(payoutId: number, title: string, body: (amount: string) => string) {
+	const [row] = await db
+		.select({ userId: vendors.userId, amount: vendorPayouts.amount })
+		.from(vendorPayouts)
+		.innerJoin(vendors, eq(vendors.id, vendorPayouts.vendorId))
+		.where(eq(vendorPayouts.id, payoutId));
+	if (row) {
+		await notify(row.userId, {
+			type: 'payout_update',
+			title,
+			body: body(formatETB(toMoney(row.amount))),
+			link: '/vendor-dashboard/payments'
+		});
+	}
+}
 import type { Actions, PageServerLoad } from './$types';
 
 const FILTERS = ['status', 'method'] as const;
@@ -60,6 +78,7 @@ export const load: PageServerLoad = async ({ url }) => {
 					method: vendorPayouts.payoutMethod,
 					status: vendorPayouts.status,
 					reference: vendorPayouts.reference,
+					destination: vendorPayouts.destination,
 					createdAt: vendorPayouts.createdAt,
 					balance: vendorWallets.balance
 				})
@@ -118,6 +137,7 @@ export const actions = {
 			);
 		if (!res[0].affectedRows) return bad('Payout already settled');
 		await audit(event, 'payout.reject', 'vendor_payout', p.data.id);
+		await tellVendor(p.data.id, 'Payout request declined', (a) => `Your payout request for ${a} was declined. Contact us if you have questions.`);
 		return ok('Payout rejected');
 	},
 	complete: async (event) => {
@@ -167,6 +187,7 @@ export const actions = {
 			);
 		}
 		await audit(event, 'payout.complete', 'vendor_payout', p.data.id);
+		await tellVendor(p.data.id, 'Payout sent', (a) => `We've sent your payout of ${a}${form.data.reference ? ` (reference ${form.data.reference})` : ''}.`);
 		return message(form, { type: 'success', text: 'Payout completed and wallet debited' });
 	}
 } satisfies Actions;

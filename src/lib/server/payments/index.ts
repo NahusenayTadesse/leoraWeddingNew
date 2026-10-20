@@ -23,6 +23,7 @@ import {
 	couples,
 	coupons,
 	payments,
+	refunds,
 	subscriptionPlans,
 	vendorBookings,
 	vendors
@@ -125,8 +126,21 @@ export async function bookingBalance(bookingId: number): Promise<BookingBalance>
 		.from(bookingPayments)
 		.where(and(eq(bookingPayments.bookingId, bookingId), isNull(bookingPayments.deletedAt)));
 
+	const [refunded] = await db
+		.select({ total: sql<string>`coalesce(sum(${refunds.amount}), 0)` })
+		.from(refunds)
+		.innerJoin(bookingPayments, eq(bookingPayments.id, refunds.bookingPaymentId))
+		.where(
+			and(
+				eq(bookingPayments.bookingId, bookingId),
+				eq(bookingPayments.status, 'confirmed'),
+				eq(refunds.status, 'approved')
+			)
+		);
+
 	const agreed = toMoney(booking?.agreedPrice ?? 0);
-	const paid = toMoney(sums?.paid ?? 0);
+	// Partial refunds leave a payment confirmed; what came back no longer counts as paid.
+	const paid = toMoney(sums?.paid ?? 0) - toMoney(refunded?.total ?? 0);
 	const underReview = toMoney(sums?.underReview ?? 0);
 	const due = Math.max(0, Math.round((agreed - paid - underReview) * 100) / 100);
 	return { agreed, paid, underReview, due };

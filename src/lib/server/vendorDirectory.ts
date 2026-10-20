@@ -15,8 +15,7 @@ import {
 	city as cityTable,
 	region,
 	vendorBookings,
-	weddingPlans,
-	bookingPayments
+	weddingPlans
 } from '$lib/server/db/schema';
 import { and, asc, desc, eq, gte, inArray, isNull, like, lte, or, sql, count } from 'drizzle-orm';
 
@@ -392,7 +391,7 @@ export async function canReviewVendor(userId: string, vendorId: number): Promise
 				isNull(vendorBookings.deletedAt),
 				or(
 					sql`${vendorBookings.eventDate} <= CURRENT_DATE`,
-					sql`EXISTS (SELECT 1 FROM ${bookingPayments} WHERE ${bookingPayments.bookingId} = ${vendorBookings.id} AND ${bookingPayments.status} = 'confirmed')`
+					sql`EXISTS (SELECT 1 FROM booking_payments bp WHERE bp.booking_id = vendor_bookings.id AND bp.status = 'confirmed')`
 				)
 			)
 		)

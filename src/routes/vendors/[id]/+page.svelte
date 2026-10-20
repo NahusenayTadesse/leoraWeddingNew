@@ -14,6 +14,8 @@
 	import { Badge } from '@nahu/admin-kit/components/ui/badge/index.js';
 	import { Separator } from '@nahu/admin-kit/components/ui/separator/index.js';
 	import { Progress } from '@nahu/admin-kit/components/ui/progress/index.js';
+	import AvailabilityCalendar from '$lib/components/AvailabilityCalendar.svelte';
+	import { m } from '$lib/paraglide/messages.js';
 	import {
 		Star,
 		BadgeCheck,
@@ -28,6 +30,15 @@
 	} from '@lucide/svelte';
 
 	let { data } = $props();
+
+	type Calendar = { month: string; blocked: string[]; booked: string[] };
+	let calendar = $state<Calendar | null>(null);
+
+	async function loadMonth(month?: string) {
+		const query = month ? `?month=${month.slice(0, 7)}` : '';
+		const res = await fetch(`/vendors/${data.vendor.id}/availability${query}`);
+		if (res.ok) calendar = await res.json();
+	}
 
 	let selectedPackage = $state<Record<number, string>>({});
 
@@ -154,11 +165,15 @@
 	<div class="grid gap-8 lg:grid-cols-3">
 		<!-- Main column -->
 		<div class="lg:col-span-2">
-			<Tabs.Root bind:value={tab}>
+			<Tabs.Root
+				bind:value={tab}
+				onValueChange={(v) => v === 'availability' && !calendar && loadMonth()}
+			>
 				<Tabs.List>
 					<Tabs.Trigger value="services">Services ({data.services.length})</Tabs.Trigger>
 					<Tabs.Trigger value="about">About</Tabs.Trigger>
 					<Tabs.Trigger value="reviews">Reviews ({data.vendor.reviewCount})</Tabs.Trigger>
+					<Tabs.Trigger value="availability">{m.avail_title()}</Tabs.Trigger>
 				</Tabs.List>
 
 				<!-- Services -->
@@ -380,6 +395,19 @@
 							{/each}
 						</div>
 					{/if}
+				</Tabs.Content>
+
+				<!-- Availability (loaded when the tab opens) -->
+				<Tabs.Content value="availability" class="mt-6 max-w-md space-y-3">
+					{#if calendar}
+						<AvailabilityCalendar
+							month={calendar.month}
+							blocked={calendar.blocked}
+							booked={calendar.booked}
+							onMonth={loadMonth}
+						/>
+					{/if}
+					<p class="text-sm text-muted-foreground">{m.avail_public_hint()}</p>
 				</Tabs.Content>
 			</Tabs.Root>
 		</div>

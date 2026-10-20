@@ -3,6 +3,7 @@ import {
 	BarChart3,
 	Building2,
 	CalendarCheck,
+	CalendarDays,
 	CreditCard,
 	Gavel,
 	Landmark,
@@ -43,6 +44,7 @@ export const VENDOR_NAVIGATION: NavItem[] = [
 	{ title: 'Services', url: '/vendor-dashboard/services', icon: Sparkles },
 	{ title: 'Packages', url: '/vendor-dashboard/packages', icon: PackageOpen },
 	{ title: 'Bookings', url: '/vendor-dashboard/bookings', icon: CalendarCheck },
+	{ title: 'Availability', url: '/vendor-dashboard/availability', icon: CalendarDays },
 	{ title: 'Payments', url: '/vendor-dashboard/payments', icon: Wallet },
 	{ title: 'Messages', url: '/vendor-dashboard/messages', icon: MessageSquare }
 ];

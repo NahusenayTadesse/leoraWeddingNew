@@ -184,7 +184,16 @@ export async function approveRefund(
 		if (!payment) return { ok: false, reason: 'Payment not found' } as const;
 
 		await tx.update(refunds).set({ status: 'approved' }).where(eq(refunds.id, refund.id));
-		await tx.update(bookingPayments).set({ status: 'refunded' }).where(eq(bookingPayments.id, payment.id));
+
+		// `refunded` means all of it came back; a partial refund leaves the payment confirmed and
+		// balances subtract approved refunds (see bookingBalance / listBookings).
+		const [approved] = await tx
+			.select({ total: sql<string>`coalesce(sum(${refunds.amount}), 0)` })
+			.from(refunds)
+			.where(and(eq(refunds.bookingPaymentId, payment.id), eq(refunds.status, 'approved')));
+		if (toMoney(approved?.total) + 0.005 >= toMoney(payment.amount)) {
+			await tx.update(bookingPayments).set({ status: 'refunded' }).where(eq(bookingPayments.id, payment.id));
+		}
 
 		let debited = 0;
 		if (payment.status === 'confirmed' && payment.payeeVendorId) {

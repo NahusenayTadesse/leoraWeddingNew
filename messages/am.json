@@ -140,5 +140,13 @@
 	"notif_title": "ማሳወቂያዎች",
 	"notif_empty": "ሁሉንም አይተዋል።",
 	"notif_read_all": "ሁሉንም እንደተነበበ ምልክት አድርግ",
-	"notif_bell": "ማሳወቂያዎች ({count} ያልተነበቡ)"
+	"notif_bell": "ማሳወቂያዎች ({count} ያልተነበቡ)",
+	"avail_title": "ተገኝነት",
+	"avail_booked": "ተይዟል",
+	"avail_blocked": "አይገኝም",
+	"avail_free": "ይገኛል",
+	"avail_prev": "ያለፈው ወር",
+	"avail_next": "የሚቀጥለው ወር",
+	"avail_public_hint": "ተይዟል ወይም አይገኝም የተባሉት ቀናት ተይዘዋል። ሌሎቹ ከአቅራቢው ጋር ማረጋገጥ ሊያስፈልጋቸው ይችላል።",
+	"avail_date_blocked": "አቅራቢው በዚያ ቀን አይገኝም። እባክዎ ሌላ ቀን ይምረጡ።"
 }

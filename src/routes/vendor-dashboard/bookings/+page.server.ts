@@ -308,7 +308,7 @@ export const actions: Actions = {
 		const coupleId = Number(data.get('coupleId'));
 		if (coupleId) await markThreadRead(vendor.id, vendor.userId, coupleId);
 		return { success: true };
-	}
+	},
 
 	/** Report a problem with a booking for staff to look into. */
 	dispute: async ({ request, locals }) => {

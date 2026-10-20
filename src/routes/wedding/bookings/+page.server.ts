@@ -16,6 +16,7 @@ import {
 import { LIMITS, takeToken } from '$lib/server/rateLimit';
 import { ClaimRefused, openDispute, requestRefund } from '$lib/server/claims';
 import { notify } from '$lib/server/notify';
+import { isBlocked } from '$lib/server/availability';
 import { parse, ok, bad } from '$lib/server/adminAction';
 import { z } from 'zod/v4';
 
@@ -88,6 +89,10 @@ export const actions: Actions = {
 		if (form.data.serviceId) {
 			const ok = await serviceBelongsToVendor(form.data.serviceId, form.data.vendorId);
 			if (!ok) return message(form, { type: 'error', text: "That service doesn't belong to the chosen vendor." }, { status: 400 });
+		}
+
+		if (await isBlocked(form.data.vendorId, form.data.eventDate)) {
+			return message(form, { type: 'error', text: m.avail_date_blocked() }, { status: 409 });
 		}
 
 		await db.insert(vendorBookings).values({
@@ -243,7 +248,7 @@ export const actions: Actions = {
 		}
 
 		return message(withFiles(form), { type: 'success', text: m.pay_transfer_received() });
-	}
+	},
 
 	/** Ask for (part of) a confirmed payment back; staff decide on admin Payments → Refunds. */
 	requestRefund: async ({ request, locals }) => {

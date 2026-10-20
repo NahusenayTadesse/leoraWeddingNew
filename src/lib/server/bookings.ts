@@ -50,7 +50,8 @@ export async function listBookings(weddingPlanId: number) {
 	const totals = await db
 		.select({
 			bookingId: bookingPayments.bookingId,
-			confirmed: sql<string>`COALESCE(SUM(CASE WHEN ${bookingPayments.status} = 'confirmed' THEN ${bookingPayments.amount} ELSE 0 END), 0)`,
+			// Confirmed money less any approved partial refunds on it.
+			confirmed: sql<string>`COALESCE(SUM(CASE WHEN ${bookingPayments.status} = 'confirmed' THEN ${bookingPayments.amount} - (SELECT COALESCE(SUM(r.amount), 0) FROM refunds r WHERE r.booking_payment_id = booking_payments.id AND r.status = 'approved') ELSE 0 END), 0)`,
 			// Receipts waiting for review. Open Chapa attempts are left out: most are abandoned.
 			pending: sql<string>`COALESCE(SUM(CASE WHEN ${bookingPayments.status} = 'pending' AND ${bookingPayments.paymentMethod} <> 'chapa' THEN ${bookingPayments.amount} ELSE 0 END), 0)`
 		})

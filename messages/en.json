@@ -140,5 +140,13 @@
 	"notif_title": "Notifications",
 	"notif_empty": "You're all caught up.",
 	"notif_read_all": "Mark all as read",
-	"notif_bell": "Notifications ({count} unread)"
+	"notif_bell": "Notifications ({count} unread)",
+	"avail_title": "Availability",
+	"avail_booked": "Booked",
+	"avail_blocked": "Unavailable",
+	"avail_free": "Available",
+	"avail_prev": "Previous month",
+	"avail_next": "Next month",
+	"avail_public_hint": "Dates marked booked or unavailable are taken. Others may still need confirming with the vendor.",
+	"avail_date_blocked": "The vendor is not available on that date. Please choose another day."
 }

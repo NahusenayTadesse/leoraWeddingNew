@@ -17,6 +17,10 @@ import {
 	BOOKING_SORTS
 } from '$lib/server/vendor-bookings';
 import { fromMoney } from '$lib/money';
+import { notify } from '$lib/server/notify';
+import { ClaimRefused, openDispute } from '$lib/server/claims';
+import { parse, ok, bad } from '$lib/server/adminAction';
+import { z as zv4 } from 'zod/v4';
 import {
 	bookingTab,
 	confirmSchema,
@@ -188,6 +192,12 @@ export const actions: Actions = {
 			})
 			.where(and(eq(vendorBookings.id, booking.id), eq(vendorBookings.vendorId, vendor.id)));
 
+		await notify(booking.partner1UserId, {
+			type: 'booking_confirmed',
+			title: 'Booking confirmed',
+			body: `${vendor.businessName ?? 'Your vendor'} confirmed your booking. You can now pay from your bookings page.`,
+			link: '/wedding/bookings'
+		});
 		return message(form, { type: 'success', text: 'Booking confirmed' });
 	},
 
@@ -210,6 +220,12 @@ export const actions: Actions = {
 			})
 			.where(and(eq(vendorBookings.id, booking.id), eq(vendorBookings.vendorId, vendor.id)));
 
+		await notify(booking.partner1UserId, {
+			type: 'booking_cancelled',
+			title: 'Booking cancelled by vendor',
+			body: `${vendor.businessName ?? 'Your vendor'} cancelled your booking. Reason: ${form.data.reason}`,
+			link: '/wedding/bookings'
+		});
 		return message(form, { type: 'success', text: 'Booking cancelled' });
 	},
 
@@ -292,5 +308,27 @@ export const actions: Actions = {
 		const coupleId = Number(data.get('coupleId'));
 		if (coupleId) await markThreadRead(vendor.id, vendor.userId, coupleId);
 		return { success: true };
+	}
+
+	/** Report a problem with a booking for staff to look into. */
+	dispute: async ({ request, locals }) => {
+		const vendor = await requireVendor(locals);
+		const p = await parse(
+			request,
+			zv4.object({
+				id: zv4.coerce.number().int().positive(),
+				reason: zv4.string().trim().min(10, 'Tell us a little more (at least 10 characters)').max(2000)
+			})
+		);
+		if ('error' in p) return p.error;
+		const booking = await getVendorBooking(vendor.id, p.data.id);
+		if (!booking) return bad('Booking not found', 404);
+		try {
+			await openDispute({ bookingId: booking.id, raisedBy: 'vendor', reason: p.data.reason });
+		} catch (err) {
+			if (err instanceof ClaimRefused) return bad(err.message);
+			throw err;
+		}
+		return ok('Thanks — our team will look into it and get back to you.');
 	}
 };

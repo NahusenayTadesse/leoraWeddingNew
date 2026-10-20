@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
-	import { MenuIcon, XIcon } from '@lucide/svelte';
+	import { BellIcon, MenuIcon, XIcon } from '@lucide/svelte';
+	import LanguageSwitch from './LanguageSwitch.svelte';
+	import { m } from '$lib/paraglide/messages.js';
 	import AvatarSettings from './AvatarSettings.svelte';
 	import ThemeToggle from './theme-toggle.svelte';
 
@@ -61,7 +63,26 @@
 		</div>
 
 		<div class="flex items-center gap-3.5">
+			<LanguageSwitch />
 			<ThemeToggle />
+
+			{#if data !== ''}
+				{@const unread = (page.data.unreadNotifications as number | undefined) ?? 0}
+				<a
+					href="/notifications"
+					class="relative p-1.5 opacity-80 hover:opacity-100"
+					aria-label={m.notif_bell({ count: unread })}
+				>
+					<BellIcon class="size-5" />
+					{#if unread > 0}
+						<span
+							class="absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full bg-(--leora-gold) px-1 text-[10px] font-bold text-black"
+						>
+							{unread > 9 ? '9+' : unread}
+						</span>
+					{/if}
+				</a>
+			{/if}
 
 			{#if data === ''}
 				<div class="hidden items-center gap-3.5 sm:flex">

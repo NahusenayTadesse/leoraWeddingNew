@@ -13,7 +13,10 @@ import {
 	address,
 	subcity,
 	city as cityTable,
-	region
+	region,
+	vendorBookings,
+	weddingPlans,
+	bookingPayments
 } from '$lib/server/db/schema';
 import { and, asc, desc, eq, gte, inArray, isNull, like, lte, or, sql, count } from 'drizzle-orm';
 
@@ -226,6 +229,7 @@ export async function getVendor(vendorId: number) {
 	const [row] = await db
 		.select({
 			id: vendors.id,
+			userId: vendors.userId,
 			businessName: vendors.businessName,
 			description: vendors.description,
 			phone: vendors.phone,
@@ -369,6 +373,33 @@ async function coupleIdFor(userId: string): Promise<number | null> {
 	return row?.id ?? null;
 }
 
+/**
+ * Only couples who actually hired the vendor may review them: a confirmed booking whose event
+ * date has passed, or one they have paid on. Without this anyone with an account could post.
+ */
+export async function canReviewVendor(userId: string, vendorId: number): Promise<boolean> {
+	const coupleId = await coupleIdFor(userId);
+	if (!coupleId) return false;
+	const [row] = await db
+		.select({ id: vendorBookings.id })
+		.from(vendorBookings)
+		.innerJoin(weddingPlans, eq(weddingPlans.id, vendorBookings.weddingPlanId))
+		.where(
+			and(
+				eq(weddingPlans.coupleId, coupleId),
+				eq(vendorBookings.vendorId, vendorId),
+				eq(vendorBookings.status, 'confirmed'),
+				isNull(vendorBookings.deletedAt),
+				or(
+					sql`${vendorBookings.eventDate} <= CURRENT_DATE`,
+					sql`EXISTS (SELECT 1 FROM ${bookingPayments} WHERE ${bookingPayments.bookingId} = ${vendorBookings.id} AND ${bookingPayments.status} = 'confirmed')`
+				)
+			)
+		)
+		.limit(1);
+	return !!row;
+}
+
 export async function getUserReview(vendorId: number, userId: string) {
 	const coupleId = await coupleIdFor(userId);
 	if (!coupleId) return null;
@@ -441,6 +472,9 @@ export async function upsertVendorReview(
 ) {
 	const coupleId = await coupleIdFor(userId);
 	if (!coupleId) return { ok: false as const, reason: 'no-couple' as const };
+	if (!(await canReviewVendor(userId, vendorId))) {
+		return { ok: false as const, reason: 'not-a-client' as const };
+	}
 
 	const existing = await db
 		.select({ id: vendorReviews.id })

@@ -3,6 +3,7 @@ import { db } from '$lib/server/db';
 import { subscriptionPlans, subscriptions, couples, vendorSubscriptions, vendors } from '$lib/server/db/schema';
 import { contentCrud } from '$lib/server/crud';
 import { subscriptionPlanAddSchema, subscriptionPlanEditSchema } from '$lib/schemas/admin';
+import { audit } from '$lib/server/auditLog';
 import type { Actions, PageServerLoad } from './$types';
 
 /**
@@ -83,5 +84,14 @@ export const load: PageServerLoad = async (event) => {
 };
 
 export const actions = {
-	edit: crud.actions.edit
+	/** The kit's edit, plus an activity-log entry: a price change is worth a trail. */
+	edit: async (event) => {
+		const posted = await event.request.clone().formData();
+		const result = await crud.actions.edit(event);
+		await audit(event, 'plan.edit', 'subscription_plan', Number(posted.get('id')) || null, {
+			price: posted.get('price'),
+			name: posted.get('name')
+		});
+		return result;
+	}
 } satisfies Actions;

@@ -136,5 +136,9 @@
 	"pay_history": "ክፍያዎች",
 	"pay_rejected_reason": "ተቀባይነት አላገኘም: {reason}",
 	"pay_button": "ይክፈሉ",
-	"pay_wait_vendor": "አቅራቢው ይህን ቦታ ማስያዝ ካረጋገጠ በኋላ መክፈል ይችላሉ።"
+	"pay_wait_vendor": "አቅራቢው ይህን ቦታ ማስያዝ ካረጋገጠ በኋላ መክፈል ይችላሉ።",
+	"notif_title": "ማሳወቂያዎች",
+	"notif_empty": "ሁሉንም አይተዋል።",
+	"notif_read_all": "ሁሉንም እንደተነበበ ምልክት አድርግ",
+	"notif_bell": "ማሳወቂያዎች ({count} ያልተነበቡ)"
 }

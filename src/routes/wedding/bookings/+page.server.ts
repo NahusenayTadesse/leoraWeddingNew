@@ -14,6 +14,20 @@ import {
 	transferAccounts
 } from '$lib/server/payments';
 import { LIMITS, takeToken } from '$lib/server/rateLimit';
+import { ClaimRefused, openDispute, requestRefund } from '$lib/server/claims';
+import { notify } from '$lib/server/notify';
+import { parse, ok, bad } from '$lib/server/adminAction';
+import { z } from 'zod/v4';
+
+const refundSchema = z.object({
+	paymentId: z.coerce.number().int().positive(),
+	amount: z.coerce.number().positive('Enter an amount'),
+	reason: z.string().trim().min(10, 'Tell us a little more (at least 10 characters)').max(1000)
+});
+const disputeSchema = z.object({
+	bookingId: z.coerce.number().int().positive(),
+	reason: z.string().trim().min(10, 'Tell us a little more (at least 10 characters)').max(2000)
+});
 import { m } from '$lib/paraglide/messages.js';
 import {
 	listBookings,
@@ -102,6 +116,13 @@ export const actions: Actions = {
 			});
 		}
 
+		await notify(vendor?.userId, {
+			type: 'booking_requested',
+			title: 'New booking request',
+			body: `A couple asked to book you for ${formatEventDate(form.data.eventDate)}.`,
+			link: '/vendor-dashboard/bookings'
+		});
+
 		return message(form, { type: 'success', text: 'Booking request sent. The vendor will confirm shortly.' });
 	},
 
@@ -128,6 +149,14 @@ export const actions: Actions = {
 					isNull(vendorBookings.deletedAt)
 				)
 			);
+
+		const vendor = await getVendorForMessage(booking.vendorId);
+		await notify(vendor?.userId, {
+			type: 'booking_cancelled',
+			title: 'Booking cancelled by couple',
+			body: 'A couple cancelled their booking with you.',
+			link: '/vendor-dashboard/bookings'
+		});
 
 		return message(form, { type: 'success', text: 'Booking cancelled.' });
 	},
@@ -214,5 +243,35 @@ export const actions: Actions = {
 		}
 
 		return message(withFiles(form), { type: 'success', text: m.pay_transfer_received() });
+	}
+
+	/** Ask for (part of) a confirmed payment back; staff decide on admin Payments → Refunds. */
+	requestRefund: async ({ request, locals }) => {
+		const { wedding } = await requireCoupleAndWedding(locals);
+		const p = await parse(request, refundSchema);
+		if ('error' in p) return p.error;
+		try {
+			await requestRefund({ ...p.data, weddingPlanId: wedding.id, userId: locals.user!.id });
+		} catch (err) {
+			if (err instanceof ClaimRefused) return bad(err.message);
+			throw err;
+		}
+		return ok("Refund requested. We'll review it and let you know.");
+	},
+
+	/** Report a problem with a booking for staff to look into. */
+	openDispute: async ({ request, locals }) => {
+		const { wedding } = await requireCoupleAndWedding(locals);
+		const p = await parse(request, disputeSchema);
+		if ('error' in p) return p.error;
+		const booking = await getBookingForWedding(p.data.bookingId, wedding.id);
+		if (!booking) return bad('That is not yours to change.', 403);
+		try {
+			await openDispute({ bookingId: booking.id, raisedBy: 'couple', reason: p.data.reason });
+		} catch (err) {
+			if (err instanceof ClaimRefused) return bad(err.message);
+			throw err;
+		}
+		return ok('Thanks — our team will look into it and get back to you.');
 	}
 };

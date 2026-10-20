@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { notifications, user } from '$lib/server/db/schema';
+import { notifications, roles, user } from '$lib/server/db/schema';
 import { appOrigin } from '$lib/server/auth';
 import { layout, notifyByEmail } from '$lib/server/email';
 
@@ -54,4 +54,14 @@ export async function notify(userId: string | null | undefined, notice: Notice):
 	} catch (err) {
 		console.error(`[notify] ${notice.type} for ${userId} failed:`, err);
 	}
+}
+
+/** In-app note to every admin (no email by default: the admin pages are where they work). */
+export async function notifyAdmins(notice: Omit<Notice, 'email'> & { email?: boolean }) {
+	const admins = await db
+		.select({ id: user.id })
+		.from(user)
+		.innerJoin(roles, eq(user.roleId, roles.id))
+		.where(eq(roles.name, 'Admin'));
+	await Promise.all(admins.map((a) => notify(a.id, { email: false, ...notice })));
 }

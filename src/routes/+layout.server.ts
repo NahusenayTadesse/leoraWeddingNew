@@ -6,9 +6,10 @@ import {
 	roles,
 	vendors,
 	couples,
-	weddingPlans
+	weddingPlans,
+	notifications
 } from '$lib/server/db/schema';
-import { and, desc, eq, isNull, or } from 'drizzle-orm';
+import { and, count, desc, eq, isNull, or } from 'drizzle-orm';
 import { serviceCardQuery, isListable } from '$lib/server/services';
 import type { LayoutServerLoad } from './$types';
 
@@ -47,13 +48,14 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 			couple: null,
 			budget: null,
 			featured,
-			categories
+			categories,
+			unreadNotifications: 0
 		};
 	}
 
 	// Guarded: the original ran these with `currentUser?.id` even when signed
 	// out, which compiles to `where user_id = NULL` and silently matches nothing.
-	const [featured, categories, profile, vendorRow, couple] = await Promise.all([
+	const [featured, categories, profile, vendorRow, couple, unread] = await Promise.all([
 		featuredQuery,
 		categoriesQuery,
 		db
@@ -82,7 +84,12 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 				)
 			)
 			.limit(1)
-			.then((r) => r[0])
+			.then((r) => r[0]),
+		db
+			.select({ n: count() })
+			.from(notifications)
+			.where(and(eq(notifications.userId, currentUser.id), eq(notifications.isRead, false)))
+			.then((r) => r[0]?.n ?? 0)
 	]);
 
 	const budget = couple
@@ -103,6 +110,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		couple: couple ?? null,
 		budget,
 		featured,
-		categories
+		categories,
+		unreadNotifications: unread
 	};
 };

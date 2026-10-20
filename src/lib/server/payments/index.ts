@@ -23,15 +23,13 @@ import {
 	couples,
 	coupons,
 	payments,
-	roles,
 	subscriptionPlans,
-	user,
 	vendorBookings,
 	vendors
 } from '$lib/server/db/schema';
 import { confirmBookingPayment } from '$lib/server/bookingPayments';
 import { activateSubscription } from '$lib/server/subscriptions';
-import { notify } from '$lib/server/notify';
+import { notify, notifyAdmins } from '$lib/server/notify';
 import { formatETB, fromMoney, toMoney } from '$lib/money';
 import { initializeTransaction, verifyTransaction } from './chapa';
 
@@ -102,18 +100,6 @@ async function assertAccount(bankAccountId: number) {
 	if (!accounts.some((a) => a.id === bankAccountId)) {
 		throw new PaymentRefused('Please choose one of the listed bank accounts.');
 	}
-}
-
-/** In-app note to every admin (no email: the payments page is where they work). */
-async function notifyAdmins(title: string, body: string, link: string) {
-	const admins = await db
-		.select({ id: user.id })
-		.from(user)
-		.innerJoin(roles, eq(user.roleId, roles.id))
-		.where(eq(roles.name, 'Admin'));
-	await Promise.all(
-		admins.map((a) => notify(a.id, { type: 'payment_review', title, body, link, email: false }))
-	);
 }
 
 // ---------------------------------------------------------------------------
@@ -233,11 +219,12 @@ export async function submitBookingTransfer(
 		verifyPayload: input.reference ? `Customer reference: ${input.reference}`.slice(0, 2000) : null
 	});
 
-	await notifyAdmins(
-		'Transfer receipt to review',
-		`${input.payer.name} uploaded a receipt for ${formatETB(input.amount)} (booking #${input.booking.id}).`,
-		'/admin/payments'
-	);
+	await notifyAdmins({
+		type: 'payment_review',
+		title: 'Transfer receipt to review',
+		body: `${input.payer.name} uploaded a receipt for ${formatETB(input.amount)} (booking #${input.booking.id}).`,
+		link: '/admin/payments'
+	});
 }
 
 /** Tells the couple and the vendor that a booking payment has been confirmed. */
@@ -420,11 +407,12 @@ export async function submitPlanTransfer(
 		verifyPayload: input.reference ? `Customer reference: ${input.reference}`.slice(0, 2000) : null
 	});
 
-	await notifyAdmins(
-		'Transfer receipt to review',
-		`${input.payer.name} uploaded a receipt for ${formatETB(total)} (${plan.name} plan).`,
-		'/admin/payments'
-	);
+	await notifyAdmins({
+		type: 'payment_review',
+		title: 'Transfer receipt to review',
+		body: `${input.payer.name} uploaded a receipt for ${formatETB(total)} (${plan.name} plan).`,
+		link: '/admin/payments'
+	});
 }
 
 /**

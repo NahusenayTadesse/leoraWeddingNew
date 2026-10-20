@@ -272,8 +272,8 @@
 						</Card.Root>
 					{/if}
 
-					<!-- Review form -->
-					{#if data.isLoggedIn}
+					<!-- Review form: only couples who hired this vendor (see canReviewVendor) -->
+					{#if data.canReview || data.hasReviewed}
 						<Card.Root>
 							<Card.Header>
 								<Card.Title>{data.hasReviewed ? 'Your review' : 'Leave a review'}</Card.Title>

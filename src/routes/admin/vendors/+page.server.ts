@@ -14,6 +14,8 @@ import { vendors, vendorCategories } from '$lib/server/db/schema';
 import { vendorStatusSchema } from '$lib/schemas/admin';
 import { parse, ok, bad } from '$lib/server/adminAction';
 import { statusLabel } from '$lib/status';
+import { audit } from '$lib/server/auditLog';
+import { notify } from '$lib/server/notify';
 import type { Actions, PageServerLoad } from './$types';
 
 const FILTERS = ['status', 'categoryId'] as const;
@@ -87,17 +89,49 @@ export const load: PageServerLoad = async ({ url }) => {
 	return { rows, server: { pagination: pagination(query, total), facets, filters: currentQuery(query) } };
 };
 
+/** What a vendor is told when an admin changes their listing's status. */
+const VENDOR_STATUS_MESSAGE: Record<string, { title: string; body: (name: string) => string }> = {
+	approved: {
+		title: 'Your listing is live',
+		body: (name) => `${name} has been approved and is now visible to couples on Leora Events.`
+	},
+	rejected: {
+		title: 'Your listing was not approved',
+		body: (name) =>
+			`We couldn't approve ${name} yet. Reply to this email or contact vendors@leoraevents.et and we'll tell you what's needed.`
+	},
+	suspended: {
+		title: 'Your listing has been suspended',
+		body: (name) =>
+			`${name} is hidden from couples for now. Contact vendors@leoraevents.et to resolve this.`
+	}
+};
+
 export const actions = {
-	updateStatus: async ({ request }) => {
-		const p = await parse(request, vendorStatusSchema);
+	updateStatus: async (event) => {
+		const p = await parse(event.request, vendorStatusSchema);
 		if ('error' in p) return p.error;
 
-		try {
-			await db.update(vendors).set({ status: p.data.status }).where(eq(vendors.id, p.data.id));
-			return ok(`Vendor marked ${statusLabel(p.data.status).toLowerCase()}`);
-		} catch (err) {
-			console.error('Failed to update vendor status:', err);
-			return bad('Could not update vendor status', 500);
+		const [before] = await db
+			.select({ status: vendors.status, userId: vendors.userId, name: vendors.businessName })
+			.from(vendors)
+			.where(eq(vendors.id, p.data.id));
+		if (!before) return bad('Vendor not found', 404);
+
+		await db.update(vendors).set({ status: p.data.status }).where(eq(vendors.id, p.data.id));
+		await audit(event, 'vendor.status', 'vendor', p.data.id, { from: before.status, to: p.data.status });
+
+		if (before.status !== p.data.status) {
+			const message = VENDOR_STATUS_MESSAGE[p.data.status];
+			if (message) {
+				await notify(before.userId, {
+					type: `vendor_${p.data.status}`,
+					title: message.title,
+					body: message.body(before.name ?? 'your business'),
+					link: '/vendor-dashboard'
+				});
+			}
 		}
+		return ok(`Vendor marked ${statusLabel(p.data.status).toLowerCase()}`);
 	}
 } satisfies Actions;

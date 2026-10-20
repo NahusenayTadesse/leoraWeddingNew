@@ -20,8 +20,10 @@
 		Check,
 		X,
 		Send,
-		MessageCircle
+		MessageCircle,
+		TriangleAlert
 	} from '@lucide/svelte';
+	import ActionForm from '@nahu/admin-kit/formComponents/ActionForm.svelte';
 	import {
 		cancelSchema,
 		confirmSchema,
@@ -37,6 +39,8 @@
 	let { data } = $props();
 
 	type Row = (typeof data.bookings)[number];
+
+	let disputeFor = $state<Row | null>(null);
 
 	const statusItems = [
 		{ value: 'pending', name: 'Pending' },
@@ -210,6 +214,11 @@
 				{#if b.status !== 'cancelled'}
 					<DropdownMenu.Item onclick={() => openFor('cancel', b)}>
 						<X class="size-4" /> Cancel
+					</DropdownMenu.Item>
+				{/if}
+				{#if b.status !== 'pending'}
+					<DropdownMenu.Item onclick={() => (disputeFor = b)}>
+						<TriangleAlert class="size-4" /> Report a problem
 					</DropdownMenu.Item>
 				{/if}
 				<DropdownMenu.Separator />
@@ -440,5 +449,40 @@
 				</Button>
 			</div>
 		</form>
+	</Dialog.Content>
+</Dialog.Root>
+
+<Dialog.Root open={!!disputeFor} onOpenChange={(open) => !open && (disputeFor = null)}>
+	<Dialog.Content class="sm:max-w-md">
+		<Dialog.Header>
+			<Dialog.Title>Report a problem</Dialog.Title>
+			<Dialog.Description>
+				Tell us what happened with this booking. Our team will contact you and the couple.
+			</Dialog.Description>
+		</Dialog.Header>
+		{#if disputeFor}
+			<ActionForm
+				action="?/dispute"
+				fields={{ id: disputeFor.id }}
+				onDone={() => (disputeFor = null)}
+				class="space-y-4"
+			>
+				{#snippet children({ busy })}
+					<textarea
+						name="reason"
+						required
+						minlength="10"
+						maxlength="2000"
+						rows="5"
+						aria-label="What happened"
+						class="w-full rounded-md border bg-background p-2 text-sm"
+					></textarea>
+					<Dialog.Footer>
+						<Button type="button" variant="outline" onclick={() => (disputeFor = null)}>Cancel</Button>
+						<Button type="submit" disabled={!!busy}>Send</Button>
+					</Dialog.Footer>
+				{/snippet}
+			</ActionForm>
+		{/if}
 	</Dialog.Content>
 </Dialog.Root>

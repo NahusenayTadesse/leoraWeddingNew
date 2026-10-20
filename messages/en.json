@@ -136,5 +136,9 @@
 	"pay_history": "Payments",
 	"pay_rejected_reason": "Not accepted: {reason}",
 	"pay_button": "Pay",
-	"pay_wait_vendor": "You can pay once the vendor confirms this booking."
+	"pay_wait_vendor": "You can pay once the vendor confirms this booking.",
+	"notif_title": "Notifications",
+	"notif_empty": "You're all caught up.",
+	"notif_read_all": "Mark all as read",
+	"notif_bell": "Notifications ({count} unread)"
 }

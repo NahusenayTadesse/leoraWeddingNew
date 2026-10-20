@@ -10,9 +10,11 @@ import {
 	getUserReview,
 	getFavoriteVendorIds,
 	toggleFavorite,
-	upsertVendorReview
+	upsertVendorReview,
+	canReviewVendor
 } from '$lib/server/vendorDirectory';
 import { and, eq } from 'drizzle-orm';
+import { notify } from '$lib/server/notify';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -22,11 +24,12 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	const vendor = await getVendor(vendorId);
 	if (!vendor) throw error(404, 'Vendor not found');
 
-	const [services, reviewData, existingReview, favoriteIds] = await Promise.all([
+	const [services, reviewData, existingReview, favoriteIds, canReview] = await Promise.all([
 		getVendorServices(vendorId),
 		getVendorReviews(vendorId),
 		locals.user ? getUserReview(vendorId, locals.user.id) : Promise.resolve(null),
-		locals.user ? getFavoriteVendorIds(locals.user.id) : Promise.resolve([])
+		locals.user ? getFavoriteVendorIds(locals.user.id) : Promise.resolve([]),
+		locals.user ? canReviewVendor(locals.user.id, vendorId) : Promise.resolve(false)
 	]);
 
 	const [form, favoriteForm] = await Promise.all([
@@ -40,12 +43,16 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		superValidate(zod4(favoriteSchema), { id: 'favorite' })
 	]);
 
+	// The owner's account id is for notifications only; it doesn't belong in page data.
+	const { userId: _ownerId, ...publicVendor } = vendor;
+
 	return {
-		vendor,
+		vendor: publicVendor,
 		services,
 		reviews: reviewData.reviews,
 		buckets: reviewData.buckets,
 		hasReviewed: !!existingReview,
+		canReview,
 		isFavorite: favoriteIds.includes(vendorId),
 		isLoggedIn: !!locals.user,
 		form,
@@ -72,9 +79,23 @@ export const actions: Actions = {
 		if (!result.ok) {
 			return message(
 				form,
-				'Create your wedding profile before reviewing a vendor.',
+				{
+					type: 'error',
+					text:
+						result.reason === 'no-couple'
+							? 'Create your wedding profile before reviewing a vendor.'
+							: 'You can review a vendor after your booking with them is confirmed and has taken place (or you have paid them).'
+				},
 				{ status: 403 }
 			);
+		}
+		if (!result.updated && vendor.userId) {
+			await notify(vendor.userId, {
+				type: 'review_new',
+				title: 'New review',
+				body: `A couple gave you ${form.data.rating} star${form.data.rating === 1 ? '' : 's'}.`,
+				link: `/vendors/${vendorId}`
+			});
 		}
 
 		return message(form, { type: 'success', text: result.updated ? 'Your review was updated.' : 'Thanks for your review!' });

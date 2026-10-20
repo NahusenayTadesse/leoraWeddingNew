@@ -1,5 +1,6 @@
 <script lang="ts">
 	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
+	import ActionForm from '@nahu/admin-kit/formComponents/ActionForm.svelte';
 	import { createForm } from '@nahu/admin-kit/forms/createForm';
 	import { bookingSchema } from '$lib/schemas/booking';
 	import { bookingTransferSchema } from '$lib/schemas/payment';
@@ -45,6 +46,8 @@
 	let pendingCancel = $state<{ id: number; label: string } | null>(null);
 	let payingFor = $state<{ id: number; label: string; balance: number } | null>(null);
 	let payMode = $state<'chapa' | 'transfer'>('chapa');
+	let refundFor = $state<{ paymentId: number; amount: number } | null>(null);
+	let disputeFor = $state<{ bookingId: number; label: string } | null>(null);
 	let chapaAmount = $state(0);
 	let chapaType = $state<'advance' | 'full' | 'balance'>('advance');
 	let serviceItems = $state<{ value: string; name: string }[]>([]);
@@ -380,6 +383,13 @@
 							<Button
 								variant="ghost"
 								size="sm"
+								onclick={() => (disputeFor = { bookingId: booking.id, label: booking.vendorName })}
+							>
+								Report a problem
+							</Button>
+							<Button
+								variant="ghost"
+								size="sm"
 								class="text-destructive"
 								onclick={() => confirmCancel(booking)}
 							>
@@ -425,6 +435,15 @@
 												target="_blank"
 												rel="noopener">{m.pay_view_receipt()}</a
 											>
+										{/if}
+										{#if p.status === 'confirmed'}
+											<button
+												type="button"
+												class="text-xs underline"
+												onclick={() => (refundFor = { paymentId: p.id, amount: p.amount })}
+											>
+												Request refund
+											</button>
 										{/if}
 										{#if p.rejection}
 											<p class="w-full text-xs text-destructive">
@@ -651,3 +670,91 @@
 		</form>
 	</AlertDialog.Content>
 </AlertDialog.Root>
+
+<!-- Refund request -->
+<Dialog.Root open={!!refundFor} onOpenChange={(open) => !open && (refundFor = null)}>
+	<Dialog.Content class="sm:max-w-md">
+		<Dialog.Header>
+			<Dialog.Title>Request a refund</Dialog.Title>
+			<Dialog.Description>
+				Our team reviews every request with you and the vendor before any money is returned.
+			</Dialog.Description>
+		</Dialog.Header>
+		{#if refundFor}
+			<ActionForm
+				action="?/requestRefund"
+				fields={{ paymentId: refundFor.paymentId }}
+				onDone={() => (refundFor = null)}
+				class="space-y-4"
+			>
+				{#snippet children({ busy })}
+					<label class="block space-y-1.5 text-sm font-medium">
+						<span>Amount (ETB)</span>
+						<input
+							name="amount"
+							type="number"
+							min="1"
+							step="0.01"
+							max={refundFor?.amount}
+							value={refundFor?.amount}
+							required
+							class="h-10 w-full rounded-md border bg-background px-3"
+						/>
+					</label>
+					<label class="block space-y-1.5 text-sm font-medium">
+						<span>Why?</span>
+						<textarea
+							name="reason"
+							required
+							minlength="10"
+							maxlength="1000"
+							rows="4"
+							class="w-full rounded-md border bg-background p-2"
+						></textarea>
+					</label>
+					<Dialog.Footer>
+						<Button type="button" variant="outline" onclick={() => (refundFor = null)}>Cancel</Button>
+						<Button type="submit" disabled={!!busy}>Send request</Button>
+					</Dialog.Footer>
+				{/snippet}
+			</ActionForm>
+		{/if}
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Dispute -->
+<Dialog.Root open={!!disputeFor} onOpenChange={(open) => !open && (disputeFor = null)}>
+	<Dialog.Content class="sm:max-w-md">
+		<Dialog.Header>
+			<Dialog.Title>Report a problem</Dialog.Title>
+			<Dialog.Description>
+				{#if disputeFor}With {disputeFor.label}. {/if}Tell us what happened — our team will contact
+				you and the vendor.
+			</Dialog.Description>
+		</Dialog.Header>
+		{#if disputeFor}
+			<ActionForm
+				action="?/openDispute"
+				fields={{ bookingId: disputeFor.bookingId }}
+				onDone={() => (disputeFor = null)}
+				class="space-y-4"
+			>
+				{#snippet children({ busy })}
+					<textarea
+						name="reason"
+						required
+						minlength="10"
+						maxlength="2000"
+						rows="5"
+						aria-label="What happened"
+						class="w-full rounded-md border bg-background p-2 text-sm"
+					></textarea>
+					<Dialog.Footer>
+						<Button type="button" variant="outline" onclick={() => (disputeFor = null)}>Cancel</Button>
+						<Button type="submit" disabled={!!busy}>Send</Button>
+					</Dialog.Footer>
+				{/snippet}
+			</ActionForm>
+		{/if}
+	</Dialog.Content>
+</Dialog.Root>

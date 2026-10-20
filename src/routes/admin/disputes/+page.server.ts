@@ -15,6 +15,7 @@ import { db } from '$lib/server/db';
 import { disputes, vendorBookings, vendors } from '$lib/server/db/schema';
 import { disputeUpdateSchema } from '$lib/schemas/admin';
 import { audit } from '$lib/server/auditLog';
+import { announceDisputeUpdate } from '$lib/server/claims';
 import type { Actions, PageServerLoad } from './$types';
 
 const FILTERS = ['status', 'raisedBy'] as const;
@@ -94,6 +95,7 @@ export const actions = {
 			.set({ status: form.data.status, resolutionNotes: form.data.notes || null })
 			.where(eq(disputes.id, form.data.id));
 		await audit(event, 'dispute.update', 'dispute', form.data.id, { status: form.data.status });
+		await announceDisputeUpdate(form.data.id, form.data.status, form.data.notes || null);
 		return message(form, { type: 'success', text: 'Dispute updated' });
 	}
 } satisfies Actions;

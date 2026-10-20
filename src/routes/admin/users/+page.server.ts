@@ -17,6 +17,8 @@ import { user, session, roles, couples, vendors } from '$lib/server/db/schema';
 import { userBanSchema, userRoleSchema } from '$lib/schemas/admin';
 import { parse, ok } from '$lib/server/adminAction';
 import { audit } from '$lib/server/auditLog';
+import { requirePermission } from '$lib/server/permissions';
+import { PERM } from '$lib/access';
 import type { Actions, PageServerLoad } from './$types';
 
 const FILTERS = ['kind', 'roleId', 'banned'] as const;
@@ -112,12 +114,26 @@ export const load: PageServerLoad = async ({ url }) => {
 	};
 };
 
+async function isAdminAccount(userId: string) {
+	const [row] = await db
+		.select({ name: roles.name })
+		.from(user)
+		.innerJoin(roles, eq(roles.id, user.roleId))
+		.where(eq(user.id, userId))
+		.limit(1);
+	return row?.name === 'Admin';
+}
+
 export const actions = {
 	ban: async (event) => {
+		requirePermission(event.locals, PERM.usersManage);
 		const form = await superValidate(event.request, zod4(userBanSchema));
 		if (!form.valid) return message(form, { type: 'error', text: 'Invalid request' }, { status: 400 });
 		if (form.data.id === event.locals.user?.id) {
 			return message(form, { type: 'error', text: "You can't ban your own account." }, { status: 400 });
+		}
+		if (!event.locals.isSuperAdmin && (await isAdminAccount(form.data.id))) {
+			return message(form, { type: 'error', text: 'Only an admin can ban an admin.' }, { status: 403 });
 		}
 		await db
 			.update(user)
@@ -130,6 +146,7 @@ export const actions = {
 		return message(form, { type: 'success', text: 'User banned and signed out everywhere.' });
 	},
 	unban: async (event) => {
+		requirePermission(event.locals, PERM.usersManage);
 		const p = await parse(event.request, z.object({ id: z.string().min(1) }));
 		if ('error' in p) return p.error;
 		await db
@@ -140,19 +157,27 @@ export const actions = {
 		return ok('User restored');
 	},
 	setRole: async (event) => {
+		requirePermission(event.locals, PERM.usersManage);
 		const form = await superValidate(event.request, zod4(userRoleSchema));
 		if (!form.valid) return message(form, { type: 'error', text: 'Invalid request' }, { status: 400 });
 		if (form.data.id === event.locals.user?.id) {
 			return message(form, { type: 'error', text: "You can't change your own role." }, { status: 400 });
 		}
 		const roleId = form.data.roleId === 0 ? null : form.data.roleId;
+		let roleName: string | null = null;
 		if (roleId !== null) {
 			const [r] = await db
-				.select({ id: roles.id })
+				.select({ id: roles.id, name: roles.name })
 				.from(roles)
 				.where(and(eq(roles.id, roleId), eq(roles.isActive, true)))
 				.limit(1);
 			if (!r) return message(form, { type: 'error', text: 'Unknown role' }, { status: 400 });
+			roleName = r.name;
+		}
+		// Granting or taking away Admin is for admins only; otherwise a staff member with
+		// user.manage could promote an account they control.
+		if (!event.locals.isSuperAdmin && (roleName === 'Admin' || (await isAdminAccount(form.data.id)))) {
+			return message(form, { type: 'error', text: 'Only an admin can change admin roles.' }, { status: 403 });
 		}
 		await db.update(user).set({ roleId }).where(eq(user.id, form.data.id));
 		await audit(event, 'user.setRole', 'user', null, { userId: form.data.id, roleId });

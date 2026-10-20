@@ -152,7 +152,5 @@ INSERT IGNORE INTO coupons (id, code, type, value, max_uses, expires_at) VALUES
   (1, 'LEORA10', 'percent', 10.00, 100, '2027-12-31 23:59:59');
 
 
-COMMIT;
-SET AUTOCOMMIT = @OLD_AUTOCOMMIT;
 
 

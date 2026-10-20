@@ -45,7 +45,8 @@ INSERT IGNORE INTO roles (id, name, description) VALUES
   (3, 'Bride',   'Bride / primary wedding organizer'),
   (4, 'Groom',   'Groom / primary wedding organizer'),
   (5, 'Planner', 'Independent or in-house wedding planner'),
-  (6, 'Vendor',  'Business offering wedding services');
+  (6, 'Vendor',  'Business offering wedding services'),
+  (7, 'Support', 'Customer support: inbox, disputes, bookings, vendors and reviews (read-mostly)');
 
 
 -- ============================================================================
@@ -70,7 +71,13 @@ INSERT IGNORE INTO permissions (id, name, description) VALUES
   (14, 'role.manage',        'Create roles and assign permissions'),
   (15, 'dispute.manage',     'Review and resolve disputes'),
   (16, 'content.manage',     'Edit testimonials, homepage media and categories'),
-  (17, 'activity.view',      'Read the activity log');
+  (17, 'activity.view',      'Read the activity log'),
+  (18, 'booking.view',       'View all bookings'),
+  (19, 'review.manage',      'Moderate vendor reviews'),
+  (20, 'message.manage',     'Work the contact-form inbox'),
+  (21, 'report.view',        'Open reports and revenue figures'),
+  (22, 'settings.manage',    'Change commission and bank accounts'),
+  (23, 'payment.manage',     'Confirm or reject transfer receipts and re-check Chapa');
 
 -- These two use NOT EXISTS rather than INSERT IGNORE. `role_permissions` has
 -- no unique key on (role_id, permission_id), so IGNORE has nothing to dedupe
@@ -82,6 +89,14 @@ SELECT 1, p.id FROM permissions p
 WHERE NOT EXISTS (
   SELECT 1 FROM role_permissions rp WHERE rp.role_id = 1 AND rp.permission_id = p.id
 );
+
+-- Support: the inbox, disputes and read access to what they need to answer people.
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT 7, p.id FROM permissions p
+WHERE p.name IN ('message.manage', 'dispute.manage', 'booking.view', 'vendor.view', 'user.view', 'review.manage', 'payment.view')
+  AND NOT EXISTS (
+    SELECT 1 FROM role_permissions rp WHERE rp.role_id = 7 AND rp.permission_id = p.id
+  );
 
 -- Vendors get the read-only slice their own portal needs.
 INSERT INTO role_permissions (role_id, permission_id)
@@ -369,6 +384,9 @@ INSERT IGNORE INTO subcity (sc_id, city_id, name) VALUES
 INSERT IGNORE INTO commission_settings (id, commission_type, value) VALUES
   (1, 'percentage', 10.00);
 
+
+COMMIT;
+SET AUTOCOMMIT = @OLD_AUTOCOMMIT;
 
 -- ============================================================================
 -- AFTER SEEDING

@@ -1,14 +1,13 @@
 import type { Handle, HandleServerError, ServerInit } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { building, dev } from '$app/environment';
-import { eq } from 'drizzle-orm';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { configureKit } from '@nahu/admin-kit/server/db';
-import { kitHandle, type Grant } from '@nahu/admin-kit/server/hooks';
+import { kitHandle } from '@nahu/admin-kit/server/hooks';
 import { auth } from '$lib/server/auth';
 import { db } from '$lib/server/db';
-import { roles, user } from '$lib/server/db/schema';
-import { access, ADMIN_PERMISSION } from '$lib/access';
+import { access } from '$lib/access';
+import { loadGrant, NO_GRANT } from '$lib/server/permissions';
 import { paraglideMiddleware } from '$lib/paraglide/server';
 
 configureKit({ db, loginPath: '/login' });
@@ -106,27 +105,10 @@ const handleSignedInAreas: Handle = ({ event, resolve }) => {
 	return resolve(event);
 };
 
-const NO_GRANT: Grant = { permList: [], isSuperAdmin: false };
-
 /**
- * The 'Admin' role (database/seed.sql section 1) holds every admin permission. Looked up only for
- * requests under `/admin`, the one area the kit gates, so public pages cost no extra query.
- */
-async function loadGrant(userId: string): Promise<Grant> {
-	const [row] = await db
-		.select({ roleName: roles.name })
-		.from(user)
-		.leftJoin(roles, eq(user.roleId, roles.id))
-		.where(eq(user.id, userId))
-		.limit(1);
-
-	return row?.roleName === 'Admin' ? { permList: [ADMIN_PERMISSION], isSuperAdmin: true } : NO_GRANT;
-}
-
-/**
- * Closes `/admin` to everyone but admins — loads, form actions and endpoints alike, since a
- * layout's `load` never runs before an action. Signed out goes to the login page (a page view) or
- * gets a 401; signed in without the role gets a 403.
+ * Closes `/admin` to everyone without the page's permission — loads, form actions and endpoints
+ * alike, since a layout's `load` never runs before an action. Signed out goes to the login page (a
+ * page view) or gets a 401; signed in without the permission gets a 403.
  */
 const handleKit = kitHandle({
 	access,

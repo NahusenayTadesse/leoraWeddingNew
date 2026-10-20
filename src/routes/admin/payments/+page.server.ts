@@ -36,6 +36,8 @@ import {
 	type PaymentKind
 } from '$lib/server/payments';
 import { reviewSchema } from '$lib/schemas/payment';
+import { requirePermission } from '$lib/server/permissions';
+import { PERM } from '$lib/access';
 import type { Actions, PageServerLoad } from './$types';
 
 /**
@@ -347,6 +349,7 @@ const idOnly = z.object({ id: z.coerce.number().int().positive() });
 export const actions = {
 	/** The receipt matches the bank statement: settle it (commission and wallet, or the plan). */
 	confirmTransfer: async (event) => {
+		requirePermission(event.locals, PERM.paymentsManage);
 		const p = await parse(event.request, reviewSchema);
 		if ('error' in p) return p.error;
 		try {
@@ -360,6 +363,7 @@ export const actions = {
 	},
 	/** The receipt doesn't match: fail it with a reason the payer is told. */
 	rejectTransfer: async (event) => {
+		requirePermission(event.locals, PERM.paymentsManage);
 		const p = await parse(event.request, reviewSchema);
 		if ('error' in p) return p.error;
 		if (!p.data.reason) return bad('Give a reason — the payer will see it.');
@@ -374,6 +378,7 @@ export const actions = {
 	},
 	/** Asks Chapa again about one pending online payment. */
 	recheckChapa: async (event) => {
+		requirePermission(event.locals, PERM.paymentsManage);
 		const p = await parse(event.request, z.object({ ref: z.string().min(3).max(150) }));
 		if ('error' in p) return p.error;
 		const outcome = await verify(p.data.ref);
@@ -384,11 +389,13 @@ export const actions = {
 				: bad('Chapa has not confirmed this payment yet.');
 	},
 	/** Runs the reconcile job now instead of waiting for the next tick. */
-	reconcile: async () => {
+	reconcile: async ({ locals }) => {
+		requirePermission(locals, PERM.paymentsManage);
 		const settled = await reconcileStale(50);
 		return ok(`Checked open Chapa payments: ${settled} newly settled.`);
 	},
 	approveRefund: async (event) => {
+		requirePermission(event.locals, PERM.refunds);
 		const p = await parse(event.request, idOnly);
 		if ('error' in p) return p.error;
 		const result = await approveRefund(p.data.id);
@@ -399,6 +406,7 @@ export const actions = {
 		);
 	},
 	rejectRefund: async (event) => {
+		requirePermission(event.locals, PERM.refunds);
 		const p = await parse(event.request, idOnly);
 		if ('error' in p) return p.error;
 		const res = await db

@@ -49,6 +49,10 @@ const TONES: Record<string, Tone> = {
 	expired: 'neutral',
 	paused: 'neutral',
 	banned: 'danger',
+	// contact inbox
+	new: 'warning',
+	read: 'info',
+	replied: 'success',
 	// tasks
 	todo: 'neutral',
 	in_progress: 'info',

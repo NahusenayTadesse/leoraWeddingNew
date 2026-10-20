@@ -16,6 +16,8 @@ import { parse, ok, bad } from '$lib/server/adminAction';
 import { statusLabel } from '$lib/status';
 import { audit } from '$lib/server/auditLog';
 import { notify } from '$lib/server/notify';
+import { requirePermission } from '$lib/server/permissions';
+import { PERM } from '$lib/access';
 import type { Actions, PageServerLoad } from './$types';
 
 const FILTERS = ['status', 'categoryId'] as const;
@@ -109,6 +111,7 @@ const VENDOR_STATUS_MESSAGE: Record<string, { title: string; body: (name: string
 
 export const actions = {
 	updateStatus: async (event) => {
+		requirePermission(event.locals, PERM.vendorsApprove);
 		const p = await parse(event.request, vendorStatusSchema);
 		if ('error' in p) return p.error;
 

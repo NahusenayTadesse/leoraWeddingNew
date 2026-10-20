@@ -63,50 +63,42 @@
 
 	const priceLabel = (price: string | null) => {
 		const n = toMoney(price);
-		return n === 0 ? 'Free' : `ETB ${n.toLocaleString()}`;
+		return n === 0 ? m.pr_free() : `ETB ${n.toLocaleString()}`;
 	};
 
 	const cycleLabel = (cycle: string, price: string | null) => {
-		if (toMoney(price) === 0) return 'forever';
-		return cycle === 'one_time' ? 'one-time' : `per ${cycle === 'yearly' ? 'year' : 'month'}`;
+		if (toMoney(price) === 0) return m.pr_forever();
+		return cycle === 'one_time'
+			? m.pr_one_time()
+			: cycle === 'yearly'
+				? m.pr_per_year()
+				: m.pr_per_month();
 	};
 
 	const faqs = [
-		[
-			'Can I change plans later?',
-			'Yes. Upgrading takes effect immediately and your new plan limits apply straight away.'
-		],
-		[
-			'What happens when my wedding is over?',
-			'Nothing disappears. Your budget, guest list and vendor history stay available on your account.'
-		],
-		[
-			'Do you take a cut of what I pay vendors?',
-			"No. You pay the vendor's agreed price through Leora; our commission comes out of the vendor's share, not yours."
-		],
-		[
-			'Which payment methods work?',
-			'Telebirr, CBE Birr, M-Pesa and cards through Chapa, or a bank transfer with your receipt.'
-		]
+		[m.pr_faq_q1(), m.pr_faq_a1()],
+		[m.pr_faq_q2(), m.pr_faq_a2()],
+		[m.pr_faq_q3(), m.pr_faq_a3()],
+		[m.pr_faq_q4(), m.pr_faq_a4()]
 	];
 </script>
 
 <svelte:head>
-	<title>Pricing — Leora Events</title>
-	<meta
-		name="description"
-		content="Simple plans for couples planning an Ethiopian wedding. Start free, upgrade when you need more."
-	/>
+	<title>{m.pr_meta_title()}</title>
+	<meta name="description" content={m.pr_meta_description()} />
+	<meta property="og:title" content={m.pr_meta_title()} />
+	<meta property="og:description" content={m.pr_meta_description()} />
 </svelte:head>
 
 <section class="mx-auto max-w-[1180px] px-5 pt-16 pb-10 text-center sm:px-8">
-	<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">Pricing</p>
+	<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">
+		{m.nav_pricing()}
+	</p>
 	<h1 class="mx-auto mt-2 max-w-2xl font-display text-4xl font-extrabold text-balance sm:text-5xl">
-		Plans that fit the wedding you're planning
+		{m.pr_title()}
 	</h1>
 	<p class="mx-auto mt-4 max-w-xl text-[15.5px] text-muted-foreground">
-		Start free and browse every vendor. Upgrade only when you want unlimited tools and a planner in
-		your corner.
+		{m.pr_lead()}
 	</p>
 </section>
 
@@ -125,7 +117,7 @@
 						<div class="flex items-center justify-between gap-2">
 							<Card.Title class="font-display text-xl font-extrabold">{plan.name}</Card.Title>
 							{#if highlighted}
-								<Badge>Most popular</Badge>
+								<Badge>{m.pr_popular()}</Badge>
 							{/if}
 						</div>
 						<div class="mt-2 flex items-baseline gap-1.5">
@@ -155,16 +147,16 @@
 
 					<Card.Footer>
 						{#if isCurrent}
-							<Button variant="outline" class="w-full" disabled>Your current plan</Button>
+							<Button variant="outline" class="w-full" disabled>{m.pr_current()}</Button>
 						{:else if toMoney(plan.price) === 0}
-							<Button href="/signup" variant="outline" class="w-full">Get started free</Button>
+							<Button href="/signup" variant="outline" class="w-full">{m.pr_get_started()}</Button>
 						{:else if !data.hasUser}
 							<Button href="/login?redirectTo=/pricing" variant="outline" class="w-full">
-								Log in to upgrade
+								{m.pr_login_upgrade()}
 							</Button>
 						{:else if !data.hasCouple}
 							<Button href="/wedding/profile" variant="outline" class="w-full">
-								Complete your profile to upgrade
+								{m.pr_profile_upgrade()}
 							</Button>
 						{:else}
 							<Button
@@ -172,7 +164,7 @@
 								class="w-full"
 								onclick={() => openCheckout(plan)}
 							>
-								Upgrade to {plan.name}
+								{m.pr_upgrade_to({ plan: plan.name })}
 							</Button>
 						{/if}
 					</Card.Footer>
@@ -182,9 +174,9 @@
 	{:else}
 		<Card.Root>
 			<Card.Content class="py-16 text-center">
-				<p class="font-display text-lg font-bold">No plans are published yet</p>
+				<p class="font-display text-lg font-bold">{m.pr_none()}</p>
 				<p class="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
-					Once plans are added to the catalog they'll appear here automatically.
+					{m.pr_none_hint()}
 				</p>
 			</Card.Content>
 		</Card.Root>
@@ -192,7 +184,7 @@
 </section>
 
 <section class="mx-auto max-w-[760px] px-5 pb-20 sm:px-8">
-	<h2 class="font-display text-2xl font-extrabold">Pricing questions</h2>
+	<h2 class="font-display text-2xl font-extrabold">{m.pr_questions()}</h2>
 	<Accordion.Root type="single" class="mt-5">
 		{#each faqs as [q, a], i (q)}
 			<Accordion.Item value={`pricing-faq-${i}`}>
@@ -209,7 +201,7 @@
 	<Dialog.Content class="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
 		{#if checkoutPlan}
 			<Dialog.Header>
-				<Dialog.Title>Upgrade to {checkoutPlan.name}</Dialog.Title>
+				<Dialog.Title>{m.pr_upgrade_to({ plan: checkoutPlan.name })}</Dialog.Title>
 				<Dialog.Description>
 					{#if quote}
 						<span class="line-through">{formatETB(planPrice)}</span>

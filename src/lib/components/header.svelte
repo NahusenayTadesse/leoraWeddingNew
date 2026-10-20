@@ -14,12 +14,12 @@
 
 	// Same five links as the PHP header, pointed at routes that exist.
 	const navLinks = [
-		{ label: 'Marketplace', href: '/vendors' },
-		{ label: 'Services', href: '/shop' },
-		{ label: 'Budget', href: '/budget-estimator' },
-		{ label: 'Planning', href: '/dashboard' },
-		{ label: 'Leora Card', href: '/card' },
-		{ label: 'Pricing', href: '/pricing' }
+		{ label: m.nav_marketplace(), href: '/vendors' },
+		{ label: m.nav_services(), href: '/shop' },
+		{ label: m.nav_budget(), href: '/budget-estimator' },
+		{ label: m.nav_planning(), href: '/dashboard' },
+		{ label: m.nav_card(), href: '/card' },
+		{ label: m.nav_pricing(), href: '/pricing' }
 	];
 
 	const isActive = (href: string) => page.url.pathname.startsWith(href);
@@ -44,7 +44,7 @@
 				<small
 					class="mt-px hidden text-[9px] font-semibold tracking-[0.12em] text-muted-foreground uppercase sm:block"
 				>
-					Ethiopia's First Wedding Platform
+					{m.site_tagline()}
 				</small>
 			</span>
 		</a>
@@ -86,8 +86,8 @@
 
 			{#if data === ''}
 				<div class="hidden items-center gap-3.5 sm:flex">
-					<Button href="/login" variant="outline" size="sm">Log in</Button>
-					<Button href="/dashboard" size="sm">Start Planning</Button>
+					<Button href="/login" variant="outline" size="sm">{m.nav_login()}</Button>
+					<Button href="/dashboard" size="sm">{m.nav_start()}</Button>
 				</div>
 			{:else}
 				<AvatarSettings {data} />
@@ -95,7 +95,7 @@
 
 			<button
 				class="-mr-1 p-1.5 lg:hidden"
-				aria-label="Toggle menu"
+				aria-label={m.nav_toggle()}
 				aria-expanded={mobileMenuOpen}
 				onclick={() => (mobileMenuOpen = !mobileMenuOpen)}
 			>
@@ -123,8 +123,9 @@
 				{/each}
 				{#if data === ''}
 					<div class="mt-3 flex gap-2 border-t pt-4">
-						<Button href="/login" variant="outline" class="flex-1" size="sm">Log in</Button>
-						<Button href="/dashboard" class="flex-1" size="sm">Start Planning</Button>
+						<Button href="/login" variant="outline" class="flex-1" size="sm">{m.nav_login()}</Button
+						>
+						<Button href="/dashboard" class="flex-1" size="sm">{m.nav_start()}</Button>
 					</div>
 				{/if}
 			</div>

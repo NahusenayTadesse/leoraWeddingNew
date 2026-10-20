@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { tick } from 'svelte';
 	import { Bot, Send, X, BotMessageSquare, Loader } from '@lucide/svelte';
 
@@ -20,15 +21,14 @@
 	let messages: ChatMessage[] = $state([
 		{
 			role: 'assistant',
-			content:
-				'Hi! Welcome to **Leora Weddings**. How can I help you plan your dream wedding today?'
+			content: m.chat_hello()
 		}
 	]);
 
 	const quickLinks = [
-		{ label: 'Find Vendors', href: '/vendors' },
-		{ label: 'Explore Venues', href: '/venues' },
-		{ label: 'Contact Concierge', href: '/contact-us' }
+		{ label: m.chat_find(), href: '/vendors' },
+		{ label: m.chat_budget(), href: '/budget-estimator' },
+		{ label: m.chat_contact(), href: '/contact-us' }
 	];
 
 	async function scrollToBottom() {
@@ -66,9 +66,7 @@
 					...messages,
 					{
 						role: 'assistant',
-						content:
-							data.error ??
-							'You have reached the chat limit for this device. Please try again later.'
+						content: data.error ?? m.chat_limit()
 					}
 				];
 
@@ -76,14 +74,14 @@
 			}
 
 			if (!response.ok) {
-				throw new Error(data.error ?? 'Failed to process your message. Please try again.');
+				throw new Error(data.error ?? m.chat_failed());
 			}
 
 			messages = [
 				...messages,
 				{
 					role: 'assistant',
-					content: data.reply ?? 'I am sorry, I couldn’t process that request right now.'
+					content: data.reply ?? m.chat_sorry()
 				}
 			];
 		} catch (error) {
@@ -91,8 +89,7 @@
 				...messages,
 				{
 					role: 'assistant',
-					content:
-						error instanceof Error ? error.message : 'Something went wrong. Please try again.'
+					content: error instanceof Error ? error.message : m.chat_error()
 				}
 			];
 		} finally {
@@ -146,8 +143,8 @@
 						</Avatar.Root>
 
 						<div>
-							<Card.Title class="text-base">Leora Wedding Assistant</Card.Title>
-							<Card.Description>Ask us about vendors, venues, or planning</Card.Description>
+							<Card.Title class="text-base">{m.chat_title()}</Card.Title>
+							<Card.Description>{m.chat_desc()}</Card.Description>
 						</div>
 					</div>
 
@@ -155,7 +152,7 @@
 						type="button"
 						variant="ghost"
 						size="icon"
-						aria-label="Close chat"
+						aria-label={m.chat_close()}
 						onclick={() => (open = false)}
 					>
 						<X class="h-4 w-4" />
@@ -203,7 +200,7 @@
 								class="flex items-center gap-2 rounded-2xl bg-muted px-4 py-2 text-sm text-muted-foreground"
 							>
 								<Loader class="h-4 w-4 animate-spin" />
-								Planning...
+								{m.chat_planning()}
 							</div>
 						</div>
 					{/if}
@@ -220,7 +217,7 @@
 				<div class="flex gap-2">
 					<Input
 						bind:value={input}
-						placeholder="Type your message..."
+						placeholder={m.chat_type()}
 						disabled={loading}
 						onkeydown={handleKeydown}
 					/>
@@ -229,7 +226,7 @@
 						type="submit"
 						size="icon"
 						disabled={loading || !input.trim()}
-						aria-label="Send message"
+						aria-label={m.chat_send()}
 					>
 						<Send class="h-4 w-4" />
 					</Button>
@@ -242,14 +239,14 @@
 		type="button"
 		size="lg"
 		class="rounded-2xl px-4 py-8 shadow-2xl"
-		aria-label={open ? 'Close chat' : 'Open chat'}
+		aria-label={open ? m.chat_close() : m.chat_open()}
 		onclick={() => (open = !open)}
 	>
 		{#if open}
 			<X class="h-8! w-8!" />
 		{:else}
 			<BotMessageSquare class="h-8! w-8!" />
-			Ask Leora
+			{m.chat_ask()}
 		{/if}
 	</Button>
 </div>

@@ -6,6 +6,7 @@ import { coupleSchema } from '$lib/schemas/couples';
 import { getCoupleByUserId, uniqueSlug } from '$lib/server/couples';
 import { and, eq, isNull } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
+import { m } from '$lib/paraglide/messages.js';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const couple = await getCoupleByUserId(locals.user!.id);
@@ -32,11 +33,7 @@ export const actions: Actions = {
 		const userId = locals.user!.id;
 		const form = await superValidate(request, zod4(coupleSchema));
 		if (!form.valid)
-			return message(
-				form,
-				{ type: 'error', text: 'Please check the form for errors' },
-				{ status: 400 }
-			);
+			return message(form, { type: 'error', text: m.srv_check_form() }, { status: 400 });
 
 		const existing = await getCoupleByUserId(userId);
 
@@ -78,7 +75,7 @@ export const actions: Actions = {
 
 		return message(form, {
 			type: 'success',
-			text: existing ? 'Details updated.' : 'Your couple profile is ready!'
+			text: existing ? m.srv_details_updated() : m.srv_profile_ready()
 		});
 	}
 };

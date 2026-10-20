@@ -10,6 +10,7 @@ import {
 } from '$lib/server/planner';
 import { parse, ok, bad } from '$lib/server/adminAction';
 import type { Actions, PageServerLoad } from './$types';
+import { m } from '$lib/paraglide/messages.js';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const couple = await getCoupleByUserId(locals.user!.id);
@@ -31,7 +32,7 @@ export const actions = {
 		);
 		if ('error' in p) return p.error;
 		await addTables(couple.id, p.data.count, p.data.capacity, p.data.prefix || 'Table');
-		return ok(`${p.data.count} table${p.data.count === 1 ? '' : 's'} added`);
+		return ok(m.srv_tables_added({ count: p.data.count }));
 	},
 	updateTable: async ({ request, locals }) => {
 		const { couple } = await requireCoupleAndWedding(locals);
@@ -45,15 +46,15 @@ export const actions = {
 		);
 		if ('error' in p) return p.error;
 		if (!(await updateTable(couple.id, p.data.id, p.data.name, p.data.capacity)))
-			return bad('Table not found', 404);
-		return ok('Table saved');
+			return bad(m.srv_table_not_found(), 404);
+		return ok(m.srv_table_saved());
 	},
 	removeTable: async ({ request, locals }) => {
 		const { couple } = await requireCoupleAndWedding(locals);
 		const p = await parse(request, z.object({ id }));
 		if ('error' in p) return p.error;
-		if (!(await removeTable(couple.id, p.data.id))) return bad('Table not found', 404);
-		return ok('Table removed');
+		if (!(await removeTable(couple.id, p.data.id))) return bad(m.srv_table_not_found(), 404);
+		return ok(m.srv_table_removed());
 	},
 	seat: async ({ request, locals }) => {
 		const { couple } = await requireCoupleAndWedding(locals);
@@ -66,7 +67,7 @@ export const actions = {
 		);
 		if ('error' in p) return p.error;
 		if (!(await seatGuest(couple.id, p.data.guestId, p.data.tableId)))
-			return bad('Guest or table not found', 404);
-		return ok(p.data.tableId ? 'Guest seated' : 'Guest unseated');
+			return bad(m.srv_seat_not_found(), 404);
+		return ok(p.data.tableId ? m.srv_guest_seated() : m.srv_guest_unseated());
 	}
 } satisfies Actions;

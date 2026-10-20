@@ -100,7 +100,7 @@ export const actions: Actions = {
 		const { request, locals, url, getClientAddress } = event;
 		if (!locals.user) {
 			return fail(401, {
-				message: { type: 'error', text: 'Please sign in to upgrade your plan.' }
+				message: { type: 'error', text: m.srv_sign_in_upgrade() }
 			});
 		}
 		if (!takeToken(`pay:${getClientAddress()}`, LIMITS.payment)) {
@@ -112,7 +112,7 @@ export const actions: Actions = {
 		const who = await payerFor(locals);
 		if (!who) {
 			return fail(400, {
-				message: { type: 'error', text: 'Add your couple details before upgrading.' }
+				message: { type: 'error', text: m.srv_couple_first() }
 			});
 		}
 
@@ -177,7 +177,7 @@ export const actions: Actions = {
 		if (!who) {
 			return message(
 				withFiles(form),
-				{ type: 'error', text: 'Add your couple details before upgrading.' },
+				{ type: 'error', text: m.srv_couple_first() },
 				{ status: 400 }
 			);
 		}

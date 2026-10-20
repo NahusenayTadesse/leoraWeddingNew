@@ -34,6 +34,7 @@ import { activateSubscription, activateVendorPlan } from '$lib/server/subscripti
 import { notify, notifyAdmins } from '$lib/server/notify';
 import { formatETB, fromMoney, toMoney } from '$lib/money';
 import { initializeTransaction, verifyTransaction } from './chapa';
+import { m } from '$lib/paraglide/messages.js';
 
 export type PaymentKind = 'booking' | 'plan' | 'vendor_plan';
 
@@ -103,7 +104,7 @@ export function transferAccounts() {
 async function assertAccount(bankAccountId: number) {
 	const accounts = await transferAccounts();
 	if (!accounts.some((a) => a.id === bankAccountId)) {
-		throw new PaymentRefused('Please choose one of the listed bank accounts.');
+		throw new PaymentRefused(m.srv_choose_account());
 	}
 }
 
@@ -160,12 +161,12 @@ export type BookingPayInput = {
 
 async function checkBookingPayable(input: BookingPayInput) {
 	if (input.booking.status !== 'confirmed') {
-		throw new PaymentRefused('You can pay once the vendor has confirmed the booking.');
+		throw new PaymentRefused(m.srv_pay_after_confirm());
 	}
 	const { due } = await bookingBalance(input.booking.id);
-	if (due <= 0) throw new PaymentRefused('Nothing is owed on this booking.');
+	if (due <= 0) throw new PaymentRefused(m.srv_nothing_owed());
 	if (!(input.amount > 0) || input.amount > due + TOLERANCE) {
-		throw new PaymentRefused(`Enter an amount between 1 and ${formatETB(due)}.`);
+		throw new PaymentRefused(m.srv_amount_between({ amount: formatETB(due) }));
 	}
 }
 
@@ -295,12 +296,12 @@ export async function quoteCoupon(code: string, price: number): Promise<CouponQu
 		)
 		.limit(1);
 
-	if (!coupon) throw new PaymentRefused('That coupon code is not valid.');
+	if (!coupon) throw new PaymentRefused(m.srv_coupon_invalid());
 	if (coupon.expiresAt && coupon.expiresAt < new Date()) {
-		throw new PaymentRefused('That coupon has expired.');
+		throw new PaymentRefused(m.srv_coupon_expired());
 	}
 	if (coupon.maxUses != null && coupon.usesCount >= coupon.maxUses) {
-		throw new PaymentRefused('That coupon has been fully used.');
+		throw new PaymentRefused(m.srv_coupon_used());
 	}
 
 	const value = toMoney(coupon.value);
@@ -335,7 +336,7 @@ async function pricePlan(input: PlanPayInput) {
 			)
 		)
 		.limit(1);
-	if (!plan) throw new PaymentRefused('This plan is no longer available.');
+	if (!plan) throw new PaymentRefused(m.srv_plan_unavailable());
 
 	const price = toMoney(plan.price);
 	if (price <= 0) throw new PaymentRefused("That plan is free — there's nothing to pay.");
@@ -409,7 +410,7 @@ export async function submitPlanTransfer(
 	input: PlanPayInput & { bankAccountId: number; receiptFile: string; reference?: string }
 ) {
 	const { plan, quote, total } = await pricePlan(input);
-	if (total <= 0) throw new PaymentRefused('This plan is fully covered by your coupon.');
+	if (total <= 0) throw new PaymentRefused(m.srv_plan_covered());
 	await assertAccount(input.bankAccountId);
 
 	await db.insert(payments).values({
@@ -508,7 +509,7 @@ async function priceVendorPlan(planId: number) {
 			)
 		)
 		.limit(1);
-	if (!plan) throw new PaymentRefused('This plan is no longer available.');
+	if (!plan) throw new PaymentRefused(m.srv_plan_unavailable());
 	return { plan, price: toMoney(plan.price) };
 }
 
@@ -569,7 +570,7 @@ export async function submitVendorPlanTransfer(
 	input: VendorPlanInput & { bankAccountId: number; receiptFile: string; reference?: string }
 ) {
 	const { plan, price } = await priceVendorPlan(input.planId);
-	if (price <= 0) throw new PaymentRefused('This plan is free.');
+	if (price <= 0) throw new PaymentRefused(m.srv_plan_free());
 	await assertAccount(input.bankAccountId);
 	await db.insert(payments).values({
 		vendorId: input.vendorId,

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
 	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
 	import { Badge } from '@nahu/admin-kit/components/ui/badge/index.js';
@@ -54,42 +55,30 @@
 	const highlights = [
 		{
 			icon: CalendarCheck,
-			title: 'One-tap RSVP',
-			body: 'Guests reply from the card. Replies land straight in your guest list.'
+			title: m.cardp_h1_title(),
+			body: m.cardp_h1_body()
 		},
 		{
 			icon: QrCode,
-			title: 'QR check-in',
-			body: 'Every guest gets a code. Scan at the door to check them in.'
+			title: m.cardp_h2_title(),
+			body: m.cardp_h2_body()
 		},
 		{
 			icon: Sparkles,
-			title: 'Ethiopian motifs',
-			body: 'Designs drawn from traditional patterns, built for the screen.'
+			title: m.cardp_h3_title(),
+			body: m.cardp_h3_body()
 		}
 	];
 
 	const features = [
-		[
-			'01',
-			'Elegant themes',
-			'Choose from designs built around Ethiopian motifs, reimagined for the screen.'
-		],
-		[
-			'02',
-			'Live RSVP & check-in',
-			'Guests respond in one tap; check them in at the door with a scan.'
-		],
-		[
-			'03',
-			'Interactive map & directions',
-			'Venue location, parking notes and timing, all in the card itself.'
-		]
+		['01', m.home_card_f1_title(), m.home_card_f1_body()],
+		['02', m.home_card_f2_title(), m.home_card_f2_body()],
+		['03', m.home_card_f3_title(), m.home_card_f3_body()]
 	];
 </script>
 
 <svelte:head>
-	<title>The Leora Card — Leora Events</title>
+	<title>{m.cardp_meta_title()}</title>
 	<meta
 		name="description"
 		content="A digital wedding invitation with a live countdown, interactive map, guest RSVP and QR check-in."
@@ -100,22 +89,21 @@
 	<div class="grid items-center gap-12 lg:grid-cols-[1fr_0.85fr]">
 		<div>
 			<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">
-				The Leora Card
+				{m.home_card_eyebrow()}
 			</p>
 			<h1 class="mt-2 font-display text-4xl font-extrabold text-balance sm:text-5xl">
-				An invitation worth sharing
+				{m.home_card_title()}
 			</h1>
 			<p class="mt-4 max-w-xl text-[15.5px] leading-relaxed text-muted-foreground">
-				Every Leora Card comes with a live countdown, interactive map, guest RSVP flow and a
-				personal QR check-in — wrapped in a design your guests will want to screenshot.
+				{m.home_card_lead()}
 			</p>
 			<div class="mt-7 flex flex-wrap gap-3">
 				{#if data.couple}
-					<Button href="/wedding/guests" size="lg">Manage guests &amp; RSVPs</Button>
-					<Button href="/wedding/wedding" variant="outline" size="lg">Edit wedding details</Button>
+					<Button href="/wedding/guests" size="lg">{m.cardp_manage()}</Button>
+					<Button href="/wedding/wedding" variant="outline" size="lg">{m.cardp_edit()}</Button>
 				{:else}
-					<Button href="/signup" size="lg">Create your card</Button>
-					<Button href="/pricing" variant="outline" size="lg">See what's included</Button>
+					<Button href="/signup" size="lg">{m.cardp_create()}</Button>
+					<Button href="/pricing" variant="outline" size="lg">{m.cardp_included()}</Button>
 				{/if}
 			</div>
 		</div>
@@ -126,11 +114,11 @@
 				<div class="pointer-events-none absolute inset-0 bg-(image:--hero-glow)"></div>
 				<div class="relative">
 					<p class="text-[11.5px] font-bold tracking-[0.14em] text-(--leora-gold) uppercase">
-						You're Invited
+						{m.cardp_invited()}
 					</p>
 
 					<p class="mt-4 font-display text-3xl font-extrabold text-white sm:text-4xl">
-						{coupleNames ?? 'Your names here'}
+						{coupleNames ?? m.cardp_names()}
 					</p>
 
 					<p class="mt-3 text-[13.5px] text-white/70">
@@ -142,12 +130,12 @@
 								· {data.plan.city}
 							{/if}
 						{:else}
-							Set your wedding date to start the countdown
+							{m.cardp_set_date()}
 						{/if}
 					</p>
 
 					<div class="mt-7 grid grid-cols-4 gap-2">
-						{#each [['Days', countdown?.days], ['Hrs', countdown?.hours], ['Min', countdown?.mins], ['Sec', countdown?.secs]] as [label, value] (label)}
+						{#each [[m.cardp_days(), countdown?.days], [m.cardp_hrs(), countdown?.hours], [m.cardp_min(), countdown?.mins], [m.cardp_sec(), countdown?.secs]] as [label, value] (label)}
 							<div class="rounded-xl border border-white/10 bg-white/5 py-3">
 								<span class="block font-display text-xl font-extrabold text-white tabular-nums">
 									{value ?? '--'}
@@ -160,7 +148,7 @@
 					</div>
 
 					{#if countdown?.passed}
-						<p class="mt-5 text-[13px] text-(--leora-gold)">Congratulations! 🎉</p>
+						<p class="mt-5 text-[13px] text-(--leora-gold)">{m.cardp_congrats()}</p>
 					{/if}
 
 					{#if data.ceremony?.venueName}
@@ -180,9 +168,9 @@
 		<Card.Root class="border-primary">
 			<Card.Content class="flex flex-wrap items-center justify-between gap-4">
 				<span class="text-[13.5px]">
-					Your card is ready — add your wedding date and venue and it fills in automatically.
+					{m.cardp_ready()}
 				</span>
-				<Button href="/wedding/wedding" size="sm">Add wedding details</Button>
+				<Button href="/wedding/wedding" size="sm">{m.cardp_add_details()}</Button>
 			</Card.Content>
 		</Card.Root>
 	</section>
@@ -219,11 +207,11 @@
 
 	{#if !data.couple}
 		<div class="mt-12 text-center">
-			<Badge variant="secondary" class="mb-4 text-accent-foreground">Included with Golden</Badge>
+			<Badge variant="secondary" class="mb-4 text-accent-foreground">{m.cardp_golden()}</Badge>
 			<p class="mx-auto max-w-md text-[14px] text-muted-foreground">
-				The Leora Card comes with the Golden plan, or as a custom design on Platinum.
+				{m.cardp_golden_body()}
 			</p>
-			<Button href="/pricing" class="mt-5">See plans</Button>
+			<Button href="/pricing" class="mt-5">{m.cardp_see_plans()}</Button>
 		</div>
 	{/if}
 </section>

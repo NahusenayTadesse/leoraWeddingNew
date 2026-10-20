@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import ActionForm from '@nahu/admin-kit/formComponents/ActionForm.svelte';
 	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
 	import { taskSchema, taskIdSchema, generateSchema } from '$lib/schemas/task';
@@ -64,40 +65,47 @@
 
 	/** Buckets tasks by urgency; only applied to the open list. */
 	const groups = $derived.by(() => {
-		if (filter === 'done') return [{ label: 'Completed', tasks: visible }];
+		if (filter === 'done') return [{ key: 'done', label: m.tsk_completed(), tasks: visible }];
 
-		const buckets: Record<string, typeof visible> = {
-			Overdue: [],
-			'This month': [],
-			Upcoming: [],
-			'No due date': [],
-			Completed: []
+		const buckets: Record<'overdue' | 'month' | 'upcoming' | 'none' | 'done', typeof visible> = {
+			overdue: [],
+			month: [],
+			upcoming: [],
+			none: [],
+			done: []
+		};
+		const LABELS: Record<keyof typeof buckets, string> = {
+			overdue: m.tsk_overdue(),
+			month: m.tsk_this_month(),
+			upcoming: m.tsk_upcoming(),
+			none: m.wov_no_due(),
+			done: m.tsk_completed()
 		};
 
 		for (const t of visible) {
 			if (t.isConfirmed) {
-				buckets.Completed.push(t);
+				buckets.done.push(t);
 				continue;
 			}
 			const diff = dayDiff(t.dueDate);
-			if (diff === null) buckets['No due date'].push(t);
-			else if (diff < 0) buckets.Overdue.push(t);
-			else if (diff <= 30) buckets['This month'].push(t);
-			else buckets.Upcoming.push(t);
+			if (diff === null) buckets.none.push(t);
+			else if (diff < 0) buckets.overdue.push(t);
+			else if (diff <= 30) buckets.month.push(t);
+			else buckets.upcoming.push(t);
 		}
 
-		return Object.entries(buckets)
-			.filter(([, tasks]) => tasks.length > 0)
-			.map(([label, tasks]) => ({ label, tasks }));
+		return (Object.keys(buckets) as (keyof typeof buckets)[])
+			.filter((key) => buckets[key].length > 0)
+			.map((key) => ({ key, label: LABELS[key], tasks: buckets[key] }));
 	});
 
 	function dueLabel(iso: string) {
 		const diff = dayDiff(iso);
 		if (diff === null) return null;
-		if (diff === 0) return 'Due today';
-		if (diff === 1) return 'Due tomorrow';
-		if (diff < 0) return `${Math.abs(diff)} day${Math.abs(diff) === 1 ? '' : 's'} overdue`;
-		if (diff <= 60) return `In ${diff} days`;
+		if (diff === 0) return m.wov_due_today();
+		if (diff === 1) return m.wov_due_tomorrow();
+		if (diff < 0) return m.wov_overdue({ days: Math.abs(diff) });
+		if (diff <= 60) return m.wov_in_days({ days: diff });
 		return new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', {
 			day: 'numeric',
 			month: 'short',
@@ -133,22 +141,22 @@
 </script>
 
 <div class="space-y-6">
-	<PageHeader
-		title="Tasks"
-		description="Your planning checklist, counted back from the wedding day."
-	>
+	<PageHeader title={m.nav_tasks()} description={m.tsk_desc()}>
 		{#snippet actions()}
 			{#if data.templateCount > 0}
 				<form method="POST" action="?/generate" use:generateEnhance>
 					<HiddenField name="confirm" value="yes" />
 					<Button type="submit" variant="outline" disabled={$generating || !data.weddingDate}>
-						{#if $generating}<LoadingBtn name="Suggesting" />{:else}<Sparkles class="size-4" /> Suggest
-							tasks{/if}
+						{#if $generating}<LoadingBtn name={m.tsk_suggesting()} />{:else}<Sparkles
+								class="size-4"
+							/>
+							{m.tsk_suggest()}{/if}
 					</Button>
 				</form>
 			{/if}
 			<Button onclick={openCreate}>
-				<Plus class="size-4" /> Add task
+				<Plus class="size-4" />
+				{m.tsk_add()}
 			</Button>
 		{/snippet}
 	</PageHeader>
@@ -157,15 +165,15 @@
 	<Card.Root class="p-5">
 		<div class="grid gap-4 sm:grid-cols-3">
 			<div>
-				<p class="text-xs text-muted-foreground">Total</p>
+				<p class="text-xs text-muted-foreground">{m.bud_total()}</p>
 				<p class="text-xl font-semibold">{total}</p>
 			</div>
 			<div>
-				<p class="text-xs text-muted-foreground">Completed</p>
+				<p class="text-xs text-muted-foreground">{m.tsk_completed()}</p>
 				<p class="text-xl font-semibold">{done}</p>
 			</div>
 			<div>
-				<p class="text-xs text-muted-foreground">Overdue</p>
+				<p class="text-xs text-muted-foreground">{m.tsk_overdue()}</p>
 				<p class="text-xl font-semibold" class:text-destructive={overdue > 0}>{overdue}</p>
 			</div>
 		</div>
@@ -174,7 +182,7 @@
 			<div class="mt-5 space-y-2">
 				<Progress value={donePct} class="h-2" />
 				<p class="text-xs text-muted-foreground">
-					{done} of {total} done ({Math.round(donePct)}%)
+					{m.tsk_done_line({ done, total, pct: Math.round(donePct) })}
 				</p>
 			</div>
 		{/if}
@@ -185,9 +193,9 @@
 		<Card.Header>
 			<Tabs.Root bind:value={filter}>
 				<Tabs.List>
-					<Tabs.Trigger value="open">To do ({total - done})</Tabs.Trigger>
-					<Tabs.Trigger value="done">Done ({done})</Tabs.Trigger>
-					<Tabs.Trigger value="all">All ({total})</Tabs.Trigger>
+					<Tabs.Trigger value="open">{m.tsk_tab_todo({ count: total - done })}</Tabs.Trigger>
+					<Tabs.Trigger value="done">{m.tsk_tab_done({ count: done })}</Tabs.Trigger>
+					<Tabs.Trigger value="all">{m.tsk_tab_all({ count: total })}</Tabs.Trigger>
 				</Tabs.List>
 			</Tabs.Root>
 		</Card.Header>
@@ -196,24 +204,26 @@
 			{#if total === 0}
 				<div class="p-10 text-center">
 					<ListChecks class="mx-auto size-8 text-muted-foreground" />
-					<p class="mt-3 text-sm text-muted-foreground">No tasks yet.</p>
+					<p class="mt-3 text-sm text-muted-foreground">{m.dash_no_tasks()}</p>
 					<div class="mt-4 flex justify-center gap-2">
 						{#if data.templateCount > 0 && data.weddingDate}
 							<form method="POST" action="?/generate" use:generateEnhance>
 								<HiddenField name="confirm" value="yes" />
 								<Button type="submit" variant="outline" disabled={$generating}>
-									<Sparkles class="size-4" /> Build my checklist
+									<Sparkles class="size-4" />
+									{m.tsk_build()}
 								</Button>
 							</form>
 						{/if}
 						<Button onclick={openCreate}>
-							<Plus class="size-4" /> Add one
+							<Plus class="size-4" />
+							{m.gst_add_one()}
 						</Button>
 					</div>
 				</div>
 			{:else if visible.length === 0}
 				<div class="p-10 text-center text-sm text-muted-foreground">
-					{filter === 'open' ? 'Everything is done. Nice.' : 'Nothing here yet.'}
+					{filter === 'open' ? m.wov_all_done() : m.tsk_nothing()}
 				</div>
 			{:else}
 				<div class="space-y-6">
@@ -222,8 +232,8 @@
 							<div class="mb-2 flex items-center gap-2">
 								<h3
 									class="text-xs font-medium tracking-wide uppercase"
-									class:text-destructive={group.label === 'Overdue'}
-									class:text-muted-foreground={group.label !== 'Overdue'}
+									class:text-destructive={group.key === 'overdue'}
+									class:text-muted-foreground={group.key !== 'overdue'}
 								>
 									{group.label}
 								</h3>
@@ -242,11 +252,7 @@
 													await update({ reset: false })}
 										>
 											<HiddenField name="id" value={task.id} />
-											<button
-												type="submit"
-												class="flex items-center"
-												aria-label="Toggle task completion"
-											>
+											<button type="submit" class="flex items-center" aria-label={m.tsk_toggle()}>
 												<Checkbox checked={task.isConfirmed} class="pointer-events-none" />
 											</button>
 										</ActionForm>
@@ -272,7 +278,7 @@
 										</div>
 
 										{#if !task.isConfirmed && diff !== null && diff >= 0 && diff <= 7}
-											<Badge variant="secondary">Soon</Badge>
+											<Badge variant="secondary">{m.tsk_soon()}</Badge>
 										{/if}
 
 										<div class="flex gap-1">
@@ -300,23 +306,23 @@
 </div>
 
 <FormDialog
-	title={editing ? 'Edit task' : 'Add task'}
+	title={editing ? m.tsk_edit() : m.tsk_add()}
 	action="?/save"
 	data={data.form}
 	schema={taskSchema}
 	bind:open={taskOpen}
 	{seed}
 	hideTrigger
-	submitLabel={editing ? 'Save changes' : 'Add task'}
+	submitLabel={editing ? m.wd_save() : m.tsk_add()}
 >
 	{#snippet fields({ form, errors })}
 		<InputComp {form} {errors} name="id" type="hidden" />
-		<InputComp {form} {errors} name="title" label="Task" placeholder="Book the photographer" />
+		<InputComp {form} {errors} name="title" label={m.tsk_task()} placeholder={m.tsk_task_ph()} />
 		<InputComp
 			{form}
 			{errors}
 			name="dueDate"
-			label="Due date (optional)"
+			label={m.tsk_due_opt()}
 			type="date"
 			oldDays={true}
 			futureDays={true}
@@ -326,23 +332,23 @@
 			{form}
 			{errors}
 			name="isConfirmed"
-			label="Status"
+			label={m.tsk_status()}
 			type="checkboxSingle"
-			placeholder="Mark as completed"
+			placeholder={m.tsk_mark_done()}
 		/>
 	{/snippet}
 </FormDialog>
 
 <FormDialog
-	title="Remove this task?"
-	description="{removing?.title ?? 'This task'} will be permanently removed from your checklist."
+	title={m.tsk_remove_title()}
+	description={m.tsk_remove_desc({ name: removing?.title ?? m.tsk_this_task() })}
 	action="?/delete"
 	data={data.deleteForm}
 	schema={taskIdSchema}
 	bind:open={removeOpen}
 	seed={{ id: removing?.id }}
 	hideTrigger
-	submitLabel="Remove"
+	submitLabel={m.bud_remove()}
 >
 	{#snippet fields({ form, errors })}
 		<InputComp {form} {errors} name="id" type="hidden" />

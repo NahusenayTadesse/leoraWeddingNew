@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import ActionForm from '@nahu/admin-kit/formComponents/ActionForm.svelte';
 	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
 	import type { ColumnDef } from '@tanstack/table-core';
@@ -20,10 +21,16 @@
 	type Guest = (typeof data.guests)[number];
 
 	const SIDE_ITEMS = [
-		{ value: 'bride', name: "Bride's side" },
-		{ value: 'groom', name: "Groom's side" },
-		{ value: 'both', name: 'Both sides' }
+		{ value: 'bride', name: m.gst_bride_side() },
+		{ value: 'groom', name: m.gst_groom_side() },
+		{ value: 'both', name: m.gst_both() }
 	];
+
+	const RSVP_LABEL: Record<string, string> = {
+		pending: m.gst_rsvp_pending(),
+		confirmed: m.gst_rsvp_confirmed(),
+		declined: m.gst_rsvp_declined()
+	};
 
 	let editing = $state<Guest | null>(null);
 	let guestOpen = $state(false);
@@ -65,28 +72,29 @@
 	const columns: ColumnDef<Guest>[] = [
 		{
 			id: 'going',
-			header: 'Going',
+			header: m.gst_going(),
 			meta: { class: 'w-12' },
 			cell: ({ row }) => renderSnippet(goingCell, row.original)
 		},
-		{ id: 'fullName', accessorKey: 'fullName', header: sortable('Name') },
+		{ id: 'fullName', accessorKey: 'fullName', header: sortable(m.gst_name()) },
 		{
 			id: 'phone',
 			accessorKey: 'phone',
-			header: 'Phone',
+			header: m.gst_phone(),
 			cell: ({ row }) => renderSnippet(phoneCell, row.original)
 		},
 		{
 			id: 'side',
 			accessorKey: 'side',
-			header: 'Side',
-			cell: ({ row }) => words(row.original.side)
+			header: m.gst_side(),
+			cell: ({ row }) =>
+				SIDE_ITEMS.find((s) => s.value === row.original.side)?.name ?? words(row.original.side)
 		},
 		{
 			id: 'rsvpStatus',
 			accessorKey: 'rsvpStatus',
-			header: 'RSVP',
-			cell: ({ row }) => status(row.original.rsvpStatus)
+			header: m.gst_rsvp(),
+			cell: ({ row }) => status(row.original.rsvpStatus, RSVP_LABEL[row.original.rsvpStatus])
 		},
 		{ id: 'actions', header: '', cell: ({ row }) => renderSnippet(actionsCell, row.original) }
 	];
@@ -103,7 +111,9 @@
 		<button
 			type="submit"
 			class="flex items-center"
-			aria-label="{guest.isConfirmed ? 'Unconfirm' : 'Confirm'} {guest.fullName}"
+			aria-label={guest.isConfirmed
+				? m.gst_unconfirm({ name: guest.fullName })
+				: m.gst_confirm({ name: guest.fullName })}
 		>
 			<Checkbox checked={guest.isConfirmed} class="pointer-events-none" />
 		</button>
@@ -129,7 +139,7 @@
 			variant="ghost"
 			size="icon"
 			onclick={() => openEdit(guest)}
-			aria-label="Edit {guest.fullName}"
+			aria-label={m.bud_edit_aria({ name: guest.fullName })}
 		>
 			<Pencil class="size-4" />
 		</Button>
@@ -137,7 +147,7 @@
 			variant="ghost"
 			size="icon"
 			class="text-destructive"
-			aria-label="Remove {guest.fullName}"
+			aria-label={m.bud_remove_aria({ name: guest.fullName })}
 			onclick={() => {
 				removing = guest;
 				removeOpen = true;
@@ -149,13 +159,15 @@
 {/snippet}
 
 <div class="space-y-6">
-	<PageHeader title="Guests" description="Track who's invited and who has confirmed.">
+	<PageHeader title={m.nav_guests()} description={m.gst_desc()}>
 		{#snippet actions()}
 			<Button variant="outline" onclick={() => (bulkOpen = true)}>
-				<ListPlus class="size-4" /> Paste list
+				<ListPlus class="size-4" />
+				{m.gst_paste()}
 			</Button>
 			<Button onclick={openCreate}>
-				<Plus class="size-4" /> Add guest
+				<Plus class="size-4" />
+				{m.gst_add()}
 			</Button>
 		{/snippet}
 	</PageHeader>
@@ -164,19 +176,19 @@
 	<Card.Root class="p-5">
 		<div class="grid gap-4 sm:grid-cols-4">
 			<div>
-				<p class="text-xs text-muted-foreground">Invited</p>
+				<p class="text-xs text-muted-foreground">{m.gst_invited()}</p>
 				<p class="text-xl font-semibold">{total}</p>
 			</div>
 			<div>
-				<p class="text-xs text-muted-foreground">Confirmed</p>
+				<p class="text-xs text-muted-foreground">{m.gst_rsvp_confirmed()}</p>
 				<p class="text-xl font-semibold">{confirmed}</p>
 			</div>
 			<div>
-				<p class="text-xs text-muted-foreground">Bride / Groom</p>
+				<p class="text-xs text-muted-foreground">{m.gst_bride_groom()}</p>
 				<p class="text-xl font-semibold">{brideCount} / {groomCount}</p>
 			</div>
 			<div>
-				<p class="text-xs text-muted-foreground">Expected</p>
+				<p class="text-xs text-muted-foreground">{m.gst_expected()}</p>
 				<p class="text-xl font-semibold" class:text-destructive={overCapacity}>
 					{data.expectedGuests || '—'}
 				</p>
@@ -187,10 +199,10 @@
 			<div class="mt-5 space-y-2">
 				<Progress value={capacityPct} class="h-2" />
 				<p class="text-xs text-muted-foreground">
-					{total} of {data.expectedGuests} expected
+					{m.gst_of_expected({ total, expected: data.expectedGuests })}
 					{#if overCapacity}
 						<span class="font-medium text-destructive">
-							— {total - data.expectedGuests} over your estimate
+							{m.gst_over({ count: total - data.expectedGuests })}
 						</span>
 					{/if}
 				</p>
@@ -202,13 +214,15 @@
 		<Card.Root>
 			<Card.Content class="p-10 text-center">
 				<Users class="mx-auto size-8 text-muted-foreground" />
-				<p class="mt-3 text-sm text-muted-foreground">No guests yet.</p>
+				<p class="mt-3 text-sm text-muted-foreground">{m.gst_none()}</p>
 				<div class="mt-4 flex justify-center gap-2">
 					<Button variant="outline" onclick={() => (bulkOpen = true)}>
-						<ListPlus class="size-4" /> Paste a list
+						<ListPlus class="size-4" />
+						{m.gst_paste_list()}
 					</Button>
 					<Button onclick={openCreate}>
-						<Plus class="size-4" /> Add one
+						<Plus class="size-4" />
+						{m.gst_add_one()}
 					</Button>
 				</div>
 			</Card.Content>
@@ -218,30 +232,36 @@
 			{columns}
 			data={data.guests}
 			facetKeys={['side', 'rsvpStatus']}
-			facetLabels={{ side: 'Side', rsvpStatus: 'RSVP' }}
-			fileName="Guest list"
+			facetLabels={{ side: m.gst_side(), rsvpStatus: m.gst_rsvp() }}
+			fileName={m.gst_file()}
 		/>
 	{/if}
 </div>
 
 <FormDialog
-	title={editing ? 'Edit guest' : 'Add guest'}
+	title={editing ? m.gst_edit() : m.gst_add()}
 	action="?/save"
 	data={data.form}
 	schema={guestSchema}
 	bind:open={guestOpen}
 	{seed}
 	hideTrigger
-	submitLabel={editing ? 'Save changes' : 'Add guest'}
+	submitLabel={editing ? m.wd_save() : m.gst_add()}
 >
 	{#snippet fields({ form, errors })}
 		<InputComp {form} {errors} name="id" type="hidden" />
-		<InputComp {form} {errors} name="fullName" label="Full name" placeholder="Abebe Kebede" />
+		<InputComp
+			{form}
+			{errors}
+			name="fullName"
+			label={m.gst_full_name()}
+			placeholder="Abebe Kebede"
+		/>
 		<InputComp
 			{form}
 			{errors}
 			name="phone"
-			label="Phone (optional)"
+			label={m.gst_phone_opt()}
 			type="tel"
 			placeholder="0911234567"
 		/>
@@ -249,25 +269,25 @@
 			{form}
 			{errors}
 			name="side"
-			label="Side"
+			label={m.gst_side()}
 			type="select"
 			items={SIDE_ITEMS}
-			placeholder="Choose a side"
+			placeholder={m.gst_choose_side()}
 		/>
 		<InputComp
 			{form}
 			{errors}
 			name="isConfirmed"
-			label="Attendance"
+			label={m.gst_attendance()}
 			type="checkboxSingle"
-			placeholder="Has confirmed they're coming"
+			placeholder={m.gst_attendance_ph()}
 		/>
 	{/snippet}
 </FormDialog>
 
 <FormDialog
-	title="Paste a guest list"
-	description="One guest per line. Add a phone after a comma if you have it — duplicates in the paste are skipped."
+	title={m.gst_paste_title()}
+	description={m.gst_paste_desc()}
 	action="?/bulk"
 	data={data.bulkForm}
 	schema={bulkGuestSchema}
@@ -275,23 +295,23 @@
 	seed={{ side: 'bride', names: '' }}
 	hideTrigger
 	resetOnSuccess
-	submitLabel="Add guests"
+	submitLabel={m.gst_add_guests()}
 >
 	{#snippet fields({ form, errors })}
 		<InputComp
 			{form}
 			{errors}
 			name="side"
-			label="Side"
+			label={m.gst_side()}
 			type="select"
 			items={SIDE_ITEMS}
-			placeholder="Choose a side"
+			placeholder={m.gst_choose_side()}
 		/>
 		<InputComp
 			{form}
 			{errors}
 			name="names"
-			label="Names"
+			label={m.gst_names()}
 			type="textarea"
 			rows={10}
 			placeholder={`Abebe Kebede, 0911234567
@@ -302,15 +322,15 @@ Dawit Girma, 0922334455`}
 </FormDialog>
 
 <FormDialog
-	title="Remove this guest?"
-	description="{removing?.fullName ?? 'This guest'} will be permanently removed from your list."
+	title={m.gst_remove_title()}
+	description={m.gst_remove_desc({ name: removing?.fullName ?? m.gst_this_guest() })}
 	action="?/delete"
 	data={data.deleteForm}
 	schema={guestIdSchema}
 	bind:open={removeOpen}
 	seed={{ id: removing?.id }}
 	hideTrigger
-	submitLabel="Remove"
+	submitLabel={m.bud_remove()}
 >
 	{#snippet fields({ form, errors })}
 		<InputComp {form} {errors} name="id" type="hidden" />

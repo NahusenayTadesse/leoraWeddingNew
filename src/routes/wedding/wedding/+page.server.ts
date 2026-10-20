@@ -8,6 +8,7 @@ import { getWeddingByCoupleId, listCities } from '$lib/server/weddings';
 import { getCoupleByUserId } from '$lib/server/couples';
 import { and, eq, isNull } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
+import { m } from '$lib/paraglide/messages.js';
 
 /** MySQL DATE -> 'YYYY-MM-DD' regardless of whether the driver hands back a Date or a string. */
 function toDateInput(value: unknown): string {
@@ -54,11 +55,7 @@ export const actions: Actions = {
 		const userId = locals.user!.id;
 		const form = await superValidate(request, zod4(weddingSchema));
 		if (!form.valid)
-			return message(
-				form,
-				{ type: 'error', text: 'Please check the form for errors' },
-				{ status: 400 }
-			);
+			return message(form, { type: 'error', text: m.srv_check_form() }, { status: 400 });
 
 		const existing = await getWeddingByCoupleId(couple.id);
 
@@ -86,7 +83,7 @@ export const actions: Actions = {
 
 		return message(form, {
 			type: 'success',
-			text: existing ? 'Wedding details updated.' : 'Your wedding is set up!'
+			text: existing ? m.srv_wedding_updated() : m.srv_wedding_ready()
 		});
 	}
 };

@@ -22,17 +22,17 @@
 	let { data, children } = $props();
 
 	const nav = [
-		{ href: '/wedding', label: 'Overview', icon: Heart, exact: true },
-		{ href: '/wedding/profile', label: 'Couple details', icon: User },
-		{ href: '/wedding/wedding', label: 'Wedding', icon: CalendarHeart },
-		{ href: '/wedding/budget', label: 'Budget', icon: Wallet },
+		{ href: '/wedding', label: m.nav_overview(), icon: Heart, exact: true },
+		{ href: '/wedding/profile', label: m.nav_couple_details(), icon: User },
+		{ href: '/wedding/wedding', label: m.nav_wedding(), icon: CalendarHeart },
+		{ href: '/wedding/budget', label: m.nav_budget(), icon: Wallet },
 		{ href: '/wedding/events', label: m.nav_events(), icon: CalendarRange },
-		{ href: '/wedding/guests', label: 'Guests', icon: Users },
+		{ href: '/wedding/guests', label: m.nav_guests(), icon: Users },
 		{ href: '/wedding/seating', label: m.nav_seating(), icon: Armchair },
-		{ href: '/wedding/tasks', label: 'Tasks', icon: ListChecks },
-		{ href: '/wedding/bookings', label: 'Bookings', icon: Store },
+		{ href: '/wedding/tasks', label: m.nav_tasks(), icon: ListChecks },
+		{ href: '/wedding/bookings', label: m.nav_bookings(), icon: Store },
 		{ href: '/wedding/saved', label: m.nav_saved(), icon: Bookmark },
-		{ href: '/wedding/messages', label: 'Messages', icon: MessageSquare }
+		{ href: '/wedding/messages', label: m.nav_messages(), icon: MessageSquare }
 	];
 
 	const isActive = (href: string, exact = false) =>
@@ -59,7 +59,7 @@
 						<p class="truncate text-sm font-medium">
 							{data.couple ? `${data.couple.brideName} & ${data.couple.groomName}` : data.user.name}
 						</p>
-						<p class="text-xs text-muted-foreground">Couple account</p>
+						<p class="text-xs text-muted-foreground">{m.nav_couple_account()}</p>
 					</div>
 				</div>
 

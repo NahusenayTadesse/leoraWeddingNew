@@ -31,21 +31,27 @@
 	// svelte-ignore state_referenced_locally
 	let mode = $state<Mode>(initialMode);
 
-	const ROLE_LABEL: Record<Role, string> = { couple: 'Couple', vendor: 'Vendor', admin: 'Admin' };
+	const ROLE_LABEL: Record<Role, string> = {
+		couple: m.auth_role_couple(),
+		vendor: m.auth_role_vendor(),
+		admin: m.auth_role_admin()
+	};
 	const ROLES: Role[] = ['couple', 'vendor', 'admin'];
 
 	const isSignup = $derived(mode === 'signup');
 
-	const headTitle = $derived(isSignup ? `Join Leora as a ${ROLE_LABEL[role]}` : 'Welcome back');
+	const headTitle = $derived(
+		isSignup ? m.auth_join_as({ role: ROLE_LABEL[role] }) : m.auth_welcome_back()
+	);
 
 	const headSub = $derived(
 		!isSignup
-			? 'Log in to continue planning your day'
+			? m.auth_sub_login()
 			: role === 'vendor'
-				? 'List your business and start getting booking requests.'
+				? m.auth_sub_vendor()
 				: role === 'admin'
-					? 'Admin sign-up is invite-only.'
-					: 'Start planning your wedding day.'
+					? m.auth_sub_admin()
+					: m.auth_sub_couple()
 	);
 
 	/**
@@ -104,7 +110,7 @@
 		</div>
 
 		<!-- Role tabs -->
-		<div class="role-tabs" role="tablist" aria-label="Account type">
+		<div class="role-tabs" role="tablist" aria-label={m.auth_account_type()}>
 			{#each ROLES as r (r)}
 				<button
 					type="button"
@@ -122,16 +128,16 @@
 		<!-- Log in / Sign up -->
 		<div class="mode-toggle">
 			<button type="button" class:active={!isSignup} onclick={() => (mode = 'login')}>
-				Log In
+				{m.auth_tab_login()}
 			</button>
 			<button type="button" class:active={isSignup} onclick={() => (mode = 'signup')}>
-				Sign Up
+				{m.auth_tab_signup()}
 			</button>
 		</div>
 
 		{#if role === 'admin'}
 			<p class="role-note">
-				Admin accounts are provisioned by Leora Events staff. Contact your team lead for access.
+				{m.auth_admin_note()}
 			</p>
 		{/if}
 
@@ -141,7 +147,7 @@
 				a couple account under an admin-looking form. There is no self-serve
 				admin sign-up, so the card says so instead of pretending.
 			-->
-			<Button class="w-full" onclick={() => (mode = 'login')}>Log in as Admin</Button>
+			<Button class="w-full" onclick={() => (mode = 'login')}>{m.auth_login_as_admin()}</Button>
 		{:else if isSignup && role === 'vendor'}
 			<!--
 				Matches leora-events-login.html exactly: the vendor sign-up step on
@@ -155,7 +161,7 @@
 					form={vendorForm}
 					errors={vendorErrors}
 					name="businessName"
-					label="Business name"
+					label={m.auth_business_name()}
 					placeholder="e.g. Mesk Studio Photography"
 					required
 				/>
@@ -163,7 +169,7 @@
 					form={vendorForm}
 					errors={vendorErrors}
 					name="email"
-					label="Email address"
+					label={m.auth_email()}
 					type="email"
 					placeholder="hello@yourbusiness.com"
 					required
@@ -172,7 +178,7 @@
 					form={vendorForm}
 					errors={vendorErrors}
 					name="password"
-					label="Password"
+					label={m.auth_password()}
 					type="password"
 					placeholder="••••••••"
 					required
@@ -181,16 +187,17 @@
 				<div class="checkbox-row">
 					<Checkbox id="vendorTerms" required />
 					<label for="vendorTerms">
-						I agree to Leora Events' <a href="/terms">Terms of Service</a> and
-						<a href="/privacy">Privacy Policy</a>.
+						{m.auth_agree_before()} <a href="/terms">{m.footer_terms()}</a>
+						{m.auth_agree_and()}
+						<a href="/privacy">{m.footer_privacy()}</a>{m.auth_agree_after()}
 					</label>
 				</div>
 
 				<Button type="submit" class="mt-1 h-11 w-full">
 					{#if $vendorDelayed}
-						<LoadingBtn name="Setting up your account" />
+						<LoadingBtn name={m.auth_setting_up()} />
 					{:else}
-						Continue to Business Setup
+						{m.auth_continue_setup()}
 					{/if}
 				</Button>
 			</form>
@@ -204,7 +211,7 @@
 						form={signupForm}
 						errors={signupErrors}
 						name="brideName"
-						label="Bride name"
+						label={m.auth_bride()}
 						placeholder="Selam"
 						required
 					/>
@@ -212,7 +219,7 @@
 						form={signupForm}
 						errors={signupErrors}
 						name="groomName"
-						label="Groom name"
+						label={m.auth_groom()}
 						placeholder="Tesfaye"
 						required
 					/>
@@ -221,7 +228,7 @@
 					form={signupForm}
 					errors={signupErrors}
 					name="email"
-					label="Email address"
+					label={m.auth_email()}
 					type="email"
 					placeholder="you@email.com"
 					required
@@ -231,7 +238,7 @@
 						form={signupForm}
 						errors={signupErrors}
 						name="phone"
-						label="Phone"
+						label={m.auth_phone()}
 						type="tel"
 						placeholder="09xxxxxxxx"
 						required
@@ -240,16 +247,16 @@
 						form={signupForm}
 						errors={signupErrors}
 						name="phone2"
-						label="Second phone"
+						label={m.auth_phone2()}
 						type="tel"
-						placeholder="Optional"
+						placeholder={m.auth_optional()}
 					/>
 				</div>
 				<InputComp
 					form={signupForm}
 					errors={signupErrors}
 					name="password"
-					label="Password"
+					label={m.auth_password()}
 					type="password"
 					placeholder="••••••••"
 					required
@@ -258,16 +265,17 @@
 				<div class="checkbox-row">
 					<Checkbox id="coupleTerms" required />
 					<label for="coupleTerms">
-						I agree to Leora Events' <a href="/terms">Terms of Service</a> and
-						<a href="/privacy">Privacy Policy</a>.
+						{m.auth_agree_before()} <a href="/terms">{m.footer_terms()}</a>
+						{m.auth_agree_and()}
+						<a href="/privacy">{m.footer_privacy()}</a>{m.auth_agree_after()}
 					</label>
 				</div>
 
 				<Button type="submit" class="mt-1 h-11 w-full">
 					{#if $signupDelayed}
-						<LoadingBtn name="Creating your account" />
+						<LoadingBtn name={m.auth_creating()} />
 					{:else}
-						Create Couple Account
+						{m.auth_create_couple()}
 					{/if}
 				</Button>
 			</form>
@@ -280,7 +288,7 @@
 					form={loginForm}
 					errors={loginErrors}
 					name="email"
-					label="Email address"
+					label={m.auth_email()}
 					type="email"
 					placeholder="you@email.com"
 					required
@@ -289,7 +297,7 @@
 					form={loginForm}
 					errors={loginErrors}
 					name="password"
-					label="Password"
+					label={m.auth_password()}
 					type="password"
 					placeholder="••••••••"
 					required
@@ -301,17 +309,17 @@
 					form={loginForm}
 					errors={loginErrors}
 					name="rememberMe"
-					label="Remember me"
+					label={m.auth_remember()}
 					hideLabel
 					type="checkboxSingle"
-					placeholder="Remember me"
+					placeholder={m.auth_remember()}
 				/>
 
 				<Button type="submit" class="h-11 w-full">
 					{#if $loginDelayed}
-						<LoadingBtn name="Signing you in" />
+						<LoadingBtn name={m.auth_signing_in()} />
 					{:else}
-						Log In as {ROLE_LABEL[role]}
+						{m.auth_login_as({ role: ROLE_LABEL[role] })}
 					{/if}
 				</Button>
 			</form>
@@ -319,11 +327,11 @@
 
 		<p class="switch-note">
 			{#if isSignup}
-				Already have an account?
-				<button type="button" onclick={() => (mode = 'login')}>Log in</button>
+				{m.auth_have_account()}
+				<button type="button" onclick={() => (mode = 'login')}>{m.nav_login()}</button>
 			{:else}
-				Don't have an account?
-				<button type="button" onclick={() => (mode = 'signup')}>Sign up</button>
+				{m.auth_no_account()}
+				<button type="button" onclick={() => (mode = 'signup')}>{m.auth_signup_link()}</button>
 			{/if}
 		</p>
 	</div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
 	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
 	import { Badge } from '@nahu/admin-kit/components/ui/badge/index.js';
@@ -17,8 +18,7 @@
 		BadgeCheck,
 		MapPin,
 		Sparkles,
-		CircleCheck,
-		Link2
+		CircleCheck
 	} from '@lucide/svelte';
 
 	let { data } = $props();
@@ -36,7 +36,7 @@
 	}
 
 	function shortDate(iso: string) {
-		if (!iso) return 'No date';
+		if (!iso) return m.wov_no_date();
 		return new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', {
 			day: 'numeric',
 			month: 'short'
@@ -44,11 +44,11 @@
 	}
 
 	function dueLabel(days: number | null) {
-		if (days === null) return 'No due date';
-		if (days === 0) return 'Due today';
-		if (days === 1) return 'Due tomorrow';
-		if (days < 0) return `${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} overdue`;
-		return `In ${days} days`;
+		if (days === null) return m.wov_no_due();
+		if (days === 0) return m.wov_due_today();
+		if (days === 1) return m.wov_due_tomorrow();
+		if (days < 0) return m.wov_overdue({ days: Math.abs(days) });
+		return m.wov_in_days({ days });
 	}
 </script>
 
@@ -58,14 +58,14 @@
 		<Card.Root class="p-8 text-center">
 			<CalendarHeart class="mx-auto size-10 text-primary" />
 			<h1 class="mt-4 text-2xl font-semibold tracking-tight">
-				Almost there, {data.coupleName}
+				{m.wov_almost({ name: data.coupleName })}
 			</h1>
 			<p class="mt-2 text-sm text-muted-foreground">
-				Add your wedding date, city and budget and we'll build your planning space around them —
-				checklist, budget tracker and guest list included.
+				{m.wov_setup_body()}
 			</p>
 			<Button href="/wedding/wedding" class="mt-6">
-				Set up your wedding <ArrowRight class="ml-2 size-4" />
+				{m.wov_setup()}
+				<ArrowRight class="ml-2 size-4" />
 			</Button>
 		</Card.Root>
 	</div>
@@ -88,7 +88,7 @@
 					<div class="flex flex-wrap items-center gap-2">
 						<h1 class="text-2xl font-semibold tracking-tight sm:text-3xl">{data.coupleName}</h1>
 						{#if data.verified}
-							<Badge class="gap-1"><BadgeCheck class="size-3.5" /> Verified</Badge>
+							<Badge class="gap-1"><BadgeCheck class="size-3.5" /> {m.vdet_verified()}</Badge>
 						{/if}
 					</div>
 
@@ -105,32 +105,23 @@
 							<span>{w.style}</span>
 						{/if}
 					</div>
-
-					{#if data.slug}
-						<a
-							href="/w/{data.slug}"
-							class="mt-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-						>
-							<Link2 class="size-3.5" /> leoraevents.com/w/{data.slug}
-						</a>
-					{/if}
 				</div>
 
 				<div class="text-right">
 					{#if w.daysAway === null}
-						<p class="text-sm text-muted-foreground">No date set</p>
+						<p class="text-sm text-muted-foreground">{m.wov_no_date_set()}</p>
 					{:else if w.daysAway > 0}
 						<p class="text-4xl font-semibold sm:text-5xl">{w.daysAway}</p>
 						<p class="text-sm text-muted-foreground">
-							day{w.daysAway === 1 ? '' : 's'} to go
+							{m.wov_days_to_go_label()}
 						</p>
 					{:else if w.daysAway === 0}
-						<p class="text-3xl font-semibold sm:text-4xl">Today!</p>
-						<p class="text-sm text-muted-foreground">Congratulations</p>
+						<p class="text-3xl font-semibold sm:text-4xl">{m.wov_today()}</p>
+						<p class="text-sm text-muted-foreground">{m.wov_congrats()}</p>
 					{:else}
-						<p class="text-3xl font-semibold sm:text-4xl">Married</p>
+						<p class="text-3xl font-semibold sm:text-4xl">{m.wov_married()}</p>
 						<p class="text-sm text-muted-foreground">
-							{Math.abs(w.daysAway)} days ago
+							{m.wov_days_ago({ days: Math.abs(w.daysAway) })}
 						</p>
 					{/if}
 				</div>
@@ -147,7 +138,7 @@
 						>
 							<p class="flex items-center gap-2 text-sm font-medium text-destructive">
 								<TriangleAlert class="size-4" />
-								{data.tasks.overdue} overdue task{data.tasks.overdue === 1 ? '' : 's'}
+								{m.wov_overdue_tasks({ count: data.tasks.overdue })}
 							</p>
 						</Card.Root>
 					</a>
@@ -160,7 +151,7 @@
 						>
 							<p class="flex items-center gap-2 text-sm font-medium text-destructive">
 								<TriangleAlert class="size-4" />
-								{etb(data.budget.planned - w.totalBudget)} ETB over budget
+								{m.wov_over_budget({ amount: etb(data.budget.planned - w.totalBudget) })}
 							</p>
 						</Card.Root>
 					</a>
@@ -171,7 +162,7 @@
 						<Card.Root class="p-4 transition-colors hover:bg-accent">
 							<p class="flex items-center gap-2 text-sm font-medium">
 								<Wallet class="size-4" />
-								{etb(data.bookings.outstanding)} ETB left to pay
+								{m.wov_left_to_pay({ amount: etb(data.bookings.outstanding) })}
 							</p>
 						</Card.Root>
 					</a>
@@ -185,10 +176,13 @@
 			<a href="/wedding/budget" class="block">
 				<Card.Root class="h-full p-5 transition-colors hover:border-primary/40">
 					<div class="flex items-center gap-2 text-xs text-muted-foreground">
-						<Wallet class="size-4" /> Budget
+						<Wallet class="size-4" />
+						{m.nav_budget()}
 					</div>
 					<p class="mt-2 text-2xl font-semibold">{etb(data.budget.spent)}</p>
-					<p class="text-xs text-muted-foreground">of {etb(w.totalBudget)} ETB spent</p>
+					<p class="text-xs text-muted-foreground">
+						{m.wov_spent_of({ amount: etb(w.totalBudget) })}
+					</p>
 					<Progress value={budgetPct} class="mt-3 h-1.5" />
 				</Card.Root>
 			</a>
@@ -197,11 +191,15 @@
 			<a href="/wedding/guests" class="block">
 				<Card.Root class="h-full p-5 transition-colors hover:border-primary/40">
 					<div class="flex items-center gap-2 text-xs text-muted-foreground">
-						<Users class="size-4" /> Guests
+						<Users class="size-4" />
+						{m.nav_guests()}
 					</div>
 					<p class="mt-2 text-2xl font-semibold">{data.guests.total}</p>
 					<p class="text-xs text-muted-foreground">
-						{data.guests.confirmed} confirmed · {w.expectedGuests || '—'} expected
+						{m.wov_guests_line({
+							confirmed: data.guests.confirmed,
+							expected: w.expectedGuests || '—'
+						})}
 					</p>
 					<Progress value={guestPct} class="mt-3 h-1.5" />
 				</Card.Root>
@@ -211,14 +209,15 @@
 			<a href="/wedding/tasks" class="block">
 				<Card.Root class="h-full p-5 transition-colors hover:border-primary/40">
 					<div class="flex items-center gap-2 text-xs text-muted-foreground">
-						<ListChecks class="size-4" /> Tasks
+						<ListChecks class="size-4" />
+						{m.nav_tasks()}
 					</div>
 					<p class="mt-2 text-2xl font-semibold">
 						{data.tasks.done}<span class="text-base text-muted-foreground">/{data.tasks.total}</span
 						>
 					</p>
 					<p class="text-xs text-muted-foreground">
-						{data.tasks.total - data.tasks.done} still to do
+						{m.wov_still_to_do({ count: data.tasks.total - data.tasks.done })}
 					</p>
 					<Progress value={taskPct} class="mt-3 h-1.5" />
 				</Card.Root>
@@ -228,11 +227,15 @@
 			<a href="/wedding/bookings" class="block">
 				<Card.Root class="h-full p-5 transition-colors hover:border-primary/40">
 					<div class="flex items-center gap-2 text-xs text-muted-foreground">
-						<Store class="size-4" /> Vendors
+						<Store class="size-4" />
+						{m.wov_vendors()}
 					</div>
 					<p class="mt-2 text-2xl font-semibold">{data.bookings.total}</p>
 					<p class="text-xs text-muted-foreground">
-						{data.bookings.confirmed} confirmed · {data.bookings.pending} pending
+						{m.wov_vendors_line({
+							confirmed: data.bookings.confirmed,
+							pending: data.bookings.pending
+						})}
 					</p>
 					<Progress value={bookingPct} class="mt-3 h-1.5" />
 				</Card.Root>
@@ -244,11 +247,12 @@
 			<Card.Root class="lg:col-span-2">
 				<Card.Header class="flex-row items-center justify-between">
 					<div>
-						<Card.Title>Next up</Card.Title>
-						<Card.Description>Your most urgent tasks.</Card.Description>
+						<Card.Title>{m.wov_next_up()}</Card.Title>
+						<Card.Description>{m.wov_urgent()}</Card.Description>
 					</div>
 					<Button variant="ghost" size="sm" href="/wedding/tasks">
-						All tasks <ArrowRight class="ml-1.5 size-4" />
+						{m.wov_all_tasks()}
+						<ArrowRight class="ml-1.5 size-4" />
 					</Button>
 				</Card.Header>
 
@@ -257,13 +261,14 @@
 						<div class="py-8 text-center">
 							{#if data.tasks.total === 0}
 								<ListChecks class="mx-auto size-7 text-muted-foreground" />
-								<p class="mt-3 text-sm text-muted-foreground">No tasks yet.</p>
+								<p class="mt-3 text-sm text-muted-foreground">{m.dash_no_tasks()}</p>
 								<Button variant="outline" size="sm" class="mt-4" href="/wedding/tasks">
-									<Sparkles class="mr-2 size-4" /> Build your checklist
+									<Sparkles class="mr-2 size-4" />
+									{m.dash_build_checklist()}
 								</Button>
 							{:else}
 								<CircleCheck class="mx-auto size-7 text-emerald-600" />
-								<p class="mt-3 text-sm text-muted-foreground">Everything's done. Nice.</p>
+								<p class="mt-3 text-sm text-muted-foreground">{m.wov_all_done()}</p>
 							{/if}
 						</div>
 					{:else}
@@ -291,19 +296,19 @@
 			<!-- Payments -->
 			<Card.Root>
 				<Card.Header>
-					<Card.Title>Outstanding</Card.Title>
-					<Card.Description>What's still owed to vendors.</Card.Description>
+					<Card.Title>{m.wov_outstanding()}</Card.Title>
+					<Card.Description>{m.wov_owed()}</Card.Description>
 				</Card.Header>
 
 				<Card.Content class="space-y-4">
 					<div>
 						<p class="text-2xl font-semibold">{etb(data.bookings.outstanding)}</p>
 						<p class="text-xs text-muted-foreground">
-							{etb(data.bookings.paid)} of {etb(data.bookings.agreed)} ETB settled
+							{m.wov_settled({ paid: etb(data.bookings.paid), agreed: etb(data.bookings.agreed) })}
 						</p>
 						{#if data.bookings.awaitingConfirmation > 0}
 							<p class="mt-1 text-xs text-muted-foreground">
-								{etb(data.bookings.awaitingConfirmation)} awaiting vendor confirmation
+								{m.wov_awaiting({ amount: etb(data.bookings.awaitingConfirmation) })}
 							</p>
 						{/if}
 					</div>
@@ -324,7 +329,7 @@
 					{/if}
 
 					<Button variant="outline" size="sm" class="w-full" href="/wedding/bookings">
-						Manage bookings
+						{m.wov_manage_bookings()}
 					</Button>
 				</Card.Content>
 			</Card.Root>
@@ -335,11 +340,12 @@
 			<Card.Root>
 				<Card.Header class="flex-row items-center justify-between">
 					<div>
-						<Card.Title>Where the money goes</Card.Title>
-						<Card.Description>Your biggest planned categories.</Card.Description>
+						<Card.Title>{m.be_where()}</Card.Title>
+						<Card.Description>{m.wov_biggest()}</Card.Description>
 					</div>
 					<Button variant="ghost" size="sm" href="/wedding/budget">
-						Full budget <ArrowRight class="ml-1.5 size-4" />
+						{m.wov_full_budget()}
+						<ArrowRight class="ml-1.5 size-4" />
 					</Button>
 				</Card.Header>
 
@@ -365,11 +371,12 @@
 			<Card.Root>
 				<Card.Header class="flex-row items-center justify-between">
 					<div>
-						<Card.Title>Vendors you might like</Card.Title>
-						<Card.Description>Top-rated on Leora Events.</Card.Description>
+						<Card.Title>{m.wov_might_like()}</Card.Title>
+						<Card.Description>{m.wov_top_rated()}</Card.Description>
 					</div>
 					<Button variant="ghost" size="sm" href="/vendors">
-						Browse all <ArrowRight class="ml-1.5 size-4" />
+						{m.wov_browse_all()}
+						<ArrowRight class="ml-1.5 size-4" />
 					</Button>
 				</Card.Header>
 

@@ -14,6 +14,7 @@ import {
 } from '$lib/server/vendorDirectory';
 import { notify } from '$lib/server/notify';
 import type { Actions, PageServerLoad } from './$types';
+import { m } from '$lib/paraglide/messages.js';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const vendorId = Number(params.id);
@@ -66,11 +67,7 @@ export const actions: Actions = {
 		const vendorId = Number(params.id);
 		const form = await superValidate(request, zod4(reviewSchema), { id: 'review' });
 		if (!form.valid)
-			return message(
-				form,
-				{ type: 'error', text: 'Please check the form for errors' },
-				{ status: 400 }
-			);
+			return message(form, { type: 'error', text: m.srv_check_form() }, { status: 400 });
 
 		const vendor = await getVendor(vendorId);
 		if (!vendor) throw error(404, 'Vendor not found');
@@ -104,7 +101,7 @@ export const actions: Actions = {
 
 		return message(form, {
 			type: 'success',
-			text: result.updated ? 'Your review was updated.' : 'Thanks for your review!'
+			text: result.updated ? m.srv_review_updated() : m.srv_review_thanks()
 		});
 	},
 
@@ -113,11 +110,7 @@ export const actions: Actions = {
 
 		const form = await superValidate(request, zod4(favoriteSchema), { id: 'favorite' });
 		if (!form.valid)
-			return message(
-				form,
-				{ type: 'error', text: 'Please check the form for errors' },
-				{ status: 400 }
-			);
+			return message(form, { type: 'error', text: m.srv_check_form() }, { status: 400 });
 
 		await toggleFavorite(locals.user.id, form.data.vendorId);
 

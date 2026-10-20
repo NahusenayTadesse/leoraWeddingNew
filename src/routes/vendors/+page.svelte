@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import ActionForm from '@nahu/admin-kit/formComponents/ActionForm.svelte';
 	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
 	import { formatPriceRange } from '$lib/price';
@@ -28,10 +29,10 @@
 	let { data } = $props();
 
 	const SORT_ITEMS = [
-		{ value: 'recommended', name: 'Recommended' },
-		{ value: 'rating', name: 'Highest rated' },
-		{ value: 'newest', name: 'Newest' },
-		{ value: 'name', name: 'A–Z' }
+		{ value: 'recommended', name: m.vdir_sort_recommended() },
+		{ value: 'rating', name: m.vdir_sort_rating() },
+		{ value: 'newest', name: m.vdir_sort_newest() },
+		{ value: 'name', name: m.vdir_sort_name() }
 	];
 
 	/** Cycles the app's chart palette so placeholder tiles read as distinct categories. */
@@ -107,16 +108,15 @@
 	);
 
 	const sortLabel = $derived(
-		SORT_ITEMS.find((s) => s.value === data.applied.sort)?.name ?? 'Recommended'
+		SORT_ITEMS.find((s) => s.value === data.applied.sort)?.name ?? m.vdir_sort_recommended()
 	);
 </script>
 
 <svelte:head>
-	<title>Wedding vendors · Leora Events</title>
-	<meta
-		name="description"
-		content="Browse photographers, venues, caterers and more for your wedding in Ethiopia."
-	/>
+	<title>{m.vdir_meta_title()}</title>
+	<meta name="description" content={m.vdir_meta_description()} />
+	<meta property="og:title" content={m.vdir_meta_title()} />
+	<meta property="og:description" content={m.vdir_meta_description()} />
 </svelte:head>
 
 <div class="mx-auto max-w-7xl px-4 py-10 lg:px-6">
@@ -124,14 +124,13 @@
 		<span
 			class="inline-flex items-center gap-2 text-xs font-bold tracking-widest text-accent-foreground uppercase before:h-px before:w-3.5 before:bg-primary"
 		>
-			Vendor Marketplace
+			{m.vdir_eyebrow()}
 		</span>
 		<h1 class="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
-			Find every vendor for your wedding
+			{m.vdir_title()}
 		</h1>
 		<p class="mt-3 text-[15px] text-muted-foreground">
-			Verified photographers, venues, decorators, caterers and more — filter by category, region and
-			rating.
+			{m.vdir_lead()}
 		</p>
 	</div>
 
@@ -142,7 +141,7 @@
 				id="vendor-search"
 				bind:value={query}
 				oninput={onSearchInput}
-				placeholder="Search vendors, e.g. 'photographer' or 'decor'"
+				placeholder={m.vdir_search()}
 				class="pl-9"
 			/>
 		</div>
@@ -163,7 +162,7 @@
 			<Card.Root class="gap-0 p-5">
 				<div>
 					<h3 class="mb-3 text-xs font-bold tracking-wide text-muted-foreground uppercase">
-						Category
+						{m.vdir_category()}
 					</h3>
 					<div class="space-y-1">
 						{#each data.filters.categoryItems as item (item.value)}
@@ -183,16 +182,18 @@
 
 				<div>
 					<h3 class="mb-3 text-xs font-bold tracking-wide text-muted-foreground uppercase">
-						Region
+						{m.vdir_region()}
 					</h3>
 					<Select.Root
 						type="single"
 						value={data.applied.city || 'all'}
 						onValueChange={(v) => apply({ city: v })}
 					>
-						<Select.Trigger class="w-full">{data.applied.city || 'All regions'}</Select.Trigger>
+						<Select.Trigger class="w-full"
+							>{data.applied.city || m.vdir_all_regions()}</Select.Trigger
+						>
 						<Select.Content>
-							<Select.Item value="all">All regions</Select.Item>
+							<Select.Item value="all">{m.vdir_all_regions()}</Select.Item>
 							{#each data.filters.cityItems as item (item.value)}
 								<Select.Item value={item.value}>{item.name}</Select.Item>
 							{/each}
@@ -204,7 +205,7 @@
 
 				<div>
 					<h3 class="mb-3 text-xs font-bold tracking-wide text-muted-foreground uppercase">
-						Minimum rating
+						{m.vdir_min_rating()}
 					</h3>
 					<Slider
 						type="single"
@@ -214,7 +215,7 @@
 						step={0.5}
 						onValueCommit={(v) => apply({ minRating: v || null })}
 					/>
-					<p class="mt-2 text-sm font-semibold">{minRating}★ and up</p>
+					<p class="mt-2 text-sm font-semibold">{m.vdir_rating_up({ rating: minRating })}</p>
 				</div>
 
 				{#if hasFilters}
@@ -224,7 +225,7 @@
 						class="text-sm font-medium text-accent-foreground hover:underline"
 						onclick={clearAllFilters}
 					>
-						Clear all filters
+						{m.vdir_clear()}
 					</button>
 				{/if}
 			</Card.Root>
@@ -233,15 +234,15 @@
 		<!-- Results -->
 		<div>
 			<p class="mb-4 text-sm text-muted-foreground">
-				Showing {data.total} vendor{data.total === 1 ? '' : 's'}
+				{m.vdir_showing({ count: data.total })}
 			</p>
 
 			{#if data.vendors.length === 0}
 				<Card.Root class="p-14 text-center">
 					<Store class="mx-auto size-10 text-muted-foreground" />
-					<p class="mt-4 font-medium">No vendors match your filters</p>
+					<p class="mt-4 font-medium">{m.vdir_none()}</p>
 					<p class="mt-1 text-sm text-muted-foreground">
-						Try widening your region, category or rating filters.
+						{m.vdir_none_hint()}
 					</p>
 				</Card.Root>
 			{:else}
@@ -281,7 +282,7 @@
 									<button
 										type="submit"
 										class="flex size-8 items-center justify-center rounded-full bg-background/90 shadow-sm"
-										aria-label={favorites.has(vendor.id) ? 'Remove from favourites' : 'Save vendor'}
+										aria-label={favorites.has(vendor.id) ? m.vdir_unsave() : m.vdir_save()}
 									>
 										<Heart
 											class="size-4 {favorites.has(vendor.id)
@@ -321,14 +322,13 @@
 									{#if vendor.city}
 										<MapPin class="size-3.5" />{vendor.city} ·
 									{/if}
-									{vendor.reviewCount} review{vendor.reviewCount === 1 ? '' : 's'}
+									{m.vdir_reviews({ count: vendor.reviewCount })}
 								</p>
 
 								{#if formatPriceRange(vendor.priceMin, vendor.priceMax)}
 									<Separator class="my-3" />
 									<p class="text-sm font-semibold">
 										{formatPriceRange(vendor.priceMin, vendor.priceMax)}
-										<span class="text-xs font-normal text-muted-foreground">ETB from</span>
 									</p>
 								{/if}
 							</div>
@@ -349,7 +349,7 @@
 						</Button>
 
 						<span class="px-3 text-sm text-muted-foreground">
-							Page {data.page} of {data.pages}
+							{m.vdir_page({ page: data.page, pages: data.pages })}
 						</span>
 
 						<Button

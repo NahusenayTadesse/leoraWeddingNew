@@ -1,42 +1,43 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	// Column structure mirrors the PHP footer.
-	const columns = [
+	const columns = $derived([
 		{
-			title: 'Platform',
+			title: m.footer_platform(),
 			links: [
-				['Marketplace', '/vendors'],
-				['Budget Estimator', '/budget-estimator'],
-				['Dashboard', '/dashboard'],
-				['Leora Card', '/card'],
-				['Pricing', '/pricing']
+				[m.nav_marketplace(), '/vendors'],
+				[m.footer_budget_estimator(), '/budget-estimator'],
+				[m.footer_dashboard(), '/dashboard'],
+				[m.nav_card(), '/card'],
+				[m.nav_pricing(), '/pricing']
 			]
 		},
 		{
 			// Careers and Press were in the PHP footer but never had pages behind
 			// them — they 404'd there too. Dropped rather than shipped broken.
-			title: 'Company',
+			title: m.footer_company(),
 			links: [
-				['About', '/about-us'],
-				['Contact', '/contact-us']
+				[m.footer_about(), '/about-us'],
+				[m.footer_contact(), '/contact-us']
 			]
 		},
 		{
-			title: 'Support',
+			title: m.footer_support(),
 			links: [
-				['FAQ', '/#faq'],
-				['Browse Vendors', '/vendors'],
-				['Vendor Sign Up', '/signup?role=vendor'],
-				['Vendor Portal', '/vendor-dashboard']
+				[m.footer_faq(), '/#faq'],
+				[m.footer_browse_vendors(), '/vendors'],
+				[m.footer_vendor_signup(), '/signup?role=vendor'],
+				[m.footer_vendor_portal(), '/vendor-dashboard']
 			]
 		},
 		{
-			title: 'Legal',
+			title: m.footer_legal(),
 			links: [
-				['Terms of Service', '/terms'],
-				['Privacy Policy', '/privacy']
+				[m.footer_terms(), '/terms'],
+				[m.footer_privacy(), '/privacy']
 			]
 		}
-	] as const;
+	] as const);
 </script>
 
 <footer class="mt-24 border-t bg-card">
@@ -57,7 +58,7 @@
 					<small
 						class="mt-px hidden text-[9px] font-semibold tracking-[0.12em] text-muted-foreground uppercase sm:block"
 					>
-						Ethiopia's First Wedding Platform
+						{m.site_tagline()}
 					</small>
 				</span>
 			</a>
@@ -83,8 +84,8 @@
 		<div
 			class="mt-12 flex flex-col items-center justify-between gap-3 border-t pt-7 text-[13px] text-muted-foreground sm:flex-row"
 		>
-			<p>© {new Date().getFullYear()} Leora Events. All rights reserved.</p>
-			<p>Made for weddings across Ethiopia 🇪🇹</p>
+			<p>© {new Date().getFullYear()} Leora Events. {m.footer_rights()}</p>
+			<p>{m.footer_made_for()}</p>
 		</div>
 	</div>
 </footer>

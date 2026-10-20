@@ -87,20 +87,12 @@ export const actions: Actions = {
 
 		const form = await superValidate(request, zod4(bookingSchema), { id: 'booking' });
 		if (!form.valid)
-			return message(
-				form,
-				{ type: 'error', text: 'Please check the form for errors' },
-				{ status: 400 }
-			);
+			return message(form, { type: 'error', text: m.srv_check_form() }, { status: 400 });
 
 		if (form.data.serviceId) {
 			const ok = await serviceBelongsToVendor(form.data.serviceId, form.data.vendorId);
 			if (!ok)
-				return message(
-					form,
-					{ type: 'error', text: "That service doesn't belong to the chosen vendor." },
-					{ status: 400 }
-				);
+				return message(form, { type: 'error', text: m.srv_service_mismatch() }, { status: 400 });
 		}
 
 		if (await isBlocked(form.data.vendorId, form.data.eventDate)) {
@@ -142,7 +134,7 @@ export const actions: Actions = {
 
 		return message(form, {
 			type: 'success',
-			text: 'Booking request sent. The vendor will confirm shortly.'
+			text: m.srv_booking_sent()
 		});
 	},
 
@@ -151,22 +143,13 @@ export const actions: Actions = {
 
 		const form = await superValidate(request, zod4(bookingIdSchema), { id: 'cancel' });
 		if (!form.valid)
-			return message(
-				form,
-				{ type: 'error', text: 'Please check the form for errors' },
-				{ status: 400 }
-			);
+			return message(form, { type: 'error', text: m.srv_check_form() }, { status: 400 });
 
 		const booking = await getBookingForWedding(form.data.id, wedding.id);
-		if (!booking)
-			return message(
-				form,
-				{ type: 'error', text: 'That is not yours to change.' },
-				{ status: 403 }
-			);
+		if (!booking) return message(form, { type: 'error', text: m.srv_not_yours() }, { status: 403 });
 
 		if (booking.status === 'cancelled') {
-			return message(form, { type: 'success', text: 'That booking is already cancelled.' });
+			return message(form, { type: 'success', text: m.srv_already_cancelled() });
 		}
 
 		await db
@@ -188,7 +171,7 @@ export const actions: Actions = {
 			link: '/vendor-dashboard/bookings'
 		});
 
-		return message(form, { type: 'success', text: 'Booking cancelled.' });
+		return message(form, { type: 'success', text: m.srv_booking_cancelled() });
 	},
 
 	/**
@@ -207,8 +190,7 @@ export const actions: Actions = {
 		}
 
 		const booking = await getBookingForWedding(form.data.bookingId, wedding.id);
-		if (!booking)
-			return fail(403, { message: { type: 'error', text: 'That is not yours to change.' } });
+		if (!booking) return fail(403, { message: { type: 'error', text: m.srv_not_yours() } });
 
 		let checkoutUrl: string;
 		try {
@@ -251,11 +233,7 @@ export const actions: Actions = {
 
 		const booking = await getBookingForWedding(form.data.bookingId, wedding.id);
 		if (!booking) {
-			return message(
-				withFiles(form),
-				{ type: 'error', text: 'That is not yours to change.' },
-				{ status: 403 }
-			);
+			return message(withFiles(form), { type: 'error', text: m.srv_not_yours() }, { status: 403 });
 		}
 
 		try {
@@ -296,7 +274,7 @@ export const actions: Actions = {
 			if (err instanceof ClaimRefused) return bad(err.message);
 			throw err;
 		}
-		return ok("Refund requested. We'll review it and let you know.");
+		return ok(m.srv_refund_requested());
 	},
 
 	/** Report a problem with a booking for staff to look into. */
@@ -305,14 +283,14 @@ export const actions: Actions = {
 		const p = await parse(request, disputeSchema);
 		if ('error' in p) return p.error;
 		const booking = await getBookingForWedding(p.data.bookingId, wedding.id);
-		if (!booking) return bad('That is not yours to change.', 403);
+		if (!booking) return bad(m.srv_not_yours(), 403);
 		try {
 			await openDispute({ bookingId: booking.id, raisedBy: 'couple', reason: p.data.reason });
 		} catch (err) {
 			if (err instanceof ClaimRefused) return bad(err.message);
 			throw err;
 		}
-		return ok('Thanks — our team will look into it and get back to you.');
+		return ok(m.srv_dispute_thanks());
 	},
 
 	/** Signs the booking's contract with the typed full name. */
@@ -327,14 +305,14 @@ export const actions: Actions = {
 		);
 		if ('error' in p) return p.error;
 		const booking = await getBookingForWedding(p.data.bookingId, wedding.id);
-		if (!booking) return bad('That is not yours to change.', 403);
+		if (!booking) return bad(m.srv_not_yours(), 403);
 		const signed = await signContract({
 			bookingId: booking.id,
 			side: 'couple',
 			name: p.data.name,
 			ip: getClientAddress()
 		});
-		if (!signed) return bad('There is no contract to sign yet.');
+		if (!signed) return bad(m.srv_no_contract());
 		const vendor = await getVendorForMessage(booking.vendorId);
 		await notify(vendor?.userId, {
 			type: 'contract_signed',
@@ -342,7 +320,7 @@ export const actions: Actions = {
 			body: `The couple signed the contract for booking #${booking.id}.`,
 			link: '/vendor-dashboard/bookings'
 		});
-		return ok('Contract signed.');
+		return ok(m.srv_contract_signed());
 	},
 
 	/** Accept or decline a vendor's quote. Accepting sets the booking's agreed price. */
@@ -355,7 +333,7 @@ export const actions: Actions = {
 		if ('error' in p) return p.error;
 		const accept = p.data.accept === 'yes';
 		const result = await respondToQuote(p.data.quoteId, wedding.id, accept);
-		if (!result) return bad('That quote is no longer open.');
+		if (!result) return bad(m.srv_quote_closed());
 		await notify(result.vendorUserId, {
 			type: accept ? 'quote_accepted' : 'quote_declined',
 			title: accept ? 'Quote accepted' : 'Quote declined',

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import ActionForm from '@nahu/admin-kit/formComponents/ActionForm.svelte';
 	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
 	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
@@ -27,19 +28,19 @@
 		if (sameDay) return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
 		const days = Math.floor((now.getTime() - d.getTime()) / 86_400_000);
-		if (days < 1) return 'Today';
-		if (days < 7) return `${days}d`;
+		if (days < 1) return m.msg_today();
+		if (days < 7) return m.msg_days_short({ days });
 		return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 	}
 </script>
 
 <svelte:head>
-	<title>Messages · Leora Events</title>
+	<title>{m.msg_meta()}</title>
 </svelte:head>
 
 <div class="mb-6">
-	<h1 class="text-2xl font-semibold tracking-tight">Messages</h1>
-	<p class="mt-1 text-sm text-muted-foreground">Conversations with your booked vendors.</p>
+	<h1 class="text-2xl font-semibold tracking-tight">{m.nav_messages()}</h1>
+	<p class="mt-1 text-sm text-muted-foreground">{m.msg_sub()}</p>
 </div>
 
 <Card.Root
@@ -55,14 +56,14 @@
 		<div
 			class="border-b px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase"
 		>
-			Inbox
+			{m.msg_inbox()}
 		</div>
 
 		{#if data.threads.length === 0}
 			<div
 				class="flex flex-1 items-center justify-center px-6 text-center text-sm text-muted-foreground"
 			>
-				No conversations yet. Message a vendor from their profile to get started.
+				{m.msg_none()}
 			</div>
 		{:else}
 			{#each data.threads as thread (thread.vendorId)}
@@ -100,7 +101,9 @@
 		{#if data.activeThread}
 			<div class="flex items-center justify-between border-b px-5 py-3.5">
 				<div class="min-w-0">
-					<a href="?" class="mb-1 inline-block text-xs text-muted-foreground md:hidden">← Back</a>
+					<a href="?" class="mb-1 inline-block text-xs text-muted-foreground md:hidden"
+						>{m.msg_back()}</a
+					>
 					<h3 class="truncate text-sm font-semibold">{data.activeThread.vendor.businessName}</h3>
 					{#if data.activeThread.vendor.categoryName}
 						<p class="text-xs text-muted-foreground">{data.activeThread.vendor.categoryName}</p>
@@ -116,7 +119,7 @@
 					<div
 						class="flex h-full items-center justify-center text-center text-sm text-muted-foreground"
 					>
-						Start the conversation with {data.activeThread.vendor.businessName}.
+						{m.msg_start({ name: data.activeThread.vendor.businessName })}
 					</div>
 				{:else}
 					{#each data.activeThread.messages as message (message.id)}
@@ -153,7 +156,7 @@
 				class="flex gap-2 border-t p-3.5"
 			>
 				<HiddenField name="vendorId" value={data.activeThread.vendor.vendorId} />
-				<Input name="body" bind:value={body} placeholder="Type a message..." autocomplete="off" />
+				<Input name="body" bind:value={body} placeholder={m.msg_type()} autocomplete="off" />
 				<Button type="submit" disabled={sending || !body.trim()}>
 					<Send class="size-4" />
 				</Button>
@@ -167,7 +170,7 @@
 				class="flex flex-1 flex-col items-center justify-center gap-2 text-sm text-muted-foreground"
 			>
 				<MessageSquare class="size-8" />
-				Select a conversation to view messages
+				{m.msg_select()}
 			</div>
 		{/if}
 	</div>

@@ -8,6 +8,7 @@ import { listBudgetItems, listBudgetCategories, assertItemOwnership } from '$lib
 import { requireCoupleAndWedding } from '$lib/server/weddings';
 import { and, eq } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
+import { m } from '$lib/paraglide/messages.js';
 
 export const load: PageServerLoad = async ({ parent }) => {
 	const { couple, wedding } = await parent();
@@ -35,11 +36,7 @@ export const actions: Actions = {
 
 		const form = await superValidate(request, zod4(budgetItemSchema), { id: 'item' });
 		if (!form.valid)
-			return message(
-				form,
-				{ type: 'error', text: 'Please check the form for errors' },
-				{ status: 400 }
-			);
+			return message(form, { type: 'error', text: m.srv_check_form() }, { status: 400 });
 
 		const values = {
 			name: form.data.name,
@@ -51,11 +48,7 @@ export const actions: Actions = {
 
 		if (form.data.id) {
 			if (!(await assertItemOwnership(form.data.id, couple!.id))) {
-				return message(
-					form,
-					{ type: 'error', text: 'That is not yours to change.' },
-					{ status: 403 }
-				);
+				return message(form, { type: 'error', text: m.srv_not_yours() }, { status: 403 });
 			}
 			await db
 				.update(budgetItems)
@@ -67,7 +60,7 @@ export const actions: Actions = {
 
 		return message(form, {
 			type: 'success',
-			text: form.data.id ? 'Line item updated.' : 'Line item added.'
+			text: form.data.id ? m.srv_item_updated() : m.srv_item_added()
 		});
 	},
 
@@ -76,24 +69,16 @@ export const actions: Actions = {
 
 		const form = await superValidate(request, zod4(deleteItemSchema), { id: 'delete' });
 		if (!form.valid)
-			return message(
-				form,
-				{ type: 'error', text: 'Please check the form for errors' },
-				{ status: 400 }
-			);
+			return message(form, { type: 'error', text: m.srv_check_form() }, { status: 400 });
 
 		if (!(await assertItemOwnership(form.data.id, couple!.id))) {
-			return message(
-				form,
-				{ type: 'error', text: 'That is not yours to change.' },
-				{ status: 403 }
-			);
+			return message(form, { type: 'error', text: m.srv_not_yours() }, { status: 403 });
 		}
 
 		await db
 			.delete(budgetItems)
 			.where(and(eq(budgetItems.id, form.data.id), eq(budgetItems.coupleId, couple!.id)));
 
-		return message(form, { type: 'success', text: 'Line item removed.' });
+		return message(form, { type: 'success', text: m.srv_item_removed() });
 	}
 };

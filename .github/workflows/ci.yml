@@ -44,6 +44,10 @@ jobs:
         working-directory: leoraWeddingNew
         run: npm ci
 
+      - name: Lint
+        working-directory: leoraWeddingNew
+        run: npm run lint
+
       - name: Type check
         working-directory: leoraWeddingNew
         run: npm run check

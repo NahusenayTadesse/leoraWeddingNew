@@ -1,11 +1,12 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
 
 	const quickLinks = [
-		['Planning Dashboard', '/dashboard'],
-		['Pricing', '/pricing'],
-		['Contact Us', '/contact-us']
+		[m.err_planning_dashboard(), '/dashboard'],
+		[m.nav_pricing(), '/pricing'],
+		[m.footer_contact(), '/contact-us']
 	];
 
 	// 404 gets the friendly wedding-specific copy from the PHP page; anything
@@ -14,28 +15,29 @@
 </script>
 
 <svelte:head>
-	<title>{isNotFound ? 'Page Not Found' : `Error ${page.status}`} — Leora Events</title>
+	<title
+		>{isNotFound ? m.err_not_found_title() : m.err_title({ status: page.status })} — Leora Events</title
+	>
 </svelte:head>
 
 <section class="mx-auto flex max-w-[640px] flex-col items-center px-5 py-24 text-center sm:px-8">
 	<p class="font-display text-7xl font-extrabold text-primary sm:text-8xl">{page.status}</p>
 
 	<h1 class="mt-4 font-display text-2xl font-extrabold text-balance sm:text-3xl">
-		{isNotFound ? "This page couldn't be found" : 'Something went wrong'}
+		{isNotFound ? m.err_not_found_heading() : m.err_heading()}
 	</h1>
 
 	<p class="mt-3 max-w-md text-[15px] leading-relaxed text-muted-foreground">
 		{#if isNotFound}
-			The link may be broken, or the page may have moved. Let's get you back to planning your
-			perfect day.
+			{m.err_not_found_body()}
 		{:else}
-			{page.error?.message ?? 'An unexpected error occurred. Please try again in a moment.'}
+			{page.error?.message ?? m.err_body()}
 		{/if}
 	</p>
 
 	<div class="mt-8 flex flex-wrap justify-center gap-3">
-		<Button href="/" size="lg">Back to Homepage</Button>
-		<Button href="/vendors" variant="outline" size="lg">Browse Marketplace</Button>
+		<Button href="/" size="lg">{m.err_home()}</Button>
+		<Button href="/vendors" variant="outline" size="lg">{m.err_browse()}</Button>
 	</div>
 
 	<nav

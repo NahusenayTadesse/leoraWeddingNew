@@ -15,6 +15,7 @@ import { requireCoupleAndWedding } from '$lib/server/weddings';
 import { parse, bad } from '$lib/server/adminAction';
 import { and, eq } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
+import { m } from '$lib/paraglide/messages.js';
 
 export const load: PageServerLoad = async ({ parent }) => {
 	const { couple, wedding } = await parent();
@@ -44,11 +45,7 @@ export const actions: Actions = {
 
 		const form = await superValidate(request, zod4(taskSchema), { id: 'task' });
 		if (!form.valid)
-			return message(
-				form,
-				{ type: 'error', text: 'Please check the form for errors' },
-				{ status: 400 }
-			);
+			return message(form, { type: 'error', text: m.srv_check_form() }, { status: 400 });
 
 		const values = {
 			title: form.data.title,
@@ -58,11 +55,7 @@ export const actions: Actions = {
 
 		if (form.data.id) {
 			if (!(await assertTaskOwnership(form.data.id, couple!.id)))
-				return message(
-					form,
-					{ type: 'error', text: 'That is not yours to change.' },
-					{ status: 403 }
-				);
+				return message(form, { type: 'error', text: m.srv_not_yours() }, { status: 403 });
 
 			await db
 				.update(tasksTable)
@@ -72,7 +65,10 @@ export const actions: Actions = {
 			await db.insert(tasksTable).values({ ...values, coupleId: couple!.id });
 		}
 
-		return message(form, { type: 'success', text: form.data.id ? 'Task updated.' : 'Task added.' });
+		return message(form, {
+			type: 'success',
+			text: form.data.id ? m.srv_task_updated() : m.srv_task_added()
+		});
 	},
 
 	toggle: async ({ request, locals }) => {
@@ -86,7 +82,7 @@ export const actions: Actions = {
 			.from(tasksTable)
 			.where(and(eq(tasksTable.id, p.data.id), eq(tasksTable.coupleId, couple!.id)))
 			.limit(1);
-		if (!current) return bad('That task is not on your checklist.', 403);
+		if (!current) return bad(m.srv_task_not_listed(), 403);
 
 		await db
 			.update(tasksTable)
@@ -102,24 +98,16 @@ export const actions: Actions = {
 
 		const form = await superValidate(request, zod4(taskIdSchema), { id: 'delete' });
 		if (!form.valid)
-			return message(
-				form,
-				{ type: 'error', text: 'Please check the form for errors' },
-				{ status: 400 }
-			);
+			return message(form, { type: 'error', text: m.srv_check_form() }, { status: 400 });
 
 		if (!(await assertTaskOwnership(form.data.id, couple!.id)))
-			return message(
-				form,
-				{ type: 'error', text: 'That is not yours to change.' },
-				{ status: 403 }
-			);
+			return message(form, { type: 'error', text: m.srv_not_yours() }, { status: 403 });
 
 		await db
 			.delete(tasksTable)
 			.where(and(eq(tasksTable.id, form.data.id), eq(tasksTable.coupleId, couple!.id)));
 
-		return message(form, { type: 'success', text: 'Task removed.' });
+		return message(form, { type: 'success', text: m.srv_task_removed() });
 	},
 
 	generate: async ({ request, locals }) => {
@@ -127,18 +115,10 @@ export const actions: Actions = {
 
 		const form = await superValidate(request, zod4(generateSchema), { id: 'generate' });
 		if (!form.valid)
-			return message(
-				form,
-				{ type: 'error', text: 'Please check the form for errors' },
-				{ status: 400 }
-			);
+			return message(form, { type: 'error', text: m.srv_check_form() }, { status: 400 });
 
 		if (!wedding.weddingDate) {
-			return message(
-				form,
-				{ type: 'error', text: 'Set your wedding date first.' },
-				{ status: 400 }
-			);
+			return message(form, { type: 'error', text: m.srv_set_date() }, { status: 400 });
 		}
 
 		const [templates, existing] = await Promise.all([listTaskTemplates(), listTasks(couple!.id)]);
@@ -161,7 +141,7 @@ export const actions: Actions = {
 		if (toInsert.length === 0) {
 			return message(form, {
 				type: 'success',
-				text: 'Your checklist already has every suggested task.'
+				text: m.srv_all_tasks()
 			});
 		}
 
@@ -169,7 +149,7 @@ export const actions: Actions = {
 
 		return message(form, {
 			type: 'success',
-			text: `Added ${toInsert.length} task${toInsert.length === 1 ? '' : 's'}.`
+			text: m.srv_added_tasks({ count: toInsert.length })
 		});
 	}
 };

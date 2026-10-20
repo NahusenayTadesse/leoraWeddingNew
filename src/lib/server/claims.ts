@@ -16,6 +16,7 @@ import {
 } from '$lib/server/db/schema';
 import { notify, notifyAdmins } from '$lib/server/notify';
 import { formatETB, fromMoney, toMoney } from '$lib/money';
+import { m } from '$lib/paraglide/messages.js';
 
 export class ClaimRefused extends Error {
 	constructor(message: string) {
@@ -46,10 +47,10 @@ export async function requestRefund(input: {
 		.where(and(eq(bookingPayments.id, input.paymentId), isNull(bookingPayments.deletedAt)));
 
 	if (!payment || payment.weddingPlanId !== input.weddingPlanId) {
-		throw new ClaimRefused('That payment is not yours.');
+		throw new ClaimRefused(m.srv_payment_not_yours());
 	}
 	if (payment.status !== 'confirmed') {
-		throw new ClaimRefused('Only confirmed payments can be refunded.');
+		throw new ClaimRefused(m.srv_refund_confirmed_only());
 	}
 
 	const [claimed] = await db
@@ -63,9 +64,9 @@ export async function requestRefund(input: {
 			)
 		);
 	const left = toMoney(payment.amount) - toMoney(claimed?.total);
-	if (left <= 0) throw new ClaimRefused('A refund has already been requested for this payment.');
+	if (left <= 0) throw new ClaimRefused(m.srv_refund_twice());
 	if (!(input.amount > 0) || input.amount > left + 0.005) {
-		throw new ClaimRefused(`You can ask for up to ${formatETB(left)}.`);
+		throw new ClaimRefused(m.srv_refund_up_to({ amount: formatETB(left) }));
 	}
 
 	await db.insert(refunds).values({
@@ -117,7 +118,7 @@ export async function openDispute(input: {
 			)
 		)
 		.limit(1);
-	if (open) throw new ClaimRefused('There is already an open dispute on this booking.');
+	if (open) throw new ClaimRefused(m.srv_open_dispute());
 
 	await db.insert(disputes).values({
 		bookingId: input.bookingId,

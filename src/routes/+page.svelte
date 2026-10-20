@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
 	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
 	import * as Accordion from '$lib/components/ui/accordion';
@@ -33,12 +34,12 @@
 	type Tier = keyof typeof tierMultiplier;
 
 	const categorySplit: [string, number][] = [
-		['Venue & Catering', 0.38],
-		['Photo & Video', 0.16],
-		['Decor', 0.18],
-		['Clothing', 0.1],
-		['Entertainment', 0.09],
-		['Other', 0.09]
+		[m.home_cat_venue(), 0.38],
+		[m.home_cat_photo(), 0.16],
+		[m.home_cat_decor(), 0.18],
+		[m.home_cat_clothing(), 0.1],
+		[m.home_cat_entertainment(), 0.09],
+		[m.home_cat_other(), 0.09]
 	];
 
 	let guests = $state(300);
@@ -50,64 +51,40 @@
 	);
 
 	const tiers: { key: Tier; label: string }[] = [
-		{ key: 'traditional', label: 'Traditional' },
-		{ key: 'outdoor', label: 'Outdoor' },
-		{ key: 'luxury', label: 'Luxury' }
+		{ key: 'traditional', label: m.home_tier_traditional() },
+		{ key: 'outdoor', label: m.home_tier_outdoor() },
+		{ key: 'luxury', label: m.home_tier_luxury() }
 	];
 
 	// ---- Editorial content carried over from the PHP page ----
 	const events = [
-		['01', 'Engagement'],
-		['02', 'Shimgelegna'],
-		['03', 'Gebez / Enshoshela'],
-		['04', 'Wedding Ceremony'],
-		['05', 'Melse'],
-		['06', 'Kilikil']
+		['01', m.event_type_engagement()],
+		['02', m.event_type_shimgelegna()],
+		['03', m.home_ev_gebez()],
+		['04', m.home_ev_ceremony()],
+		['05', m.event_type_melse()],
+		['06', m.event_type_kilikil()]
 	];
 
 	const timeline = [
-		['Engagement', '12 months out'],
-		['Book vendors', '9 months out'],
-		['Send invitations', '4 months out'],
-		['Melse', '1 month out'],
-		['Wedding day', 'The big day']
+		[m.event_type_engagement(), m.home_tl_12()],
+		[m.home_tl_book(), m.home_tl_9()],
+		[m.home_tl_invites(), m.home_tl_4()],
+		[m.event_type_melse(), m.home_tl_1()],
+		[m.home_tl_day(), m.home_tl_big()]
 	];
 
 	const cardFeatures = [
-		[
-			'01',
-			'Elegant themes',
-			'Choose from designs built around Ethiopian motifs, reimagined for the screen.'
-		],
-		[
-			'02',
-			'Live RSVP & check-in',
-			'Guests respond in one tap; check them in at the door with a scan.'
-		],
-		[
-			'03',
-			'Interactive map & directions',
-			'Venue location, parking notes and timing, all in the card itself.'
-		]
+		['01', m.home_card_f1_title(), m.home_card_f1_body()],
+		['02', m.home_card_f2_title(), m.home_card_f2_body()],
+		['03', m.home_card_f3_title(), m.home_card_f3_body()]
 	];
 
 	const faqs = [
-		[
-			'Is Leora free to use for couples?',
-			'Yes. Browsing the marketplace, planning your budget and building your guest list are all free for couples.'
-		],
-		[
-			'How are vendors verified?',
-			'Every vendor goes through an identity and business check before they can list packages on Leora.'
-		],
-		[
-			'Can I plan multiple events under one wedding?',
-			'Yes — engagement, Melse, ceremony and reception can all live under a single budget and guest list.'
-		],
-		[
-			'Does Leora work outside Addis Ababa?',
-			'Leora currently covers eight regions across Ethiopia, with more being added as vendors join.'
-		]
+		[m.home_faq_q1(), m.home_faq_a1()],
+		[m.home_faq_q2(), m.home_faq_a2()],
+		[m.home_faq_q3(), m.home_faq_a3()],
+		[m.home_faq_q4(), m.home_faq_a4()]
 	];
 
 	const initials = (name: string) =>
@@ -120,11 +97,10 @@
 </script>
 
 <svelte:head>
-	<title>Leora Events — Ethiopia's First Wedding Platform</title>
-	<meta
-		name="description"
-		content="Plan your dream Ethiopian wedding, all in one place. Vendors, budgeting, planning, invitations and guests in a single workspace."
-	/>
+	<title>Leora Events — {m.site_tagline()}</title>
+	<meta name="description" content={m.home_meta_description()} />
+	<meta property="og:title" content="Leora Events — {m.site_tagline()}" />
+	<meta property="og:description" content={m.home_meta_description()} />
 </svelte:head>
 
 <!-- ============================ HERO ============================ -->
@@ -135,23 +111,22 @@
 			<div>
 				<Badge variant="secondary" class="mb-5 gap-1.5 text-accent-foreground">
 					<span class="size-1.5 rounded-full bg-primary"></span>
-					Ethiopia's First Wedding Platform
+					{m.site_tagline()}
 				</Badge>
 
 				<h1
 					class="font-display text-4xl font-extrabold text-balance sm:text-5xl lg:text-[54px] lg:leading-[1.06]"
 				>
-					Plan your dream Ethiopian wedding, all in one place
+					{m.home_hero_title()}
 				</h1>
 
 				<p class="mt-5 max-w-xl text-[15.5px] leading-relaxed text-muted-foreground">
-					Vendors, budgeting, planning, invitations and guests — Leora brings every part of your
-					wedding into a single, beautifully designed workspace.
+					{m.home_hero_lead()}
 				</p>
 
 				<div class="mt-7 flex flex-wrap gap-3">
-					<Button href="/signup" size="lg">Start Planning</Button>
-					<Button href="/vendors" variant="outline" size="lg">Explore Vendors</Button>
+					<Button href="/signup" size="lg">{m.nav_start()}</Button>
+					<Button href="/vendors" variant="outline" size="lg">{m.home_explore_vendors()}</Button>
 				</div>
 
 				<dl class="mt-10 flex flex-wrap gap-x-10 gap-y-4">
@@ -159,17 +134,17 @@
 						<dt class="font-display text-2xl font-extrabold">
 							{data.stats.vendorCount.toLocaleString()}
 						</dt>
-						<dd class="text-[13px] text-muted-foreground">Vendors listed</dd>
+						<dd class="text-[13px] text-muted-foreground">{m.home_stat_vendors()}</dd>
 					</div>
 					<div>
 						<dt class="font-display text-2xl font-extrabold">{data.stats.regionCount}</dt>
-						<dd class="text-[13px] text-muted-foreground">Cities covered</dd>
+						<dd class="text-[13px] text-muted-foreground">{m.home_stat_cities()}</dd>
 					</div>
 					<div>
 						<dt class="font-display text-2xl font-extrabold">
 							{data.vendors.length ? `${Number(data.vendors[0].ratingAvg).toFixed(1)}/5` : '—'}
 						</dt>
-						<dd class="text-[13px] text-muted-foreground">Top rated vendor</dd>
+						<dd class="text-[13px] text-muted-foreground">{m.home_stat_top()}</dd>
 					</div>
 				</dl>
 			</div>
@@ -181,17 +156,17 @@
 			-->
 			<div class="hero-visual" use:inview={startHero}>
 				<div class="floatcard fc-budget">
-					<div class="fc-label">Budget Tracker</div>
+					<div class="fc-label">{m.home_fc_budget()}</div>
 					<div class="fc-value">ETB {heroBudget.toLocaleString()}</div>
 					<div class="fc-bar"><i style="width:{heroBarWidth}%"></i></div>
 					<div class="fc-mini-row">
-						<span>Spent: 64%</span>
-						<span class="font-semibold text-(--color-success)">On track</span>
+						<span>{m.home_fc_spent()}</span>
+						<span class="font-semibold text-(--color-success)">{m.home_fc_on_track()}</span>
 					</div>
 				</div>
 
 				<div class="floatcard fc-vendor">
-					<div class="fc-label">Vendor Match</div>
+					<div class="fc-label">{m.home_fc_vendor()}</div>
 					{#if data.vendors.length}
 						{@const v = data.vendors[0]}
 						<div class="fc-value">{v.businessName}</div>
@@ -203,30 +178,33 @@
 						</div>
 					{:else}
 						<div class="mt-2 text-[12.5px] text-muted-foreground">
-							No vendors listed yet — they appear here as they're approved.
+							{m.home_fc_no_vendors()}
 						</div>
 					{/if}
 				</div>
 
 				<div class="floatcard fc-timeline">
-					<div class="fc-label">Wedding Timeline</div>
+					<div class="fc-label">{m.home_fc_timeline()}</div>
 					<div class="mt-2.5 flex flex-col gap-2 text-[13px]">
 						<div class="flex items-center gap-1.5">
-							<Check class="size-3.5 text-(--color-success)" /> Venue booked
+							<Check class="size-3.5 text-(--color-success)" />
+							{m.home_fc_venue_booked()}
 						</div>
 						<div class="flex items-center gap-1.5">
-							<Check class="size-3.5 text-(--color-success)" /> Melse date set
+							<Check class="size-3.5 text-(--color-success)" />
+							{m.home_fc_melse_set()}
 						</div>
 						<div class="flex items-center gap-1.5 font-bold text-accent-foreground">
-							<ArrowRight class="size-3.5" /> Send invitations
+							<ArrowRight class="size-3.5" />
+							{m.home_fc_send_invites()}
 						</div>
 					</div>
 				</div>
 
 				<div class="floatcard fc-guest">
-					<div class="fc-label">Guests</div>
+					<div class="fc-label">{m.home_fc_guests()}</div>
 					<div class="fc-value">318</div>
-					<div class="fc-mini-row"><span>RSVP'd: 240</span></div>
+					<div class="fc-mini-row"><span>{m.home_fc_rsvpd()}</span></div>
 				</div>
 			</div>
 		</div>
@@ -236,14 +214,13 @@
 <!-- ========================= MARKETPLACE ========================= -->
 <section class="mx-auto max-w-[1180px] px-5 py-16 sm:px-8">
 	<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">
-		Marketplace
+		{m.home_mkt_eyebrow()}
 	</p>
 	<h2 class="mt-2 font-display text-3xl font-extrabold text-balance sm:text-4xl">
-		Every vendor your wedding needs
+		{m.home_mkt_title()}
 	</h2>
 	<p class="mt-3 max-w-2xl text-[15px] text-muted-foreground">
-		Browse verified photographers, venues, decorators and more — with real reviews, real pricing,
-		and real availability.
+		{m.home_mkt_lead()}
 	</p>
 
 	{#if data.categories.length}
@@ -258,8 +235,9 @@
 							<span>
 								<span class="block text-sm font-bold">{category.name}</span>
 								<span class="block text-[12.5px] text-muted-foreground">
-									{category.count}
-									{category.count === 1 ? 'vendor' : 'vendors'}
+									{category.count === 1
+										? m.home_vendor_count_one()
+										: m.home_vendor_count({ count: category.count })}
 								</span>
 							</span>
 						</Card.Content>
@@ -270,7 +248,7 @@
 	{:else}
 		<Card.Root class="mt-9">
 			<Card.Content class="py-12 text-center text-sm text-muted-foreground">
-				No vendor categories yet.
+				{m.home_no_categories()}
 			</Card.Content>
 		</Card.Root>
 	{/if}
@@ -280,13 +258,13 @@
 <section class="border-y bg-card">
 	<div class="mx-auto max-w-[1180px] px-5 py-16 sm:px-8">
 		<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">
-			Budget Estimator
+			{m.home_est_eyebrow()}
 		</p>
 		<h2 class="mt-2 font-display text-3xl font-extrabold text-balance sm:text-4xl">
-			Know your number before you book anything
+			{m.home_est_title()}
 		</h2>
 		<p class="mt-3 max-w-2xl text-[15px] text-muted-foreground">
-			Adjust guest count and venue tier to see a live estimate, broken down by category.
+			{m.home_est_lead()}
 		</p>
 
 		<div class="mt-9 grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
@@ -294,8 +272,12 @@
 				<Card.Content class="space-y-6">
 					<div>
 						<label for="guestSlider" class="mb-2.5 flex items-baseline justify-between">
-							<span class="text-[12.5px] font-bold text-muted-foreground">Guest count</span>
-							<span class="font-display text-lg font-extrabold">{guests} guests</span>
+							<span class="text-[12.5px] font-bold text-muted-foreground"
+								>{m.home_est_guest_count()}</span
+							>
+							<span class="font-display text-lg font-extrabold"
+								>{m.home_est_guests({ count: guests })}</span
+							>
 						</label>
 						<input
 							id="guestSlider"
@@ -310,7 +292,7 @@
 
 					<div>
 						<span class="mb-2.5 block text-[12.5px] font-bold text-muted-foreground">
-							Venue tier
+							{m.home_est_tier()}
 						</span>
 						<div class="flex flex-wrap gap-2">
 							{#each tiers as t (t.key)}
@@ -326,7 +308,7 @@
 					</div>
 
 					<div class="border-t pt-5">
-						<p class="text-[12.5px] font-bold text-muted-foreground">Estimated Total</p>
+						<p class="text-[12.5px] font-bold text-muted-foreground">{m.home_est_total()}</p>
 						<p class="mt-1 font-display text-4xl font-extrabold">
 							{estimateTotal.toLocaleString()}
 							<span class="text-lg font-bold text-muted-foreground">ETB</span>
@@ -352,7 +334,7 @@
 						</div>
 					{/each}
 					<Button href="/budget-estimator" variant="outline" class="mt-3 w-full">
-						Open the full Budget Estimator
+						{m.home_est_open()}
 						<ArrowRight class="size-4" />
 					</Button>
 				</Card.Content>
@@ -364,33 +346,33 @@
 <!-- ====================== PLANNING DASHBOARD ====================== -->
 <section class="mx-auto max-w-[1180px] px-5 py-16 sm:px-8">
 	<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">
-		Planning Dashboard
+		{m.home_dash_eyebrow()}
 	</p>
 	<h2 class="mt-2 font-display text-3xl font-extrabold text-balance sm:text-4xl">
-		One workspace for the whole wedding
+		{m.home_dash_title()}
 	</h2>
 	<p class="mt-3 max-w-2xl text-[15px] text-muted-foreground">
-		Track budget, tasks, vendors and guests — all updating live as you plan.
+		{m.home_dash_lead()}
 	</p>
 
 	<div class="mt-9 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
 		<Card.Root>
 			<Card.Content class="space-y-3">
 				<p class="text-[11.5px] font-bold tracking-[0.08em] text-muted-foreground uppercase">
-					To do
+					{m.home_dash_todo()}
 				</p>
-				{#each [['Finalize decor theme', 'Due in 5 days'], ['Confirm catering count', 'Due in 9 days']] as [title, due] (title)}
+				{#each [[m.home_dash_task1(), m.home_dash_due5()], [m.home_dash_task2(), m.home_dash_due9()]] as [title, due] (title)}
 					<div class="rounded-xl bg-muted/50 px-4 py-3">
 						<b class="block text-[13.5px]">{title}</b>
 						<span class="text-[12.5px] text-muted-foreground">{due}</span>
 					</div>
 				{/each}
 				<p class="pt-2 text-[11.5px] font-bold tracking-[0.08em] text-muted-foreground uppercase">
-					In progress
+					{m.home_dash_in_progress()}
 				</p>
 				<div class="rounded-xl bg-muted/50 px-4 py-3">
-					<b class="block text-[13.5px]">Send invitations</b>
-					<span class="text-[12.5px] text-muted-foreground">62% sent</span>
+					<b class="block text-[13.5px]">{m.home_fc_send_invites()}</b>
+					<span class="text-[12.5px] text-muted-foreground">{m.home_dash_sent()}</span>
 				</div>
 			</Card.Content>
 		</Card.Root>
@@ -417,14 +399,14 @@
 				</div>
 				<div>
 					<div class="font-display text-2xl font-extrabold">68%</div>
-					<div class="text-[12.5px] text-muted-foreground">Wedding ready</div>
+					<div class="text-[12.5px] text-muted-foreground">{m.home_dash_ready()}</div>
 				</div>
 				<div class="w-full border-t pt-4">
 					<p class="flex justify-between text-[12.5px] text-muted-foreground">
-						<span>Guests invited</span><b class="text-foreground">318</b>
+						<span>{m.home_dash_invited()}</span><b class="text-foreground">318</b>
 					</p>
 					<p class="mt-1.5 flex justify-between text-[12.5px] text-muted-foreground">
-						<span>Confirmed</span><b class="text-foreground">240</b>
+						<span>{m.home_dash_confirmed()}</span><b class="text-foreground">240</b>
 					</p>
 				</div>
 			</Card.Content>
@@ -435,14 +417,13 @@
 <!-- ========================= LEORA CARD ========================= -->
 <section class="mx-auto max-w-[1180px] px-5 py-16 sm:px-8">
 	<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">
-		The Leora Card
+		{m.home_card_eyebrow()}
 	</p>
 	<h2 class="mt-2 font-display text-3xl font-extrabold text-balance sm:text-4xl">
-		An invitation worth sharing
+		{m.home_card_title()}
 	</h2>
 	<p class="mt-3 max-w-2xl text-[15px] text-muted-foreground">
-		Every Leora Card comes with a live countdown, interactive map, guest RSVP flow and a personal QR
-		check-in — wrapped in a design your guests will want to screenshot.
+		{m.home_card_lead()}
 	</p>
 
 	<div class="mt-9 grid gap-4 md:grid-cols-3">
@@ -462,13 +443,13 @@
 <section class="border-y bg-card">
 	<div class="mx-auto max-w-[1180px] px-5 py-16 sm:px-8">
 		<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">
-			Multi-Event Support
+			{m.home_events_eyebrow()}
 		</p>
 		<h2 class="mt-2 font-display text-3xl font-extrabold text-balance sm:text-4xl">
-			Ethiopian weddings are more than one day
+			{m.home_events_title()}
 		</h2>
 		<p class="mt-3 max-w-2xl text-[15px] text-muted-foreground">
-			Plan every event in the celebration under a single guest list and budget.
+			{m.home_events_lead()}
 		</p>
 
 		<ol class="mt-9 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -490,10 +471,10 @@
 
 		<div class="mt-12">
 			<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">
-				Wedding Timeline
+				{m.home_tl_eyebrow()}
 			</p>
 			<h3 class="mt-2 font-display text-2xl font-extrabold">
-				From engagement to reception, mapped out
+				{m.home_tl_title()}
 			</h3>
 			<ol class="mt-6 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
 				{#each timeline as [name, when] (name)}
@@ -511,10 +492,10 @@
 {#if data.testimonials.length}
 	<section class="mx-auto max-w-[1180px] px-5 py-16 sm:px-8">
 		<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">
-			Testimonials
+			{m.home_testimonials_eyebrow()}
 		</p>
 		<h2 class="mt-2 font-display text-3xl font-extrabold sm:text-4xl">
-			Couples planning with Leora
+			{m.home_testimonials_title()}
 		</h2>
 
 		<div class="mt-9 grid gap-4 md:grid-cols-3">
@@ -544,8 +525,10 @@
 
 <!-- ============================ FAQ ============================ -->
 <section id="faq" class="mx-auto max-w-[760px] px-5 py-16 sm:px-8">
-	<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">FAQ</p>
-	<h2 class="mt-2 font-display text-3xl font-extrabold sm:text-4xl">Common questions</h2>
+	<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">
+		{m.footer_faq()}
+	</p>
+	<h2 class="mt-2 font-display text-3xl font-extrabold sm:text-4xl">{m.home_faq_title()}</h2>
 
 	<Accordion.Root type="single" class="mt-7">
 		{#each faqs as [q, a], i (q)}
@@ -566,28 +549,28 @@
 			<div class="pointer-events-none absolute inset-0 bg-(image:--hero-glow)"></div>
 			<div class="relative">
 				<p class="text-[12.5px] font-bold tracking-[0.08em] text-(--leora-gold) uppercase">
-					Get Started
+					{m.home_cta_eyebrow()}
 				</p>
 				<h2 class="mt-2 font-display text-3xl font-extrabold text-balance text-white sm:text-4xl">
-					Your wedding, planned properly
+					{m.home_cta_title()}
 				</h2>
 				<p class="mx-auto mt-3 max-w-lg text-[15px] text-white/70">
-					Join couples across Ethiopia planning smarter, from first vendor call to final RSVP.
+					{m.home_cta_lead()}
 				</p>
 				<div class="mt-7 flex flex-wrap justify-center gap-3">
-					<Button href="/signup" size="lg">Start Planning</Button>
+					<Button href="/signup" size="lg">{m.nav_start()}</Button>
 					<Button
 						href="/vendors"
 						size="lg"
 						variant="outline"
 						class="border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white"
 					>
-						Explore Vendors
+						{m.home_explore_vendors()}
 					</Button>
 				</div>
 				<p class="mt-6 flex items-center justify-center gap-1.5 text-[12.5px] text-white/50">
 					<ShieldCheck class="size-3.5" />
-					Every vendor is identity and business checked
+					{m.home_cta_checked()}
 				</p>
 			</div>
 		</Card.Content>

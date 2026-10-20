@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { ColumnDef } from '@tanstack/table-core';
 	import { renderSnippet } from '@nahu/admin-kit/components/ui/data-table/index.js';
 	import DataTable from '@nahu/admin-kit/components/Table/data-table.svelte';
@@ -69,20 +70,20 @@
 	});
 
 	const columns: ColumnDef<Item>[] = [
-		{ id: 'name', accessorKey: 'name', header: sortable('Item'), footer: 'Total' },
-		{ id: 'categoryName', accessorKey: 'categoryName', header: 'Category' },
-		amountColumn('plannedAmount', 'Planned'),
-		amountColumn('actualAmount', 'Actual'),
+		{ id: 'name', accessorKey: 'name', header: sortable(m.bud_item()), footer: m.bud_total() },
+		{ id: 'categoryName', accessorKey: 'categoryName', header: m.bud_category() },
+		amountColumn('plannedAmount', m.bud_planned()),
+		amountColumn('actualAmount', m.bud_actual()),
 		{
 			id: 'difference',
-			header: 'Difference',
+			header: m.bud_difference(),
 			meta: { align: 'right' },
 			cell: ({ row }) => renderSnippet(differenceCell, row.original)
 		},
 		{
 			id: 'notes',
 			accessorKey: 'notes',
-			header: 'Notes',
+			header: m.bud_notes(),
 			cell: ({ row }) => longText(row.original.notes)
 		},
 		{ id: 'actions', header: '', cell: ({ row }) => renderSnippet(actionsCell, row.original) }
@@ -106,7 +107,7 @@
 			variant="ghost"
 			size="icon"
 			onclick={() => openEdit(item)}
-			aria-label="Edit {item.name}"
+			aria-label={m.bud_edit_aria({ name: item.name })}
 		>
 			<Pencil class="size-4" />
 		</Button>
@@ -114,7 +115,7 @@
 			variant="ghost"
 			size="icon"
 			class="text-destructive"
-			aria-label="Remove {item.name}"
+			aria-label={m.bud_remove_aria({ name: item.name })}
 			onclick={() => {
 				removing = item;
 				removeOpen = true;
@@ -126,13 +127,11 @@
 {/snippet}
 
 <div class="space-y-6">
-	<PageHeader
-		title="Budget"
-		description="Plan what you expect to spend, then track what you actually spent."
-	>
+	<PageHeader title={m.nav_budget()} description={m.bud_desc()}>
 		{#snippet actions()}
 			<Button onclick={openCreate} disabled={data.categoryItems.length === 0}>
-				<Plus class="size-4" /> Add line item
+				<Plus class="size-4" />
+				{m.bud_add()}
 			</Button>
 		{/snippet}
 	</PageHeader>
@@ -141,19 +140,19 @@
 	<Card.Root class="p-5">
 		<div class="grid gap-4 sm:grid-cols-4">
 			<div>
-				<p class="text-xs text-muted-foreground">Total budget</p>
+				<p class="text-xs text-muted-foreground">{m.bud_total_budget()}</p>
 				<p class="text-xl font-semibold">{etb(data.totalBudget)}</p>
 			</div>
 			<div>
-				<p class="text-xs text-muted-foreground">Planned</p>
+				<p class="text-xs text-muted-foreground">{m.bud_planned()}</p>
 				<p class="text-xl font-semibold">{etb(totalPlanned)}</p>
 			</div>
 			<div>
-				<p class="text-xs text-muted-foreground">Spent</p>
+				<p class="text-xs text-muted-foreground">{m.bud_spent()}</p>
 				<p class="text-xl font-semibold">{etb(totalActual)}</p>
 			</div>
 			<div>
-				<p class="text-xs text-muted-foreground">Unallocated</p>
+				<p class="text-xs text-muted-foreground">{m.bud_unallocated()}</p>
 				<p class="text-xl font-semibold" class:text-destructive={remaining < 0}>
 					{etb(remaining)}
 				</p>
@@ -163,7 +162,11 @@
 		<div class="mt-5 space-y-2">
 			<Progress value={spentPct} class="h-2" />
 			<p class="text-xs text-muted-foreground">
-				{etb(totalActual)} of {etb(data.totalBudget)} ETB spent ({Math.round(spentPct)}%)
+				{m.bud_spent_line({
+					spent: etb(totalActual),
+					total: etb(data.totalBudget),
+					pct: Math.round(spentPct)
+				})}
 			</p>
 		</div>
 
@@ -172,7 +175,7 @@
 				class="mt-4 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
 			>
 				<TriangleAlert class="size-4 shrink-0" />
-				Your planned amounts exceed your total budget by {etb(Math.abs(remaining))} ETB.
+				{m.bud_over({ amount: etb(Math.abs(remaining)) })}
 			</div>
 		{/if}
 	</Card.Root>
@@ -180,15 +183,16 @@
 	{#if data.categoryItems.length === 0}
 		<Card.Root>
 			<Card.Content class="p-6 text-center text-sm text-muted-foreground">
-				No budget categories exist yet. Ask an admin to add some before you can plan.
+				{m.bud_no_categories()}
 			</Card.Content>
 		</Card.Root>
 	{:else if data.items.length === 0}
 		<Card.Root>
 			<Card.Content class="p-10 text-center">
-				<p class="text-sm text-muted-foreground">Nothing budgeted yet.</p>
+				<p class="text-sm text-muted-foreground">{m.bud_nothing()}</p>
 				<Button variant="outline" class="mt-4" onclick={openCreate}>
-					<Plus class="size-4" /> Add your first line item
+					<Plus class="size-4" />
+					{m.bud_add_first()}
 				</Button>
 			</Card.Content>
 		</Card.Root>
@@ -197,41 +201,47 @@
 			{columns}
 			data={data.items}
 			facetKeys={['categoryName']}
-			facetLabels={{ categoryName: 'Category' }}
-			fileName="Wedding budget"
+			facetLabels={{ categoryName: m.bud_category() }}
+			fileName={m.bud_file()}
 		/>
 	{/if}
 </div>
 
 <FormDialog
-	title={editing ? 'Edit line item' : 'Add line item'}
-	description="Planned is what you expect to spend. Actual is what you've paid so far."
+	title={editing ? m.bud_edit_title() : m.bud_add()}
+	description={m.bud_dialog_desc()}
 	action="?/save"
 	data={data.form}
 	schema={budgetItemSchema}
 	bind:open={itemOpen}
 	{seed}
 	hideTrigger
-	submitLabel={editing ? 'Save changes' : 'Add item'}
+	submitLabel={editing ? m.wd_save() : m.bud_add_item()}
 >
 	{#snippet fields({ form, errors })}
 		<InputComp {form} {errors} name="id" type="hidden" />
-		<InputComp {form} {errors} name="name" label="Item name" placeholder="Photographer deposit" />
+		<InputComp
+			{form}
+			{errors}
+			name="name"
+			label={m.bud_item_name()}
+			placeholder={m.bud_item_ph()}
+		/>
 		<InputComp
 			{form}
 			{errors}
 			name="categoryId"
-			label="Category"
+			label={m.bud_category()}
 			type="select"
 			items={data.categoryItems}
-			placeholder="Choose a category"
+			placeholder={m.bud_choose_category()}
 		/>
 		<div class="grid gap-1 sm:grid-cols-2">
 			<InputComp
 				{form}
 				{errors}
 				name="plannedAmount"
-				label="Planned amount (ETB)"
+				label={m.bud_planned_amount()}
 				type="number"
 				min={0}
 			/>
@@ -239,7 +249,7 @@
 				{form}
 				{errors}
 				name="actualAmount"
-				label="Actual amount (ETB)"
+				label={m.bud_actual_amount()}
 				type="number"
 				min={0}
 			/>
@@ -248,25 +258,24 @@
 			{form}
 			{errors}
 			name="notes"
-			label="Notes (optional)"
+			label={m.bud_notes_opt()}
 			type="textarea"
 			rows={3}
-			placeholder="Deposit paid, balance due two weeks before"
+			placeholder={m.bud_notes_ph()}
 		/>
 	{/snippet}
 </FormDialog>
 
 <FormDialog
-	title="Remove this line item?"
-	description="{removing?.name ??
-		''} will be permanently removed from your budget. This can't be undone."
+	title={m.bud_remove_title()}
+	description={m.bud_remove_desc({ name: removing?.name ?? '' })}
 	action="?/delete"
 	data={data.deleteForm}
 	schema={deleteItemSchema}
 	bind:open={removeOpen}
 	seed={{ id: removing?.id }}
 	hideTrigger
-	submitLabel="Remove"
+	submitLabel={m.bud_remove()}
 >
 	{#snippet fields({ form, errors })}
 		<InputComp {form} {errors} name="id" type="hidden" />

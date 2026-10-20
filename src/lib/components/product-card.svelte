@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { Card, CardContent, CardFooter } from '@nahu/admin-kit/components/ui/card/index.js';
 	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
 	import { Badge } from '@nahu/admin-kit/components/ui/badge/index.js';
@@ -73,7 +74,7 @@
 			class="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-primary"
 		>
 			<StoreIcon class="size-3.5 shrink-0" />
-			<span class="truncate">{vendor ?? 'Vendor'}</span>
+			<span class="truncate">{vendor ?? m.card_vendor()}</span>
 		</a>
 
 		<!-- Name -->
@@ -86,7 +87,7 @@
 		<!-- Price -->
 		{#if formattedPrice}
 			<p class="mt-auto text-sm">
-				<span class="text-muted-foreground">From</span>
+				<span class="text-muted-foreground">{m.card_from()}</span>
 				<span class="font-display font-semibold text-primary">{formattedPrice}</span>
 				{#if priceList.length > 1}
 					<span class="text-muted-foreground">· {priceList.length} packages</span>
@@ -98,7 +99,7 @@
 	<CardFooter class="p-4 pt-0">
 		<Button href="/wedding/bookings?vendor={vendorId}&service={productId}" class="w-full">
 			<CalendarPlusIcon class="mr-2 size-4" />
-			Book
+			{m.vdet_book()}
 		</Button>
 	</CardFooter>
 </Card>

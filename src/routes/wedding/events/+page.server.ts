@@ -4,6 +4,7 @@ import { getCoupleByUserId } from '$lib/server/couples';
 import { addEvent, EVENT_TYPES, listEvents, removeEvent, updateEvent } from '$lib/server/planner';
 import { parse, ok, bad } from '$lib/server/adminAction';
 import type { Actions, PageServerLoad } from './$types';
+import { m } from '$lib/paraglide/messages.js';
 
 const optional = (max: number) =>
 	z
@@ -40,7 +41,7 @@ export const actions = {
 		const p = await parse(request, eventSchema);
 		if ('error' in p) return p.error;
 		await addEvent(couple.id, p.data, locals.user!.id);
-		return ok('Event added');
+		return ok(m.srv_event_added());
 	},
 	edit: async ({ request, locals }) => {
 		const { couple } = await requireCoupleAndWedding(locals);
@@ -48,15 +49,15 @@ export const actions = {
 		if ('error' in p) return p.error;
 		const { id, ...input } = p.data;
 		if (!(await updateEvent(couple.id, id, input, locals.user!.id)))
-			return bad('Event not found', 404);
-		return ok('Event updated');
+			return bad(m.srv_event_not_found(), 404);
+		return ok(m.srv_event_updated());
 	},
 	remove: async ({ request, locals }) => {
 		const { couple } = await requireCoupleAndWedding(locals);
 		const p = await parse(request, idSchema);
 		if ('error' in p) return p.error;
 		if (!(await removeEvent(couple.id, p.data.id, locals.user!.id)))
-			return bad('Event not found', 404);
-		return ok('Event deleted');
+			return bad(m.srv_event_not_found(), 404);
+		return ok(m.srv_event_deleted());
 	}
 } satisfies Actions;

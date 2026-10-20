@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
 	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
 	import { Badge } from '@nahu/admin-kit/components/ui/badge/index.js';
@@ -9,27 +10,23 @@
 	let { data } = $props();
 
 	const eventLabels: Record<string, string> = {
-		engagement: 'Engagement',
-		shimgelegna: 'Shimgelegna',
-		gebez_enshoshela: 'Gebez / Enshoshela',
-		ceremony: 'Wedding Ceremony',
-		melse: 'Melse',
-		kilikil: 'Kilikil',
-		reception: 'Reception',
-		other: 'Other'
+		engagement: m.event_type_engagement(),
+		shimgelegna: m.event_type_shimgelegna(),
+		gebez_enshoshela: m.home_ev_gebez(),
+		ceremony: m.home_ev_ceremony(),
+		melse: m.event_type_melse(),
+		kilikil: m.event_type_kilikil(),
+		reception: m.dash_ev_reception(),
+		other: m.event_type_other()
 	};
 
 	const previewFeatures = [
-		['💰', 'Budget Tracker', 'Set a total, split it by category and watch every birr against it.'],
-		['🤝', 'Vendor Shortlists', 'Save vendors, compare them side by side and book from one place.'],
-		['👥', 'Guest List & RSVP', 'Track invitations, replies, plus-ones and meal preferences.'],
-		['✅', 'Task Checklist', 'A full Ethiopian wedding checklist, counted back from your date.'],
-		[
-			'🎉',
-			'Multi-Event Planning',
-			'Engagement through Kilikil under a single budget and guest list.'
-		],
-		['🔔', 'Shared Workspace', 'Invite your partner so you both plan from the same numbers.']
+		['💰', m.dash_f1_title(), m.dash_f1_body()],
+		['🤝', m.dash_f2_title(), m.dash_f2_body()],
+		['👥', m.dash_f3_title(), m.dash_f3_body()],
+		['✅', m.dash_f4_title(), m.dash_f4_body()],
+		['🎉', m.dash_f5_title(), m.dash_f5_body()],
+		['🔔', m.dash_f6_title(), m.dash_f6_body()]
 	];
 
 	const fmtDate = (d: string | Date | null) =>
@@ -37,29 +34,29 @@
 </script>
 
 <svelte:head>
-	<title>{data.couple ? 'Your Planning Dashboard' : 'Planning Dashboard'} — Leora Events</title>
+	<title>{data.couple ? m.dash_meta_yours() : m.err_planning_dashboard()} — Leora Events</title>
 </svelte:head>
 
 {#if !data.couple}
 	<!-- ---------- Logged-out / no-workspace preview: no sample data ---------- -->
 	<section class="mx-auto max-w-[1180px] px-5 py-16 text-center sm:px-8">
 		<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">
-			Planning Dashboard
+			{m.home_dash_eyebrow()}
 		</p>
 		<h1
 			class="mx-auto mt-2 max-w-2xl font-display text-4xl font-extrabold text-balance sm:text-5xl"
 		>
-			One workspace for the whole wedding
+			{m.home_dash_title()}
 		</h1>
 		<p class="mx-auto mt-4 max-w-xl text-[15.5px] text-muted-foreground">
-			Track budget, tasks, vendors and guests — all in one place, updating live as you plan.
+			{m.home_dash_lead()}
 		</p>
 		<div class="mt-7 flex flex-wrap justify-center gap-3">
 			{#if data.loggedIn}
-				<Button href="/wedding/profile" size="lg">Create your wedding profile</Button>
+				<Button href="/wedding/profile" size="lg">{m.dash_create_profile()}</Button>
 			{:else}
-				<Button href="/signup" size="lg">Start Planning</Button>
-				<Button href="/login" variant="outline" size="lg">Log in</Button>
+				<Button href="/signup" size="lg">{m.nav_start()}</Button>
+				<Button href="/login" variant="outline" size="lg">{m.nav_login()}</Button>
 			{/if}
 		</div>
 
@@ -81,28 +78,30 @@
 		<div class="flex flex-wrap items-end justify-between gap-4">
 			<div>
 				<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">
-					Planning Dashboard
+					{m.home_dash_eyebrow()}
 				</p>
 				<h1 class="mt-2 font-display text-3xl font-extrabold sm:text-4xl">
 					{#if data.couple.brideName && data.couple.groomName}
 						{data.couple.brideName} &amp; {data.couple.groomName}
 					{:else}
-						Your Wedding Workspace
+						{m.dash_workspace()}
 					{/if}
 				</h1>
 				<p class="mt-2 text-[14px] text-muted-foreground">
 					{#if data.daysUntilWedding === null}
-						Set your wedding date to start the countdown.
+						{m.dash_set_date()}
 					{:else if data.daysUntilWedding > 0}
-						{data.daysUntilWedding} days until your wedding
+						{m.dash_days_until({ days: data.daysUntilWedding })}
 					{:else if data.daysUntilWedding === 0}
-						Today is the day — congratulations!
+						{m.dash_today()}
 					{:else}
-						Your wedding day has passed — congratulations!
+						{m.dash_passed()}
 					{/if}
 				</p>
 			</div>
-			<Badge variant="secondary" class="text-accent-foreground">{data.planSlug.name} plan</Badge>
+			<Badge variant="secondary" class="text-accent-foreground"
+				>{m.dash_plan({ plan: data.planSlug.name })}</Badge
+			>
 		</div>
 
 		<!-- Stat row -->
@@ -110,12 +109,13 @@
 			<Card.Root>
 				<Card.Content>
 					<p class="flex items-center gap-1.5 text-[12.5px] font-bold text-muted-foreground">
-						<CheckCircle2 class="size-3.5" /> Planning progress
+						<CheckCircle2 class="size-3.5" />
+						{m.dash_progress()}
 					</p>
 					<p class="mt-2 font-display text-3xl font-extrabold">{data.progressPct}%</p>
 					<Progress value={data.progressPct} class="mt-3 h-2" />
 					<p class="mt-2 text-[12.5px] text-muted-foreground">
-						{data.tasks.done} of {data.tasks.total} tasks done
+						{m.dash_tasks_done({ done: data.tasks.done, total: data.tasks.total })}
 					</p>
 				</Card.Content>
 			</Card.Root>
@@ -123,11 +123,12 @@
 			<Card.Root>
 				<Card.Content>
 					<p class="flex items-center gap-1.5 text-[12.5px] font-bold text-muted-foreground">
-						<Wallet class="size-3.5" /> Spent
+						<Wallet class="size-3.5" />
+						{m.dash_spent()}
 					</p>
 					<p class="mt-2 font-display text-3xl font-extrabold">{formatETB(data.budget.actual)}</p>
 					<p class="mt-2 text-[12.5px] text-muted-foreground">
-						of {formatETB(data.budget.estimated)} estimated
+						{m.dash_of_estimated({ amount: formatETB(data.budget.estimated) })}
 					</p>
 				</Card.Content>
 			</Card.Root>
@@ -135,7 +136,8 @@
 			<Card.Root>
 				<Card.Content>
 					<p class="flex items-center gap-1.5 text-[12.5px] font-bold text-muted-foreground">
-						<Users class="size-3.5" /> Guests confirmed
+						<Users class="size-3.5" />
+						{m.dash_guests_confirmed()}
 					</p>
 					<p class="mt-2 font-display text-3xl font-extrabold">
 						{data.guests.confirmed}<span class="text-lg text-muted-foreground"
@@ -143,7 +145,10 @@
 						>
 					</p>
 					<p class="mt-2 text-[12.5px] text-muted-foreground">
-						{data.guests.pending} pending · {data.guests.declined} declined
+						{m.dash_pending_declined({
+							pending: data.guests.pending,
+							declined: data.guests.declined
+						})}
 					</p>
 				</Card.Content>
 			</Card.Root>
@@ -151,15 +156,19 @@
 			<Card.Root>
 				<Card.Content>
 					<p class="flex items-center gap-1.5 text-[12.5px] font-bold text-muted-foreground">
-						<CalendarDays class="size-3.5" /> Budget items
+						<CalendarDays class="size-3.5" />
+						{m.dash_budget_items()}
 					</p>
 					<p class="mt-2 font-display text-3xl font-extrabold">{data.budget.items}</p>
 					<p class="mt-2 text-[12.5px] text-muted-foreground">
 						{#if data.plan?.totalBudget}
-							{formatETB(Math.max(0, toMoney(data.plan.totalBudget) - toMoney(data.budget.actual)))} left
-							of budget
+							{m.dash_left({
+								amount: formatETB(
+									Math.max(0, toMoney(data.plan.totalBudget) - toMoney(data.budget.actual))
+								)
+							})}
 						{:else}
-							Set a total budget to track what's left
+							{m.dash_set_total()}
 						{/if}
 					</p>
 				</Card.Content>
@@ -170,8 +179,10 @@
 			<div class="space-y-6">
 				<Card.Root>
 					<Card.Header class="flex-row items-center justify-between">
-						<Card.Title class="font-display text-base font-extrabold">Upcoming Tasks</Card.Title>
-						<Button href="/wedding/tasks" variant="ghost" size="sm">View all</Button>
+						<Card.Title class="font-display text-base font-extrabold"
+							>{m.dash_upcoming()}</Card.Title
+						>
+						<Button href="/wedding/tasks" variant="ghost" size="sm">{m.dash_view_all()}</Button>
 					</Card.Header>
 					<Card.Content>
 						{#if data.tasks.upcoming.length}
@@ -187,8 +198,8 @@
 							</ul>
 						{:else}
 							<p class="py-8 text-center text-sm text-muted-foreground">
-								No tasks yet. <a href="/wedding/tasks" class="underline">Build your checklist</a> to get
-								started.
+								{m.dash_no_tasks()}
+								<a href="/wedding/tasks" class="underline">{m.dash_build_checklist()}</a>
 							</p>
 						{/if}
 					</Card.Content>
@@ -197,7 +208,7 @@
 				<Card.Root>
 					<Card.Header>
 						<Card.Title class="font-display text-base font-extrabold">
-							Wedding Events Timeline
+							{m.dash_timeline()}
 						</Card.Title>
 					</Card.Header>
 					<Card.Content>
@@ -216,8 +227,8 @@
 							</div>
 						{:else}
 							<p class="py-8 text-center text-sm text-muted-foreground">
-								No events scheduled yet. Add your Engagement, Shimgelegna, Gebez/Enshoshela,
-								Ceremony, Melse and Kilikil dates to build your timeline.
+								{m.dash_no_events()}
+								<a href="/wedding/events" class="underline">{m.dash_add_events()}</a>
 							</p>
 						{/if}
 					</Card.Content>
@@ -227,8 +238,8 @@
 			<div class="space-y-6">
 				<Card.Root>
 					<Card.Header class="flex-row items-center justify-between">
-						<Card.Title class="font-display text-base font-extrabold">Saved Vendors</Card.Title>
-						<Button href="/vendors" variant="ghost" size="sm">Browse</Button>
+						<Card.Title class="font-display text-base font-extrabold">{m.dash_saved()}</Card.Title>
+						<Button href="/wedding/saved" variant="ghost" size="sm">{m.dash_view_all()}</Button>
 					</Card.Header>
 					<Card.Content>
 						{#if data.shortlist.length}
@@ -253,8 +264,8 @@
 							</ul>
 						{:else}
 							<p class="py-8 text-center text-sm text-muted-foreground">
-								No vendors saved yet. <a href="/vendors" class="underline">Browse the marketplace</a
-								>.
+								{m.dash_no_saved()}
+								<a href="/vendors" class="underline">{m.dash_browse_market()}</a>
 							</p>
 						{/if}
 					</Card.Content>
@@ -263,12 +274,11 @@
 				{#if data.planSlug.slug === 'free'}
 					<Card.Root class="border-primary">
 						<Card.Content>
-							<p class="font-display text-base font-extrabold">Unlock unlimited tools</p>
+							<p class="font-display text-base font-extrabold">{m.dash_unlock()}</p>
 							<p class="mt-1.5 text-[13.5px] text-muted-foreground">
-								Golden gives you the unlimited budget estimator, 5-vendor comparison and a
-								consultation.
+								{m.dash_unlock_body()}
 							</p>
-							<Button href="/pricing" class="mt-4 w-full">See plans</Button>
+							<Button href="/pricing" class="mt-4 w-full">{m.cardp_see_plans()}</Button>
 						</Card.Content>
 					</Card.Root>
 				{/if}

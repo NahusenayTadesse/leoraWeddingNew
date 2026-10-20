@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import ProductCard from '$lib/components/product-card.svelte';
 	import { Input } from '@nahu/admin-kit/components/ui/input/index.js';
 	import { Checkbox } from '@nahu/admin-kit/components/ui/checkbox/index.js';
@@ -93,12 +94,12 @@
 			: []),
 		...filters.catIds.map((id) => ({
 			key: 'cat-' + id,
-			label: facets.categories.find((c) => c.id === id)?.name ?? 'Category ' + id,
+			label: facets.categories.find((c) => c.id === id)?.name ?? m.shop_category_n({ id }),
 			clear: () => toggleId('cat', id)
 		})),
 		...filters.subIds.map((id) => ({
 			key: 'sub-' + id,
-			label: facets.subCategories.find((s) => s.id === id)?.name ?? 'Type ' + id,
+			label: facets.subCategories.find((s) => s.id === id)?.name ?? m.shop_type_n({ id }),
 			clear: () => toggleId('sub', id)
 		})),
 		...(filters.minPrice !== null || filters.maxPrice !== null
@@ -115,7 +116,13 @@
 				]
 			: []),
 		...(filters.verifiedOnly
-			? [{ key: 'verified', label: 'Verified vendors', clear: () => apply({ verified: null }) }]
+			? [
+					{
+						key: 'verified',
+						label: m.shop_verified_vendors(),
+						clear: () => apply({ verified: null })
+					}
+				]
 			: [])
 	]);
 
@@ -136,7 +143,7 @@
 </script>
 
 <svelte:head>
-	<title>{filters.q ? filters.q + ' — Marketplace' : 'Wedding services and products'}</title>
+	<title>{filters.q ? m.shop_meta_search({ q: filters.q }) : m.shop_meta_title()}</title>
 	<meta
 		name="description"
 		content="Browse photographers, venues, caterers and more from verified wedding vendors."
@@ -147,10 +154,10 @@
 	<header class="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
 		<div class="mx-auto max-w-7xl space-y-4 px-4 py-5 sm:px-6 lg:px-8">
 			<div class="flex flex-wrap items-baseline justify-between gap-3">
-				<h1 class="font-display text-2xl font-semibold sm:text-3xl">Vendor marketplace</h1>
+				<h1 class="font-display text-2xl font-semibold sm:text-3xl">{m.shop_title()}</h1>
 				<p class="text-sm text-muted-foreground">
 					{pagination.total.toLocaleString()}
-					{pagination.total === 1 ? 'listing' : 'listings'}
+					{pagination.total === 1 ? m.shop_listing() : m.shop_listings()}
 				</p>
 			</div>
 
@@ -161,7 +168,7 @@
 					/>
 					<Input
 						type="search"
-						placeholder="Search services, categories or vendors"
+						placeholder={m.shop_search()}
 						value={searchValue}
 						oninput={onSearchInput}
 						class="h-11 rounded-lg pl-10"
@@ -172,12 +179,12 @@
 					value={filters.sort}
 					onchange={(e) => apply({ sort: e.currentTarget.value })}
 					class="h-11 rounded-lg border bg-background px-3 text-sm"
-					aria-label="Sort results"
+					aria-label={m.shop_sort()}
 				>
-					<option value="newest">Newest</option>
-					<option value="price_asc">Price: low to high</option>
-					<option value="price_desc">Price: high to low</option>
-					<option value="name">Name A–Z</option>
+					<option value="newest">{m.shop_sort_newest()}</option>
+					<option value="price_asc">{m.shop_sort_price_asc()}</option>
+					<option value="price_desc">{m.shop_sort_price_desc()}</option>
+					<option value="name">{m.shop_sort_name()}</option>
 				</select>
 
 				<Button
@@ -186,7 +193,7 @@
 					onclick={() => (mobileFiltersOpen = !mobileFiltersOpen)}
 				>
 					<SlidersHorizontalIcon size={16} />
-					Filters
+					{m.shop_filters()}
 					{#if hasActiveFilters}
 						<span class="ml-1 rounded-full bg-primary px-1.5 text-xs text-primary-foreground">
 							{activeFilters.length}
@@ -204,14 +211,14 @@
 								type="button"
 								onclick={filter.clear}
 								class="rounded-sm p-0.5 hover:bg-background"
-								aria-label={'Remove filter: ' + filter.label}
+								aria-label={m.shop_remove_filter({ label: filter.label })}
 							>
 								<XIcon size={12} />
 							</button>
 						</Badge>
 					{/each}
 					<Button variant="ghost" size="sm" onclick={resetAll} class="h-7 text-xs">
-						Clear all
+						{m.shop_clear_all()}
 					</Button>
 				</div>
 			{/if}
@@ -223,10 +230,12 @@
 			<aside class="lg:col-span-1 {mobileFiltersOpen ? 'block' : 'hidden lg:block'}">
 				<div class="sticky top-36 max-h-[calc(100dvh-11rem)] space-y-6 overflow-y-auto pr-2">
 					<section class="space-y-3 border-b pb-6">
-						<h2 class="text-sm font-medium">Price range</h2>
+						<h2 class="text-sm font-medium">{m.shop_price_range()}</h2>
 						<div class="flex items-end gap-2">
 							<div class="flex-1">
-								<Label for="min-price" class="mb-1 block text-xs text-muted-foreground">Min</Label>
+								<Label for="min-price" class="mb-1 block text-xs text-muted-foreground"
+									>{m.shop_min()}</Label
+								>
 								<Input
 									id="min-price"
 									type="number"
@@ -240,7 +249,9 @@
 								/>
 							</div>
 							<div class="flex-1">
-								<Label for="max-price" class="mb-1 block text-xs text-muted-foreground">Max</Label>
+								<Label for="max-price" class="mb-1 block text-xs text-muted-foreground"
+									>{m.shop_max()}</Label
+								>
 								<Input
 									id="max-price"
 									type="number"
@@ -268,14 +279,14 @@
 							/>
 							<Label for="verified" class="flex cursor-pointer items-center gap-1.5 text-sm">
 								<BadgeCheckIcon size={14} class="text-primary" />
-								Verified vendors only
+								{m.shop_verified_only()}
 							</Label>
 						</div>
 					</section>
 
 					{#if facets.categories.length > 0}
 						<section class="space-y-3 border-b pb-6">
-							<h2 class="text-sm font-medium">Categories</h2>
+							<h2 class="text-sm font-medium">{m.shop_categories()}</h2>
 							{#each facets.categories as category (category.id)}
 								<div class="flex items-center gap-3">
 									<Checkbox
@@ -297,7 +308,7 @@
 
 					{#if facets.subCategories.length > 0}
 						<section class="space-y-3">
-							<h2 class="text-sm font-medium">Service type</h2>
+							<h2 class="text-sm font-medium">{m.shop_service_type()}</h2>
 							{#each facets.subCategories as sub (sub.id)}
 								<div class="flex items-center gap-3">
 									<Checkbox
@@ -319,10 +330,12 @@
 			<div class="lg:col-span-3">
 				<p class="mb-6 text-sm text-muted-foreground" aria-live="polite">
 					{#if pagination.total > 0}
-						Showing <span class="font-medium text-foreground">{rangeStart}–{rangeEnd}</span>
-						of {pagination.total.toLocaleString()}
+						{m.shop_showing({
+							range: `${rangeStart}–${rangeEnd}`,
+							total: pagination.total.toLocaleString()
+						})}
 					{:else}
-						No results
+						{m.shop_no_results()}
 					{/if}
 				</p>
 
@@ -344,7 +357,10 @@
 					</div>
 
 					{#if pagination.pageCount > 1}
-						<nav class="mt-12 flex items-center justify-center gap-1" aria-label="Pagination">
+						<nav
+							class="mt-12 flex items-center justify-center gap-1"
+							aria-label={m.shop_pagination()}
+						>
 							<Button
 								variant="outline"
 								size="sm"
@@ -352,7 +368,7 @@
 								disabled={pagination.page === 1}
 								data-sveltekit-noscroll
 							>
-								Previous
+								{m.shop_previous()}
 							</Button>
 
 							{#each pageWindow as n (n)}
@@ -375,7 +391,7 @@
 								disabled={pagination.page === pagination.pageCount}
 								data-sveltekit-noscroll
 							>
-								Next
+								{m.shop_next()}
 							</Button>
 						</nav>
 					{/if}
@@ -384,13 +400,13 @@
 						class="flex flex-col items-center justify-center rounded-lg border border-dashed py-20"
 					>
 						<SearchIcon class="mb-4 size-12 text-muted-foreground/30" />
-						<h2 class="mb-1 text-lg font-semibold">Nothing matches these filters</h2>
+						<h2 class="mb-1 text-lg font-semibold">{m.shop_nothing()}</h2>
 						<p class="max-w-sm text-center text-sm text-muted-foreground">
-							Try a wider price range, or clear a category to see more vendors.
+							{m.shop_nothing_hint()}
 						</p>
 						{#if hasActiveFilters}
 							<Button variant="outline" size="sm" onclick={resetAll} class="mt-5">
-								Clear all filters
+								{m.vdir_clear()}
 							</Button>
 						{/if}
 					</div>

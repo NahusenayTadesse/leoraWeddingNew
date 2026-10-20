@@ -1,3 +1,5 @@
+import { m } from '$lib/paraglide/messages.js';
+
 /**
  * Shared price formatting. Lives outside $lib/server because components import
  * it — anything under $lib/server is server-only and cannot be bundled for the
@@ -10,5 +12,5 @@ export function formatPriceRange(min: string | null, max: string | null) {
 	const hi = max === null ? null : Number(max);
 	if (lo === null && hi === null) return null;
 	if (lo !== null && hi !== null) return `ETB ${lo.toLocaleString()} – ${hi.toLocaleString()}`;
-	return `From ETB ${(lo ?? hi)!.toLocaleString()}`;
+	return m.price_from({ amount: (lo ?? hi)!.toLocaleString() });
 }

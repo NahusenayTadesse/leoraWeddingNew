@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import ActionForm from '@nahu/admin-kit/formComponents/ActionForm.svelte';
 	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
 	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
@@ -80,7 +81,7 @@
 
 	const handleShare = () => {
 		navigator.clipboard.writeText(window.location.href);
-		toast.success('Link copied to clipboard');
+		toast.success(m.pd_link_copied());
 	};
 </script>
 
@@ -126,12 +127,13 @@
 					<HiddenField name="vendorId" value={vendorId} />
 					<Button type="submit" variant="outline">
 						<HeartIcon class="mr-2 size-4 {isFavorite ? 'fill-red-500 text-red-500' : ''}" />
-						{isFavorite ? 'Saved' : 'Save'}
+						{isFavorite ? m.vdet_saved() : m.vdet_save()}
 					</Button>
 				</ActionForm>
 
 				<Button href="/wedding/messages?vendor={vendorId}" variant="outline">
-					<MessageSquareIcon class="mr-2 size-4" /> Message
+					<MessageSquareIcon class="mr-2 size-4" />
+					{m.vdet_message()}
 				</Button>
 			</div>
 		</div>
@@ -167,12 +169,12 @@
 							<button
 								class="aspect-square w-20 overflow-hidden rounded-lg border-2 bg-muted/50 transition-all duration-200
 									{displayImage === img ? 'border-primary' : 'border-transparent hover:border-primary/50'}"
-								aria-label="View image {i + 1}"
+								aria-label={m.pd_view_image({ n: i + 1 })}
 								onclick={() => (displayImage = img)}
 							>
 								<img
 									src={assetUrl(img)}
-									alt="Thumbnail {i + 1}"
+									alt={m.pd_thumbnail({ n: i + 1 })}
 									class="h-full w-full object-cover"
 								/>
 							</button>
@@ -206,7 +208,7 @@
 				{#if subs.length > 0}
 					<div class="space-y-3">
 						<h3 class="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
-							Includes
+							{m.pd_includes()}
 						</h3>
 						<div class="flex flex-wrap gap-2">
 							{#each subs as sub (sub.id)}
@@ -225,7 +227,7 @@
 				{#if priceList.length > 0}
 					<div class="space-y-3">
 						<h3 class="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
-							Select package
+							{m.pd_select_package()}
 						</h3>
 						<div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
 							{#each priceList as pkg (pkg)}
@@ -248,7 +250,7 @@
 										<Badge
 											class="absolute -top-2 px-3 text-[10px] font-bold tracking-widest uppercase"
 										>
-											Selected
+											{m.pd_selected()}
 										</Badge>
 									{/if}
 								</button>
@@ -264,12 +266,12 @@
 						class="w-full transition-all active:scale-95"
 					>
 						<CalendarPlusIcon class="mr-2 size-4" />
-						Book this service
+						{m.pd_book()}
 					</Button>
 
 					<Button variant="outline" class="w-full gap-2" onclick={handleShare}>
 						<ShareIcon size={18} />
-						Share
+						{m.pd_share()}
 					</Button>
 				</div>
 			</div>

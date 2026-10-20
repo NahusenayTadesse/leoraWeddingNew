@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
 	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
 	import * as Tabs from '@nahu/admin-kit/components/ui/tabs/index.js';
@@ -16,12 +17,12 @@
 	type Tier = keyof typeof tierMultiplier;
 
 	const categorySplit: [string, number][] = [
-		['Venue & Catering', 0.38],
-		['Photo & Video', 0.16],
-		['Decor', 0.18],
-		['Clothing', 0.1],
-		['Entertainment', 0.09],
-		['Other', 0.09]
+		[m.home_cat_venue(), 0.38],
+		[m.home_cat_photo(), 0.16],
+		[m.home_cat_decor(), 0.18],
+		[m.home_cat_clothing(), 0.1],
+		[m.home_cat_entertainment(), 0.09],
+		[m.home_cat_other(), 0.09]
 	];
 
 	let guests = $state(300);
@@ -33,9 +34,9 @@
 	);
 
 	const tiers: { key: Tier; label: string; blurb: string }[] = [
-		{ key: 'traditional', label: 'Traditional', blurb: 'Community hall, family catering' },
-		{ key: 'outdoor', label: 'Outdoor', blurb: 'Garden or resort, full service' },
-		{ key: 'luxury', label: 'Luxury', blurb: 'Five-star hotel ballroom' }
+		{ key: 'traditional', label: m.home_tier_traditional(), blurb: m.be_blurb_traditional() },
+		{ key: 'outdoor', label: m.home_tier_outdoor(), blurb: m.be_blurb_outdoor() },
+		{ key: 'luxury', label: m.home_tier_luxury(), blurb: m.be_blurb_luxury() }
 	];
 
 	// ---------------- Mode 2: compare real vendors ----------------
@@ -82,30 +83,27 @@
 </script>
 
 <svelte:head>
-	<title>Budget Estimator — Leora Events</title>
-	<meta
-		name="description"
-		content="Estimate your Ethiopian wedding budget by guest count and venue tier, or compare real vendors side by side."
-	/>
+	<title>{m.be_meta_title()}</title>
+	<meta name="description" content={m.be_meta_description()} />
 </svelte:head>
 
 <section class="mx-auto max-w-[1080px] px-5 pt-14 pb-8 text-center sm:px-8">
 	<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">
-		Budget Estimator
+		{m.home_est_eyebrow()}
 	</p>
 	<h1 class="mx-auto mt-2 max-w-2xl font-display text-3xl font-extrabold text-balance sm:text-4xl">
-		Know your number before you book anything
+		{m.home_est_title()}
 	</h1>
 	<p class="mx-auto mt-3 max-w-xl text-[15px] text-muted-foreground">
-		Build an estimate from guest count and venue tier, or compare real vendors on price and rating.
+		{m.be_lead()}
 	</p>
 </section>
 
 <section class="mx-auto max-w-[1080px] px-5 pb-20 sm:px-8">
 	<Tabs.Root value="build">
 		<Tabs.List class="mx-auto">
-			<Tabs.Trigger value="build">Build your own</Tabs.Trigger>
-			<Tabs.Trigger value="compare">Compare vendors</Tabs.Trigger>
+			<Tabs.Trigger value="build">{m.be_tab_build()}</Tabs.Trigger>
+			<Tabs.Trigger value="compare">{m.be_tab_compare()}</Tabs.Trigger>
 		</Tabs.List>
 
 		<!-- ================= MODE 1 ================= -->
@@ -115,8 +113,12 @@
 					<Card.Content class="space-y-6">
 						<div>
 							<label for="guests" class="mb-2.5 flex items-baseline justify-between">
-								<span class="text-[12.5px] font-bold text-muted-foreground">Guest count</span>
-								<span class="font-display text-lg font-extrabold">{guests} guests</span>
+								<span class="text-[12.5px] font-bold text-muted-foreground"
+									>{m.home_est_guest_count()}</span
+								>
+								<span class="font-display text-lg font-extrabold"
+									>{m.home_est_guests({ count: guests })}</span
+								>
 							</label>
 							<input
 								id="guests"
@@ -131,7 +133,7 @@
 
 						<div>
 							<span class="mb-2.5 block text-[12.5px] font-bold text-muted-foreground">
-								Venue tier
+								{m.home_est_tier()}
 							</span>
 							<div class="grid gap-2">
 								{#each tiers as t (t.key)}
@@ -144,7 +146,7 @@
 										<span class="block text-[13.5px] font-bold">{t.label}</span>
 										<span class="block text-[12.5px] text-muted-foreground">{t.blurb}</span>
 										<span class="block text-[12px] text-muted-foreground">
-											~ETB {tierMultiplier[t.key].toLocaleString()} per guest
+											{m.be_per_guest({ amount: tierMultiplier[t.key].toLocaleString() })}
 										</span>
 									</button>
 								{/each}
@@ -152,7 +154,7 @@
 						</div>
 
 						<div class="border-t pt-5">
-							<p class="text-[12.5px] font-bold text-muted-foreground">Estimated Total</p>
+							<p class="text-[12.5px] font-bold text-muted-foreground">{m.home_est_total()}</p>
 							<p class="mt-1 font-display text-4xl font-extrabold">
 								{estimateTotal.toLocaleString()}
 								<span class="text-lg font-bold text-muted-foreground">ETB</span>
@@ -164,7 +166,7 @@
 				<Card.Root>
 					<Card.Header>
 						<Card.Title class="font-display text-base font-extrabold">
-							Where the money goes
+							{m.be_where()}
 						</Card.Title>
 					</Card.Header>
 					<Card.Content class="space-y-3.5">
@@ -184,12 +186,12 @@
 
 						{#if data.hasCouple}
 							<Button href="/wedding/budget" class="mt-4 w-full">
-								Save this into my budget planner
+								{m.be_save()}
 								<ArrowRight class="size-4" />
 							</Button>
 						{:else}
 							<Button href="/signup" class="mt-4 w-full">
-								Create an account to save this
+								{m.be_create()}
 								<ArrowRight class="size-4" />
 							</Button>
 						{/if}
@@ -206,21 +208,23 @@
 						<span class="flex items-center gap-2.5">
 							<Lock class="size-4 shrink-0 text-accent-foreground" />
 							<span class="text-[13.5px]">
-								You've used all {data.limits.maxRuns} free comparison runs. Upgrade to Golden for unlimited
-								access.
+								{m.be_exhausted({ max: data.limits.maxRuns ?? 0 })}
 							</span>
 						</span>
-						<Button href="/pricing" size="sm">Upgrade</Button>
+						<Button href="/pricing" size="sm">{m.be_upgrade()}</Button>
 					</Card.Content>
 				</Card.Root>
 			{:else if data.planSlug === 'free'}
 				<Card.Root class="mb-6">
 					<Card.Content class="flex flex-wrap items-center justify-between gap-4">
 						<span class="text-[13.5px] text-muted-foreground">
-							Free plan: compare up to {maxCompare} vendors, {data.limits.maxRuns! -
-								data.limits.runsUsed} of {data.limits.maxRuns} runs left.
+							{m.be_free_plan({
+								max: maxCompare,
+								left: data.limits.maxRuns! - data.limits.runsUsed,
+								runs: data.limits.maxRuns!
+							})}
 						</span>
-						<Button href="/pricing" variant="outline" size="sm">Compare 5 with Golden</Button>
+						<Button href="/pricing" variant="outline" size="sm">{m.be_compare_golden()}</Button>
 					</Card.Content>
 				</Card.Root>
 			{/if}
@@ -229,7 +233,7 @@
 				<Card.Root>
 					<Card.Header>
 						<Card.Title class="font-display text-base font-extrabold">
-							Pick vendors
+							{m.be_pick()}
 							<span class="text-[12.5px] font-medium text-muted-foreground">
 								({selected.length}/{maxCompare})
 							</span>
@@ -262,7 +266,7 @@
 							</ul>
 						{:else}
 							<p class="py-10 text-center text-sm text-muted-foreground">
-								No approved vendors to compare yet.
+								{m.be_no_vendors()}
 							</p>
 						{/if}
 					</Card.Content>
@@ -271,7 +275,9 @@
 				<div class="space-y-6">
 					<Card.Root>
 						<Card.Header>
-							<Card.Title class="font-display text-base font-extrabold">Comparison</Card.Title>
+							<Card.Title class="font-display text-base font-extrabold"
+								>{m.be_comparison()}</Card.Title
+							>
 						</Card.Header>
 						<Card.Content>
 							{#if scored.length}
@@ -279,10 +285,10 @@
 									<table class="w-full text-[13px]">
 										<thead>
 											<tr class="border-b text-left text-muted-foreground">
-												<th class="pb-2 font-semibold">Vendor</th>
-												<th class="pb-2 font-semibold">Price</th>
-												<th class="pb-2 font-semibold">Rating</th>
-												<th class="pb-2 text-right font-semibold">Value</th>
+												<th class="pb-2 font-semibold">{m.be_vendor()}</th>
+												<th class="pb-2 font-semibold">{m.be_price()}</th>
+												<th class="pb-2 font-semibold">{m.be_rating()}</th>
+												<th class="pb-2 text-right font-semibold">{m.be_value()}</th>
 											</tr>
 										</thead>
 										<tbody>
@@ -291,7 +297,7 @@
 													<td class="py-2.5">
 														<span class="font-semibold">{v.businessName}</span>
 														{#if i === 0}
-															<Badge class="ml-1.5">Best value</Badge>
+															<Badge class="ml-1.5">{m.be_best()}</Badge>
 														{/if}
 													</td>
 													<td class="py-2.5 text-muted-foreground">
@@ -309,7 +315,7 @@
 								</div>
 							{:else}
 								<p class="py-10 text-center text-sm text-muted-foreground">
-									Select up to {maxCompare} vendors to compare them side by side.
+									{m.be_select_hint({ max: maxCompare })}
 								</p>
 							{/if}
 						</Card.Content>
@@ -318,12 +324,12 @@
 					<Card.Root>
 						<Card.Header>
 							<Card.Title class="font-display text-base font-extrabold">
-								I have a budget — what fits?
+								{m.be_budget_title()}
 							</Card.Title>
 						</Card.Header>
 						<Card.Content class="space-y-3">
 							<Label for="budget" class="text-[12.5px] font-bold text-muted-foreground">
-								Your total budget (ETB)
+								{m.be_budget_label()}
 							</Label>
 							<Input
 								id="budget"
@@ -348,8 +354,8 @@
 									</ul>
 								{:else}
 									<p class="pt-1 text-[13px] text-muted-foreground">
-										Nothing starts below ETB {budgetNum.toLocaleString()} yet. Try a higher figure, or
-										browse the <a href="/vendors" class="underline">full marketplace</a>.
+										{m.be_nothing_below({ amount: budgetNum.toLocaleString() })}
+										<a href="/vendors" class="underline">{m.be_full_marketplace()}</a>.
 									</p>
 								{/if}
 							{/if}

@@ -89,13 +89,8 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
  * `+server.ts`, so without this an anonymous POST reached their actions (and crashed on
  * `locals.user!`). Page views go to the login page; everything else gets a 401.
  */
-const SIGNED_IN_AREAS = [
-	'/wedding',
-	'/dashboard',
-	'/vendor-dashboard',
-	'/vendor-onboarding',
-	'/account'
-];
+// /dashboard is not here: signed-out visitors get its feature preview.
+const SIGNED_IN_AREAS = ['/wedding', '/vendor-dashboard', '/vendor-onboarding', '/account'];
 
 const handleSignedInAreas: Handle = ({ event, resolve }) => {
 	const path = event.url.pathname;

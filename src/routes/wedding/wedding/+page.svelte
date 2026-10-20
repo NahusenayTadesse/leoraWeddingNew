@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { createForm } from '@nahu/admin-kit/forms/createForm';
 	import { weddingSchema, WEDDING_STYLES } from '$lib/schemas/wedding';
 	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
@@ -37,12 +38,10 @@
 <div class="space-y-6">
 	<div>
 		<h1 class="text-2xl font-semibold tracking-tight">
-			{data.isNew ? 'Set up your wedding' : 'Wedding details'}
+			{data.isNew ? m.wd_setup() : m.wd_details()}
 		</h1>
 		<p class="text-sm text-muted-foreground">
-			{data.isNew
-				? 'These details drive your budget, guest list and vendor recommendations.'
-				: 'Changing the date or budget updates the rest of your dashboard.'}
+			{data.isNew ? m.wd_setup_hint() : m.wd_edit_hint()}
 		</p>
 	</div>
 
@@ -50,31 +49,35 @@
 		<div class="grid gap-3 sm:grid-cols-3">
 			<Card.Root class="p-4">
 				<div class="flex items-center gap-2 text-xs text-muted-foreground">
-					<CalendarHeart class="size-4" /> Countdown
+					<CalendarHeart class="size-4" />
+					{m.wd_countdown()}
 				</div>
 				<p class="mt-1 text-2xl font-semibold">
 					{#if daysAway === null}
 						—
 					{:else if daysAway > 0}
-						{daysAway} <span class="text-base font-normal text-muted-foreground">days</span>
+						{daysAway}
+						<span class="text-base font-normal text-muted-foreground">{m.wd_days()}</span>
 					{:else if daysAway === 0}
-						Today!
+						{m.wov_today()}
 					{:else}
-						<span class="text-base font-normal">Past</span>
+						<span class="text-base font-normal">{m.wd_past()}</span>
 					{/if}
 				</p>
 			</Card.Root>
 
 			<Card.Root class="p-4">
 				<div class="flex items-center gap-2 text-xs text-muted-foreground">
-					<Users class="size-4" /> Expected guests
+					<Users class="size-4" />
+					{m.wd_expected()}
 				</div>
 				<p class="mt-1 text-2xl font-semibold">{$form.expectedGuests || '—'}</p>
 			</Card.Root>
 
 			<Card.Root class="p-4">
 				<div class="flex items-center gap-2 text-xs text-muted-foreground">
-					<Wallet class="size-4" /> Per guest
+					<Wallet class="size-4" />
+					{m.wd_per_guest()}
 				</div>
 				<p class="mt-1 text-2xl font-semibold">
 					{perGuest ? `${etb(perGuest)} ETB` : '—'}
@@ -86,13 +89,13 @@
 	<form method="POST" use:enhance>
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>The big day</Card.Title>
-				<Card.Description>You can change any of this later.</Card.Description>
+				<Card.Title>{m.wd_big_day()}</Card.Title>
+				<Card.Description>{m.wd_change_later()}</Card.Description>
 			</Card.Header>
 
 			<Card.Content class="grid gap-3 sm:grid-cols-2">
 				<InputComp
-					label="wedding date"
+					label={m.wd_date()}
 					{form}
 					{errors}
 					name="weddingDate"
@@ -102,27 +105,27 @@
 				/>
 
 				<InputComp
-					label="wedding style"
+					label={m.wd_style()}
 					{form}
 					{errors}
 					name="weddingStyle"
 					type="select"
 					items={styleItems}
-					placeholder="Choose a style"
+					placeholder={m.wd_choose_style()}
 				/>
 
 				<InputComp
-					label="city"
+					label={m.wd_city()}
 					{form}
 					{errors}
 					name="city"
 					type="combo"
 					items={data.cityItems}
-					placeholder="Search cities"
+					placeholder={m.wd_search_cities()}
 				/>
 
 				<InputComp
-					label="expected guests"
+					label={m.wd_expected()}
 					{form}
 					{errors}
 					name="expectedGuests"
@@ -133,7 +136,7 @@
 
 				<div class="sm:col-span-2">
 					<InputComp
-						label="total budget (ETB)"
+						label={m.wd_total_budget()}
 						{form}
 						{errors}
 						name="totalBudget"
@@ -152,7 +155,7 @@
 			<Card.Footer class="justify-end border-t pt-6">
 				<Button type="submit" disabled={$submitting}>
 					{#if $submitting}<Loader2 class="mr-2 size-4 animate-spin" />{/if}
-					{data.isNew ? 'Save and continue' : 'Save changes'}
+					{data.isNew ? m.wd_save_continue() : m.wd_save()}
 				</Button>
 			</Card.Footer>
 		</Card.Root>

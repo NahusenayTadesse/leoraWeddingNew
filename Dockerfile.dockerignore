@@ -1,0 +1,14 @@
+# Context is the parent folder; only these two projects are needed.
+*
+!admin-kit
+!leoraWeddingNew
+**/node_modules
+**/.svelte-kit
+**/build
+**/build.tar.gz
+**/.git
+leoraWeddingNew/.env
+leoraWeddingNew/.tempFiles*
+leoraWeddingNew/leoara_php
+leoraWeddingNew/.playwright-mcp
+leoraWeddingNew/src/lib/paraglide

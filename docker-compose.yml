@@ -1,0 +1,43 @@
+# Example production stack: the app and MariaDB. Build context is the parent folder
+# (admin-kit is a sibling). Put secrets in .env (see .env.example).
+#
+#   docker compose up -d --build
+#   docker compose run --rm app npm run db:migrate
+#   docker compose exec -T db mariadb -uleora -p"$DB_PASSWORD" leora < database/seed.sql
+#   docker compose run --rm app node scripts/create-user.mjs --email you@example.com --role Admin
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: leoraWeddingNew/Dockerfile
+    env_file: .env
+    environment:
+      DATABASE_URL: mysql://leora:${DB_PASSWORD}@db:3306/leora
+    ports:
+      - '3000:3000'
+    volumes:
+      - files:/data
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: mariadb:11
+    environment:
+      MARIADB_DATABASE: leora
+      MARIADB_USER: leora
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_RANDOM_ROOT_PASSWORD: '1'
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - db:/var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'healthcheck.sh', '--connect', '--innodb_initialized']
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  files:
+  db:

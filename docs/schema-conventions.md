@@ -90,11 +90,9 @@ of the schema with it.
 
 ## FULLTEXT search
 
-drizzle-kit cannot emit FULLTEXT indexes. After the first migration, run once:
-
-```sql
-ALTER TABLE vendors ADD FULLTEXT KEY ftx_vendors_search (business_name, description);
-```
+drizzle-kit cannot emit FULLTEXT indexes, so `ftx_vendors_search` is created by the hand-written
+migration `drizzle/0002_vendors_fulltext.sql`. Add any new FULLTEXT index the same way
+(`drizzle-kit generate --custom`).
 
 ## Creating the database
 

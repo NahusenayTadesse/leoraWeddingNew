@@ -3,7 +3,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { sveltekitCookies } from 'better-auth/svelte-kit';
 import { twoFactor } from 'better-auth/plugins';
 import { env } from '$env/dynamic/private';
-import { dev } from '$app/environment';
+import { building, dev } from '$app/environment';
 import { getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
 import { layout, resetPasswordEmail, sendEmail, verifyEmailEmail } from '$lib/server/email';
@@ -23,10 +23,15 @@ export const auth = betterAuth({
 	// each request's Host header, limited to localhost, so the app works on whatever port Vite picks.
 	baseURL: env.ORIGIN
 		? env.ORIGIN
-		: dev
-			? { allowedHosts: ['localhost:*', '127.0.0.1:*'], protocol: 'http' }
-			: undefined,
-	secret: env.BETTER_AUTH_SECRET,
+		: building
+			? 'http://localhost'
+			: dev
+				? { allowedHosts: ['localhost:*', '127.0.0.1:*'], protocol: 'http' }
+				: undefined,
+	// `vite build` loads this module without secrets; a placeholder there only. At runtime a
+	// missing secret makes better-auth refuse to start, which is what we want.
+	secret:
+		env.BETTER_AUTH_SECRET || (building ? 'build-time-placeholder-not-used-at-runtime' : undefined),
 	database: drizzleAdapter(db, { provider: 'mysql' }),
 	emailAndPassword: {
 		enabled: true,

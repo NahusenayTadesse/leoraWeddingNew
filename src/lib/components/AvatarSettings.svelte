@@ -3,7 +3,7 @@
 	import * as DropdownMenu from '@nahu/admin-kit/components/ui/dropdown-menu/index.js';
 	import * as Avatar from '@nahu/admin-kit/components/ui/avatar/index.js';
 
-	import { LogOut, KeyRound } from '@lucide/svelte';
+	import { LogOut, KeyRound, Bell } from '@lucide/svelte';
 	import LoadingBtn from '@nahu/admin-kit/formComponents/LoadingBtn.svelte';
 	import { goto } from '$app/navigation';
 	let { data }: { data: string | undefined } = $props();
@@ -25,8 +25,11 @@
 		<DropdownMenu.Group>
 			<DropdownMenu.Label>My Account</DropdownMenu.Label>
 			<DropdownMenu.Separator />
-			<DropdownMenu.Item onclick={() => goto('/dashboard/change-password')}>
-				<KeyRound /> Change Password
+			<DropdownMenu.Item onclick={() => goto('/notifications')}>
+				<Bell /> Notifications
+			</DropdownMenu.Item>
+			<DropdownMenu.Item onclick={() => goto('/account/security')}>
+				<KeyRound /> Password &amp; security
 			</DropdownMenu.Item>
 			<DropdownMenu.Item>
 				<ActionForm

@@ -13,6 +13,8 @@ import { roles } from './common';
  * any regeneration:
  *
  *   user.roleId — FK to roles.id
+ *
+ * `user.twoFactorEnabled` and the `twoFactor` table come from better-auth's two-factor plugin.
  */
 
 export const user = mysqlTable('user', {
@@ -29,6 +31,7 @@ export const user = mysqlTable('user', {
 	banned: boolean('banned'),
 	banReason: text('ban_reason'),
 	banExpires: datetime('ban_expires'),
+	twoFactorEnabled: boolean('two_factor_enabled').default(false),
 	createdAt: timestamp('created_at', { fsp: 3 }).defaultNow().notNull(),
 	updatedAt: timestamp('updated_at', { fsp: 3 })
 		.default(sql`CURRENT_TIMESTAMP(3) on update CURRENT_TIMESTAMP(3)`)
@@ -77,6 +80,22 @@ export const account = mysqlTable(
 			.notNull()
 	},
 	(table) => [index('account_userId_idx').on(table.userId)]
+);
+
+export const twoFactor = mysqlTable(
+	'two_factor',
+	{
+		id: varchar('id', { length: 36 }).primaryKey(),
+		secret: text('secret').notNull(),
+		backupCodes: text('backup_codes').notNull(),
+		userId: varchar('user_id', { length: 36 })
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		verified: boolean('verified').default(true),
+		failedVerificationCount: int('failed_verification_count').default(0),
+		lockedUntil: timestamp('locked_until', { fsp: 3 })
+	},
+	(table) => [index('two_factor_user_idx').on(table.userId)]
 );
 
 export const verification = mysqlTable(

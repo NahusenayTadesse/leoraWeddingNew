@@ -84,7 +84,7 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
  * `+server.ts`, so without this an anonymous POST reached their actions (and crashed on
  * `locals.user!`). Page views go to the login page; everything else gets a 401.
  */
-const SIGNED_IN_AREAS = ['/wedding', '/dashboard', '/vendor-dashboard', '/vendor-onboarding'];
+const SIGNED_IN_AREAS = ['/wedding', '/dashboard', '/vendor-dashboard', '/vendor-onboarding', '/account'];
 
 const handleSignedInAreas: Handle = ({ event, resolve }) => {
 	const path = event.url.pathname;
@@ -116,10 +116,30 @@ const handleKit = kitHandle({
 		locals.user && access.guards(url.pathname) ? loadGrant(locals.user.id) : NO_GRANT
 });
 
+/**
+ * Staff must have two-step verification on before the admin console opens (production, or
+ * REQUIRE_STAFF_2FA=true). Runs after the kit has worked out the viewer's permissions.
+ */
+const handleStaffTwoFactor: Handle = ({ event, resolve }) => {
+	const enforce = process.env.REQUIRE_STAFF_2FA ? process.env.REQUIRE_STAFF_2FA === 'true' : !dev;
+	const path = event.url.pathname;
+	if (
+		enforce &&
+		(path === '/admin' || path.startsWith('/admin/')) &&
+		event.locals.user &&
+		(event.locals.isSuperAdmin || event.locals.permList?.length) &&
+		!(event.locals.user as { twoFactorEnabled?: boolean }).twoFactorEnabled
+	) {
+		return new Response(null, { status: 303, headers: { location: '/account/security?required=1' } });
+	}
+	return resolve(event);
+};
+
 export const handle: Handle = sequence(
 	handleSecurityHeaders,
 	handleParaglide,
 	handleBetterAuth,
 	handleSignedInAreas,
-	handleKit
+	handleKit,
+	handleStaffTwoFactor
 );

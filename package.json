@@ -34,6 +34,7 @@
 		"@tanstack/table-core": "^8.21.3",
 		"@types/node": "^24",
 		"@types/nodemailer": "^8.0.2",
+		"@types/qrcode": "^1.5.6",
 		"better-auth": "^1.4.18",
 		"bits-ui": "^2.16.3",
 		"clsx": "^2.1.1",
@@ -75,6 +76,7 @@
 		"nodemailer": "^10.1.7",
 		"papaparse": "^5.5.3",
 		"pluralize": "^8.0.0",
+		"qrcode": "^1.5.4",
 		"svelte-chartjs": "^4.0.1",
 		"svelte-sonner": "^1.1.0"
 	}

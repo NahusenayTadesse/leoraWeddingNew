@@ -125,7 +125,7 @@ export async function destinationFor(userId: string, roleName: string): Promise<
  * Only same-origin paths are honoured, so `?redirectTo=` can't be used to
  * bounce a freshly-authenticated user off to another site.
  */
-function safeRedirect(redirectTo: string | null, fallback: string): string {
+export function safeRedirect(redirectTo: string | null, fallback: string): string {
 	if (!redirectTo) return fallback;
 	if (!redirectTo.startsWith('/') || redirectTo.startsWith('//')) return fallback;
 	return redirectTo;
@@ -166,23 +166,30 @@ export const authActions = {
 			return message(scrubPassword(form), { type: 'error', text: TOO_MANY }, { status: 429 });
 		}
 
-		let userId: string;
+		let userId = '';
+		let needsSecondFactor = false;
 		try {
 			const result = await auth.api.signInEmail({
 				body: { email, password, rememberMe: rememberMe ?? true, callbackURL: VERIFIED_CALLBACK },
 				headers: event.request.headers
 			});
 
-			if (!result?.user) {
-				setError(form, 'email', 'Invalid email or password');
-				setError(form, 'password', 'Invalid email or password');
-				return message(
-					scrubPassword(form),
-					{ type: 'error', text: 'Invalid email or password.' },
-					{ status: 401 }
-				);
+			// Account with two-factor on: better-auth holds the session until the code is entered.
+			if (result && 'twoFactorRedirect' in result && result.twoFactorRedirect) {
+				needsSecondFactor = true;
+			} else {
+				const signedIn = (result as { user?: { id: string } } | null)?.user;
+				if (!signedIn) {
+					setError(form, 'email', 'Invalid email or password');
+					setError(form, 'password', 'Invalid email or password');
+					return message(
+						scrubPassword(form),
+						{ type: 'error', text: 'Invalid email or password.' },
+						{ status: 401 }
+					);
+				}
+				userId = signedIn.id;
 			}
-			userId = result.user.id;
 		} catch (error) {
 			// Right password, unconfirmed address: better-auth has just sent a fresh link.
 			if (error instanceof APIError && error.body?.code === 'EMAIL_NOT_VERIFIED') {
@@ -200,6 +207,11 @@ export const authActions = {
 			const text =
 				error instanceof APIError ? error.message : 'Something went wrong. Please try again.';
 			return message(scrubPassword(form), { type: 'error', text }, { status: 401 });
+		}
+
+		if (needsSecondFactor) {
+			const next = event.url.searchParams.get('redirectTo');
+			redirect(302, `/two-factor${next ? `?redirectTo=${encodeURIComponent(next)}` : ''}`);
 		}
 
 		const roleName = await roleNameFor(userId);

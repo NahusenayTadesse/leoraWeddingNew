@@ -1,6 +1,7 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { sveltekitCookies } from 'better-auth/svelte-kit';
+import { twoFactor } from 'better-auth/plugins';
 import { env } from '$env/dynamic/private';
 import { dev } from '$app/environment';
 import { getRequestEvent } from '$app/server';
@@ -85,5 +86,9 @@ export const auth = betterAuth({
 			banExpires: { type: 'date', required: false, input: false }
 		}
 	},
-	plugins: [sveltekitCookies(getRequestEvent)] // make sure this is the last plugin in the array
+	plugins: [
+		// TOTP (authenticator app) with backup codes. Required for staff — see hooks.server.ts.
+		twoFactor({ issuer: 'Leora Events' }),
+		sveltekitCookies(getRequestEvent) // make sure this is the last plugin in the array
+	]
 });

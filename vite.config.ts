@@ -2,6 +2,21 @@ import devtoolsJson from 'vite-plugin-devtools-json';
 import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { adminKit } from '@nahu/admin-kit/vite';
+import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import { defineConfig } from 'vite';
 
-export default defineConfig({ plugins: [tailwindcss(), sveltekit(), adminKit(), devtoolsJson()] });
+export default defineConfig({
+	plugins: [
+		tailwindcss(),
+		sveltekit(),
+		paraglideVitePlugin({
+			project: './project.inlang',
+			outdir: './src/lib/paraglide',
+			emitTsDeclarations: true,
+			// No locale in the URL: the visitor's choice (cookie), else their browser language.
+			strategy: ['cookie', 'preferredLanguage', 'baseLocale']
+		}),
+		adminKit(),
+		devtoolsJson()
+	]
+});

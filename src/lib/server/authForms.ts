@@ -9,6 +9,26 @@ import { db } from '$lib/server/db';
 import { auth } from '$lib/server/auth';
 import { addUser, addVendor, loginSchema } from '$lib/ZodSchema';
 import { couples, roles, user, vendors } from '$lib/server/db/schema';
+import { LIMITS, takeToken } from '$lib/server/rateLimit';
+
+/** Where better-auth sends a freshly verified user (signed in) — see /auth/verified. */
+const VERIFIED_CALLBACK = '/auth/verified';
+
+const TOO_MANY = 'Too many attempts. Please wait a minute and try again.';
+
+/**
+ * With email verification on, better-auth answers a sign-up for an address that already has an
+ * account with a made-up user that was never stored (so the form can't reveal who is registered).
+ * Only a real row gets a role and a couple workspace.
+ */
+async function userExists(id: string): Promise<boolean> {
+	const rows = await db.select({ id: user.id }).from(user).where(eq(user.id, id)).limit(1);
+	return rows.length > 0;
+}
+
+function checkEmailPath(email: string) {
+	return `/check-email?email=${encodeURIComponent(email)}`;
+}
 
 /**
  * `/login` and `/signup` are one screen in the PHP app
@@ -71,7 +91,7 @@ function scrubPassword<T extends { data: { password?: string } }>(form: T): T {
 }
 
 /** The signed-in user's role name, via `user.role_id → roles.name`. */
-async function roleNameFor(userId: string): Promise<string> {
+export async function roleNameFor(userId: string): Promise<string> {
 	const row = await db
 		.select({ name: roles.name })
 		.from(user)
@@ -87,7 +107,7 @@ async function roleNameFor(userId: string): Promise<string> {
  * `vendors` yet, and `/vendor-dashboard` 403s anyone without one — so they
  * have to land on the wizard, not the dashboard, until it's done.
  */
-async function destinationFor(userId: string, roleName: string): Promise<string> {
+export async function destinationFor(userId: string, roleName: string): Promise<string> {
 	if (roleName === 'Vendor') {
 		const hasVendorProfile = await db
 			.select({ id: vendors.id })
@@ -138,10 +158,17 @@ export const authActions = {
 
 		const { email, password, rememberMe } = form.data;
 
+		if (
+			!takeToken(`login:ip:${event.getClientAddress()}`, LIMITS.login) ||
+			!takeToken(`login:email:${email.toLowerCase()}`, LIMITS.login)
+		) {
+			return message(scrubPassword(form), { type: 'error', text: TOO_MANY }, { status: 429 });
+		}
+
 		let userId: string;
 		try {
 			const result = await auth.api.signInEmail({
-				body: { email, password, rememberMe: rememberMe ?? true },
+				body: { email, password, rememberMe: rememberMe ?? true, callbackURL: VERIFIED_CALLBACK },
 				headers: event.request.headers
 			});
 
@@ -156,6 +183,17 @@ export const authActions = {
 			}
 			userId = result.user.id;
 		} catch (error) {
+			// Right password, unconfirmed address: better-auth has just sent a fresh link.
+			if (error instanceof APIError && error.body?.code === 'EMAIL_NOT_VERIFIED') {
+				return message(
+					scrubPassword(form),
+					{
+						type: 'error',
+						text: 'Please confirm your email first. We just sent you a new confirmation link.'
+					},
+					{ status: 403 }
+				);
+			}
 			// better-auth returns the same shape for "no such user" and "wrong
 			// password", which is what we want — don't tell an attacker which.
 			const text =
@@ -184,57 +222,60 @@ export const authActions = {
 
 		const { brideName, groomName, email, password, phone, phone2 } = form.data;
 
+		if (!takeToken(`signup:${event.getClientAddress()}`, LIMITS.signup)) {
+			return message(scrubPassword(form), { type: 'error', text: TOO_MANY }, { status: 429 });
+		}
+
+		let createdUserId: string | null = null;
 		try {
 			const coupleRoleId = await roleIdByName('Couple');
 
-			await db.transaction(async (tx) => {
-				const newCustomer = await auth.api.signUpEmail({
-					body: {
-						email,
-						password,
-						name: brideName,
-						callbackURL: '/auth/verification-success'
-					},
-					headers: event.request.headers
-				});
-
-				// better-auth owns the `user` row and only accepts the fields it
-				// declares, so the role is stamped on straight after. Without this
-				// every new account has role_id NULL and the role-based redirects
-				// above have nothing to go on.
-				await tx
-					.update(user)
-					.set({ roleId: coupleRoleId, role: 'couple' })
-					.where(eq(user.id, newCustomer.user.id));
-
-				// `couples` has no `user_id`. The workspace is joined through
-				// partner1/partner2, and both `invite_code` (NOT NULL) and `slug`
-				// have to be generated here — there is no DB default for either.
-				await tx.insert(couples).values({
-					partner1UserId: newCustomer.user.id,
-					inviteCode: makeInviteCode(),
-					slug: makeSlug(brideName, groomName),
-					groomName,
-					brideName,
-					email,
-					phone,
-					phone2
-				});
+			const newCustomer = await auth.api.signUpEmail({
+				body: { email, password, name: brideName, callbackURL: VERIFIED_CALLBACK },
+				headers: event.request.headers
 			});
+
+			if (await userExists(newCustomer.user.id)) {
+				createdUserId = newCustomer.user.id;
+				await db.transaction(async (tx) => {
+					// better-auth owns the `user` row and only accepts the fields it
+					// declares, so the role is stamped on straight after. Without this
+					// every new account has role_id NULL and the role-based redirects
+					// above have nothing to go on.
+					await tx
+						.update(user)
+						.set({ roleId: coupleRoleId, role: 'couple' })
+						.where(eq(user.id, newCustomer.user.id));
+
+					// `couples` has no `user_id`. The workspace is joined through
+					// partner1/partner2, and both `invite_code` (NOT NULL) and `slug`
+					// have to be generated here — there is no DB default for either.
+					await tx.insert(couples).values({
+						partner1UserId: newCustomer.user.id,
+						inviteCode: makeInviteCode(),
+						slug: makeSlug(brideName, groomName),
+						groomName,
+						brideName,
+						email,
+						phone,
+						phone2
+					});
+				});
+			}
 		} catch (error) {
+			// signUpEmail commits on its own, outside the transaction above. If the workspace could
+			// not be created, remove the half-made account so the couple can simply try again.
+			if (createdUserId) {
+				await db.delete(user).where(eq(user.id, createdUserId)).catch(() => {});
+			}
+			console.error('Couple signup failed:', error);
 			const text =
 				error instanceof APIError ? error.message : 'Registration failed. Please try again.';
 			return message(scrubPassword(form), { type: 'error', text }, { status: 400 });
 		}
 
-		// signUpEmail also opens a session, so the couple goes straight to their
-		// planner rather than being bounced back to the login tab.
-		redirect(
-			302,
-			'/dashboard',
-			{ type: 'success', message: 'Welcome to Leora — your planner is ready.' },
-			event
-		);
+		// No session until the email is confirmed; the link signs them in (see VERIFIED_CALLBACK).
+		redirect(302, checkEmailPath(email));
 	},
 
 	/**
@@ -258,33 +299,30 @@ export const authActions = {
 
 		const { businessName, email, password } = form.data;
 
+		if (!takeToken(`signup:${event.getClientAddress()}`, LIMITS.signup)) {
+			return message(scrubPassword(form), { type: 'error', text: TOO_MANY }, { status: 429 });
+		}
+
 		try {
 			const vendorRoleId = await roleIdByName('Vendor');
 			const newVendor = await auth.api.signUpEmail({
-				body: {
-					email,
-					password,
-					name: businessName,
-					callbackURL: '/auth/verification-success'
-				},
+				body: { email, password, name: businessName, callbackURL: VERIFIED_CALLBACK },
 				headers: event.request.headers
 			});
 
-			await db
-				.update(user)
-				.set({ roleId: vendorRoleId, role: 'vendor' })
-				.where(eq(user.id, newVendor.user.id));
+			if (await userExists(newVendor.user.id)) {
+				await db
+					.update(user)
+					.set({ roleId: vendorRoleId, role: 'vendor' })
+					.where(eq(user.id, newVendor.user.id));
+			}
 		} catch (error) {
 			const text =
 				error instanceof APIError ? error.message : 'Registration failed. Please try again.';
 			return message(scrubPassword(form), { type: 'error', text }, { status: 400 });
 		}
 
-		redirect(
-			302,
-			'/vendor-onboarding',
-			{ type: 'success', message: `Welcome, ${businessName}. Let's set up your listing.` },
-			event
-		);
+		// Confirming the email signs them in and lands them on /vendor-onboarding.
+		redirect(302, checkEmailPath(email));
 	}
 } satisfies Actions;

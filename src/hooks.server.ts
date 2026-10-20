@@ -1,6 +1,6 @@
 import type { Handle } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
-import { building } from '$app/environment';
+import { building, dev } from '$app/environment';
 import { eq } from 'drizzle-orm';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { configureKit } from '@nahu/admin-kit/server/db';
@@ -9,8 +9,33 @@ import { auth } from '$lib/server/auth';
 import { db } from '$lib/server/db';
 import { roles, user } from '$lib/server/db/schema';
 import { access, ADMIN_PERMISSION } from '$lib/access';
+import { paraglideMiddleware } from '$lib/paraglide/server';
 
 configureKit({ db, loginPath: '/login' });
+
+/** The visitor's language (cookie, else Accept-Language) for `m.*` and `<html lang>`. */
+const handleParaglide: Handle = ({ event, resolve }) =>
+	paraglideMiddleware(event.request, ({ request, locale }) => {
+		event.request = request;
+		return resolve(event, {
+			transformPageChunk: ({ html }) => html.replace('%paraglide.lang%', locale)
+		});
+	});
+
+/**
+ * Headers every response gets. The CSP itself is set by SvelteKit (`kit.csp` in svelte.config.js)
+ * so it can hash its own inline scripts; these are the ones it doesn't cover.
+ */
+const handleSecurityHeaders: Handle = async ({ event, resolve }) => {
+	const response = await resolve(event);
+	const h = response.headers;
+	h.set('X-Content-Type-Options', 'nosniff');
+	h.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+	h.set('X-Frame-Options', 'DENY');
+	h.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+	if (!dev) h.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+	return response;
+};
 
 const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	const session = await auth.api.getSession({ headers: event.request.headers });
@@ -56,4 +81,9 @@ const handleKit = kitHandle({
 		locals.user && access.guards(url.pathname) ? loadGrant(locals.user.id) : NO_GRANT
 });
 
-export const handle: Handle = sequence(handleBetterAuth, handleKit);
+export const handle: Handle = sequence(
+	handleSecurityHeaders,
+	handleParaglide,
+	handleBetterAuth,
+	handleKit
+);

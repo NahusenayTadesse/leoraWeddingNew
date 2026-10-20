@@ -8,6 +8,7 @@
 	import { addUser, addVendor, loginSchema } from '$lib/ZodSchema';
 	import { replaceState } from '$app/navigation';
 	import { page } from '$app/state';
+	import { m } from '$lib/paraglide/messages.js';
 
 	/**
 	 * The combined auth card from the PHP app (leora-events-login.html): role
@@ -290,6 +291,9 @@
 					placeholder="••••••••"
 					required
 				/>
+				<p class="forgot-row">
+					<a href="/forgot-password">{m.auth_forgot_link()}</a>
+				</p>
 				<InputComp
 					form={loginForm}
 					errors={loginErrors}
@@ -446,6 +450,19 @@
 		text-decoration: underline;
 	}
 	:global(.dark) .checkbox-row a {
+		color: var(--leora-gold);
+	}
+
+	.forgot-row {
+		text-align: right;
+		margin: -6px 0 10px;
+		font-size: 13px;
+	}
+	.forgot-row a {
+		color: var(--leora-gold-dark);
+		font-weight: 600;
+	}
+	:global(.dark) .forgot-row a {
 		color: var(--leora-gold);
 	}
 

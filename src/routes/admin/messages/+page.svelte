@@ -1,37 +1,59 @@
 <script lang="ts">
-	import PageHeader from '$lib/components/admin/PageHeader.svelte';
-	import ActionForm from '$lib/components/admin/ActionForm.svelte';
-	import Filter from '$lib/components/admin/Filter.svelte';
-	import * as Card from '$lib/components/ui/card/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import type { ColumnDef } from '@tanstack/table-core';
+	import { renderSnippet } from '@nahu/admin-kit/components/ui/data-table/index.js';
+	import DataTable from '@nahu/admin-kit/components/Table/data-table.svelte';
+	import ConfirmAction from '@nahu/admin-kit/components/ConfirmAction.svelte';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
 	import { Mail } from '@lucide/svelte';
+	import PageHeader from '$lib/components/admin/PageHeader.svelte';
+	import { dateTime, longText, sortable } from '$lib/cells';
 
 	let { data } = $props();
-	let q = $state('');
-	const rows = $derived(
-		data.rows.filter((m) => `${m.name} ${m.email} ${m.subject} ${m.message}`.toLowerCase().includes(q.toLowerCase()))
-	);
+
+	type Row = (typeof data.rows)[number];
+
+	const columns: ColumnDef<Row>[] = [
+		{
+			id: 'createdAt',
+			accessorKey: 'createdAt',
+			header: sortable('Received'),
+			cell: ({ row }) => dateTime(row.original.createdAt)
+		},
+		{ id: 'name', accessorKey: 'name', header: sortable('From') },
+		{ id: 'email', accessorKey: 'email', header: 'Email' },
+		{ id: 'phone', accessorKey: 'phone', header: 'Phone', cell: ({ row }) => row.original.phone ?? '—' },
+		{ id: 'subject', accessorKey: 'subject', header: sortable('Subject') },
+		{
+			id: 'message',
+			accessorKey: 'message',
+			header: 'Message',
+			cell: ({ row }) => longText(row.original.message, 60)
+		},
+		{ id: 'actions', header: '', cell: ({ row }) => renderSnippet(actionsCell, row.original) }
+	];
 </script>
+
+{#snippet actionsCell(m: Row)}
+	<div class="flex justify-end gap-2">
+		<Button
+			size="sm"
+			variant="outline"
+			href="mailto:{m.email}?subject={encodeURIComponent('Re: ' + m.subject)}"
+			><Mail class="size-4" /> Reply</Button
+		>
+		<ConfirmAction
+			action="?/remove"
+			fields={{ id: m.id }}
+			label="Delete"
+			variant="destructive"
+			title="Delete this message?"
+			description="From {m.name}: {m.subject}"
+		/>
+	</div>
+{/snippet}
 
 <div class="space-y-6">
 	<PageHeader title="Contact messages" description="Enquiries from the public contact form." />
-	<Filter bind:value={q} placeholder="Search messages" />
 
-	{#each rows as m (m.id)}
-		<Card.Root>
-			<Card.Header>
-				<Card.Title class="text-base">{m.subject}</Card.Title>
-				<Card.Description>{m.name} · {m.email}{m.phone ? ` · ${m.phone}` : ''} · {new Date(m.createdAt).toLocaleString()}</Card.Description>
-			</Card.Header>
-			<Card.Content class="space-y-3">
-				<p class="text-sm whitespace-pre-wrap">{m.message}</p>
-				<div class="flex gap-2">
-					<Button size="sm" variant="outline" href="mailto:{m.email}?subject={encodeURIComponent('Re: ' + m.subject)}"><Mail class="size-4" /> Reply</Button>
-					<ActionForm action="?/remove" fields={{ id: m.id }} label="Delete" variant="destructive" confirmText="Delete this message?" />
-				</div>
-			</Card.Content>
-		</Card.Root>
-	{:else}
-		<p class="text-muted-foreground text-sm">No messages.</p>
-	{/each}
+	<DataTable {columns} data={data.rows} server={data.server} dateFilter="Received" fileName="Contact messages" />
 </div>

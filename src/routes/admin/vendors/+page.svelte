@@ -1,109 +1,102 @@
 <script lang="ts">
-	import { tick } from 'svelte';
-	import { superForm } from 'sveltekit-superforms';
-	import { toast } from 'svelte-sonner';
-	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
-	import DataTable from '$lib/components/Table/data-table.svelte';
-	import { Check, X, Ban, RotateCcw, MoreVertical, ShieldCheck } from '@lucide/svelte';
-	import { vendorColumns, type VendorRow } from './columns';
+	import type { ColumnDef } from '@tanstack/table-core';
+	import { renderSnippet } from '@nahu/admin-kit/components/ui/data-table/index.js';
+	import DataTable from '@nahu/admin-kit/components/Table/data-table.svelte';
+	import ConfirmAction from '@nahu/admin-kit/components/ConfirmAction.svelte';
+	import { ShieldCheck } from '@lucide/svelte';
+	import PageHeader from '$lib/components/admin/PageHeader.svelte';
+	import { date, sortable, status } from '$lib/cells';
 
 	let { data } = $props();
 
-	const statusForm = superForm(data.statusForm, {
-		id: 'status',
-		resetForm: false,
-		onUpdated: ({ form }) => {
-			if (form.message) toast[form.message.type === 'error' ? 'error' : 'success'](form.message.text);
-		}
-	});
-	const { form, enhance } = statusForm;
+	type Row = (typeof data.rows)[number];
+	type Status = Row['status'];
 
-	async function updateStatus(id: number, status: VendorRow['status']) {
-		$form.id = id;
-		$form.status = status;
-		// The hidden inputs are bound reactively — the DOM write has to flush
-		// before the synthetic submit reads it, or the request goes out with
-		// last render's (stale/empty) values and the server rejects it.
-		await tick();
-		document.getElementById('vendor-status-form')?.dispatchEvent(new Event('submit', { cancelable: true }));
-	}
+	/** The moves each status allows, as on the old row menu. */
+	const moves = (s: Status) =>
+		(
+			[
+				{ to: 'approved', label: 'Approve', when: s !== 'approved', variant: 'default' },
+				{ to: 'rejected', label: 'Reject', when: s !== 'rejected', variant: 'destructive' },
+				{ to: 'suspended', label: 'Suspend', when: s === 'approved', variant: 'destructive' },
+				{
+					to: 'pending',
+					label: 'Reset to pending',
+					when: s === 'suspended' || s === 'rejected',
+					variant: 'outline'
+				}
+			] as const
+		).filter((m) => m.when);
 
-	const statusVariant = {
-		approved: 'default',
-		pending: 'secondary',
-		rejected: 'destructive',
-		suspended: 'outline'
+	const consequence = {
+		approved: 'Their listing goes live in the marketplace.',
+		rejected: 'Their listing is hidden from couples.',
+		suspended: 'Their listing is hidden from couples.',
+		pending: 'They go back into the approval queue.'
 	} as const;
 
-	const columns = vendorColumns({ business: businessCell, status: statusCell, actions: actionsCell });
+	const columns: ColumnDef<Row>[] = [
+		{
+			id: 'businessName',
+			accessorKey: 'businessName',
+			header: sortable('Business'),
+			cell: ({ row }) => renderSnippet(businessCell, row.original)
+		},
+		{
+			id: 'categoryId',
+			accessorKey: 'category',
+			header: 'Category',
+			cell: ({ row }) => row.original.category ?? '—'
+		},
+		{ id: 'city', accessorKey: 'city', header: sortable('City'), cell: ({ row }) => row.original.city ?? '—' },
+		{ id: 'status', accessorKey: 'status', header: 'Status', cell: ({ row }) => status(row.original.status) },
+		{
+			id: 'createdAt',
+			accessorKey: 'createdAt',
+			header: sortable('Joined'),
+			cell: ({ row }) => date(row.original.createdAt)
+		},
+		{ id: 'actions', header: '', cell: ({ row }) => renderSnippet(actionsCell, row.original) }
+	];
 </script>
 
-<svelte:head>
-	<title>Vendors — Admin Console</title>
-</svelte:head>
-
-<form id="vendor-status-form" method="POST" action="?/updateStatus" use:enhance class="hidden">
-	<input type="hidden" name="id" bind:value={$form.id} />
-	<input type="hidden" name="status" bind:value={$form.status} />
-</form>
-
-{#snippet businessCell(row: VendorRow)}
+{#snippet businessCell(row: Row)}
 	<div class="flex items-center gap-2">
 		<span class="font-medium">{row.businessName}</span>
 		{#if row.isVerified}
-			<ShieldCheck class="size-3.5 text-emerald-600" />
+			<ShieldCheck class="text-success size-3.5" aria-label="Verified" />
 		{/if}
 	</div>
 	{#if row.email || row.phone}
-		<p class="text-muted-foreground text-xs">{[row.email, row.phone].filter(Boolean).join(' · ')}</p>
+		<span class="text-muted-foreground text-xs">{[row.email, row.phone].filter(Boolean).join(' · ')}</span>
 	{/if}
 {/snippet}
 
-{#snippet statusCell(row: VendorRow)}
-	<Badge variant={statusVariant[row.status]}>{row.status}</Badge>
-{/snippet}
-
-{#snippet actionsCell(row: VendorRow)}
-	<DropdownMenu.Root>
-		<DropdownMenu.Trigger>
-			{#snippet child({ props })}
-				<Button {...props} variant="ghost" size="icon">
-					<MoreVertical class="size-4" />
-				</Button>
-			{/snippet}
-		</DropdownMenu.Trigger>
-		<DropdownMenu.Content align="end">
-			{#if row.status !== 'approved'}
-				<DropdownMenu.Item onclick={() => updateStatus(row.id, 'approved')}>
-					<Check class="size-4" /> Approve
-				</DropdownMenu.Item>
-			{/if}
-			{#if row.status !== 'rejected'}
-				<DropdownMenu.Item onclick={() => updateStatus(row.id, 'rejected')}>
-					<X class="size-4" /> Reject
-				</DropdownMenu.Item>
-			{/if}
-			{#if row.status === 'approved'}
-				<DropdownMenu.Item onclick={() => updateStatus(row.id, 'suspended')}>
-					<Ban class="size-4" /> Suspend
-				</DropdownMenu.Item>
-			{/if}
-			{#if row.status === 'suspended' || row.status === 'rejected'}
-				<DropdownMenu.Item onclick={() => updateStatus(row.id, 'pending')}>
-					<RotateCcw class="size-4" /> Reset to pending
-				</DropdownMenu.Item>
-			{/if}
-		</DropdownMenu.Content>
-	</DropdownMenu.Root>
+{#snippet actionsCell(row: Row)}
+	<div class="flex justify-end gap-2">
+		{#each moves(row.status) as move (move.to)}
+			<ConfirmAction
+				action="?/updateStatus"
+				fields={{ id: row.id, status: move.to }}
+				label={move.label}
+				variant={move.variant}
+				title="{move.label}: {row.businessName}?"
+				description={consequence[move.to]}
+			/>
+		{/each}
+	</div>
 {/snippet}
 
 <div class="space-y-6">
-	<div>
-		<h1 class="text-2xl font-semibold tracking-tight">Vendors</h1>
-		<p class="text-muted-foreground text-sm">Approve, reject or suspend vendor listings.</p>
-	</div>
+	<PageHeader title="Vendors" description="Approve, reject or suspend vendor listings." />
 
-	<DataTable data={data.rows as VendorRow[]} {columns} fileName="Vendors" />
+	<DataTable
+		{columns}
+		data={data.rows}
+		server={data.server}
+		facetKeys={['status', 'categoryId']}
+		facetLabels={{ status: 'Status', categoryId: 'Category' }}
+		dateFilter="Joined"
+		fileName="Vendors"
+	/>
 </div>

@@ -2,14 +2,14 @@
 	import type { WithoutChildren } from "bits-ui";
 	import { getEmblaContext } from "./context.js";
 	import { cn } from "$lib/utils.js";
-	import { Button, type Props } from "$lib/components/ui/button/index.js";
+	import { Button, type Props } from "@nahu/admin-kit/components/ui/button/index.js";
 	import ChevronLeftIcon from '@lucide/svelte/icons/chevron-left';
 
 	let {
 		ref = $bindable(null),
 		class: className,
 		variant = "outline",
-		size = "icon-sm",
+		size = "icon",
 		...restProps
 	}: WithoutChildren<Props> = $props();
 
@@ -23,7 +23,7 @@
 	aria-disabled={!emblaCtx.canScrollPrev}
 	disabled={!emblaCtx.canScrollPrev}
 	class={cn(
-		"rounded-full absolute touch-manipulation",
+		"rounded-full absolute touch-manipulation size-8",
 		emblaCtx.orientation === "horizontal"
 			? "inset-y-0 -start-12 my-auto"
 			: "start-1/2 -top-12 -translate-x-1/2 rotate-90",

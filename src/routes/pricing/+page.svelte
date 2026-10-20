@@ -1,21 +1,22 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import * as Card from '$lib/components/ui/card';
+	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
+	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
 	import * as Accordion from '$lib/components/ui/accordion';
-	import { Badge } from '$lib/components/ui/badge';
+	import { Badge } from '@nahu/admin-kit/components/ui/badge/index.js';
 	import { Check, Loader2 } from '@lucide/svelte';
 	import { toMoney } from '$lib/money';
-	import { superForm } from 'sveltekit-superforms/client';
-	import { toast } from 'svelte-sonner';
+	import { createForm } from '@nahu/admin-kit/forms/createForm';
+	import { subscribeSchema } from '$lib/schemas/subscribe';
 
 	let { data } = $props();
 
-	const { enhance, delayed } = superForm(data.subscribeForm, {
+	// `createForm` toasts the result; a successful subscribe also carries the checkout to go to.
+	// svelte-ignore state_referenced_locally
+	const { enhance, delayed } = createForm(data.subscribeForm, subscribeSchema, {
 		onUpdated: ({ form: f }) => {
 			if (f.message?.type === 'success' && f.message.checkoutUrl) {
 				window.location.href = f.message.checkoutUrl;
-			} else if (f.message?.type === 'error') {
-				toast.error(f.message.text);
 			}
 		}
 	});
@@ -62,11 +63,11 @@
 </svelte:head>
 
 <section class="mx-auto max-w-[1180px] px-5 pt-16 pb-10 text-center sm:px-8">
-	<p class="text-accent-foreground text-[12.5px] font-bold tracking-[0.08em] uppercase">Pricing</p>
-	<h1 class="font-display mx-auto mt-2 max-w-2xl text-4xl font-extrabold text-balance sm:text-5xl">
+	<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">Pricing</p>
+	<h1 class="mx-auto mt-2 max-w-2xl font-display text-4xl font-extrabold text-balance sm:text-5xl">
 		Plans that fit the wedding you're planning
 	</h1>
-	<p class="text-muted-foreground mx-auto mt-4 max-w-xl text-[15.5px]">
+	<p class="mx-auto mt-4 max-w-xl text-[15.5px] text-muted-foreground">
 		Start free and browse every vendor. Upgrade only when you want unlimited tools and a planner in
 		your corner.
 	</p>
@@ -81,7 +82,7 @@
 				<!-- Card.Root sets overflow-hidden, so the "most popular" marker
 				     sits inside the header rather than overhanging the border. -->
 				<Card.Root
-					class="h-full {highlighted ? 'border-primary ring-primary/25 shadow-lg ring-2' : ''}"
+					class="h-full {highlighted ? 'border-primary shadow-lg ring-2 ring-primary/25' : ''}"
 				>
 					<Card.Header>
 						<div class="flex items-center justify-between gap-2">
@@ -92,7 +93,7 @@
 						</div>
 						<div class="mt-2 flex items-baseline gap-1.5">
 							<span class="font-display text-4xl font-extrabold">{priceLabel(plan.price)}</span>
-							<span class="text-muted-foreground text-[13px]">
+							<span class="text-[13px] text-muted-foreground">
 								{cycleLabel(plan.billingCycle, plan.price)}
 							</span>
 						</div>
@@ -130,7 +131,7 @@
 							</Button>
 						{:else}
 							<form method="POST" action="?/subscribe" use:enhance class="w-full">
-								<input type="hidden" name="planId" value={plan.id} />
+								<HiddenField name="planId" value={plan.id} />
 								<Button
 									type="submit"
 									variant={highlighted ? 'default' : 'outline'}
@@ -152,7 +153,7 @@
 		<Card.Root>
 			<Card.Content class="py-16 text-center">
 				<p class="font-display text-lg font-bold">No plans are published yet</p>
-				<p class="text-muted-foreground mx-auto mt-2 max-w-sm text-sm">
+				<p class="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
 					Once plans are added to the catalog they'll appear here automatically.
 				</p>
 			</Card.Content>
@@ -166,7 +167,7 @@
 		{#each faqs as [q, a], i (q)}
 			<Accordion.Item value={`pricing-faq-${i}`}>
 				<Accordion.Trigger class="text-left text-[15px] font-semibold">{q}</Accordion.Trigger>
-				<Accordion.Content class="text-muted-foreground text-[14px] leading-relaxed">
+				<Accordion.Content class="text-[14px] leading-relaxed text-muted-foreground">
 					{a}
 				</Accordion.Content>
 			</Accordion.Item>

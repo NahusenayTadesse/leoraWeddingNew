@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
 	import { CircleCheck, CircleX, Clock } from '@lucide/svelte';
 	import { formatETB } from '$lib/money';
 

@@ -63,8 +63,9 @@ export const vendorOnboardingSchema = z
 		packageCapacity: positiveNumber,
 		packageIncludes: z.string().max(1000).optional(),
 
-		// Step 4 — Plan. Absent/undefined means the free Starter tier.
-		planId: positiveNumber
+		// Step 4 — Plan. `0` is the free Starter tier, which the wizard's plan cards offer
+		// beside the paid plans; the action stores a subscription only for a real plan id.
+		planId: z.coerce.number().int().min(0).default(0)
 	})
 	.superRefine((data, ctx) => {
 		if (!data.categoryId) {

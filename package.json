@@ -24,7 +24,7 @@
 		"@fontsource-variable/inter": "^5.2.8",
 		"@fontsource-variable/plus-jakarta-sans": "^5.3.0",
 		"@internationalized/date": "^3.12.0",
-		"@lucide/svelte": "^1.8.0",
+		"@lucide/svelte": "^0.562.0",
 		"@prgm/sveltekit-progress-bar": "^3.0.2",
 		"@sveltejs/adapter-node": "^5.5.2",
 		"@sveltejs/kit": "^2.50.2",
@@ -62,6 +62,7 @@
 	},
 	"dependencies": {
 		"@google/genai": "^2.13.0",
+		"@nahu/admin-kit": "file:../admin-kit",
 		"@tabler/icons-svelte": "^3.38.0",
 		"browser-image-compression": "^2.0.2",
 		"chapa-nodejs": "^2.1.1",

@@ -1,26 +1,17 @@
 <script lang="ts">
-	import { superForm } from 'sveltekit-superforms';
-	import { zod4Client } from 'sveltekit-superforms/adapters';
+	import { createForm } from '@nahu/admin-kit/forms/createForm';
 	import { coupleSchema } from '$lib/schemas/couples';
 	import { slugify } from '$lib/utils/slugify';
-	import InputComp from '$lib/formComponents/InputComp.svelte';
-	import * as Card from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import { toast } from 'svelte-sonner';
+	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
+	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
+	import { Badge } from '@nahu/admin-kit/components/ui/badge/index.js';
 	import { BadgeCheck, Loader2 } from '@lucide/svelte';
 
 	let { data } = $props();
 
-	const sf = superForm(data.form, {
-		validators: zod4Client(coupleSchema),
-		resetForm: false,
-		onUpdated: ({ form }) => {
-			if (form.message) toast.success(form.message);
-		}
-	});
-
-	const { form, errors, enhance, submitting } = sf;
+	// svelte-ignore state_referenced_locally
+	const { form, errors, enhance, submitting } = createForm(data.form, coupleSchema, { resetForm: false });
 
 	const previewSlug = $derived(
 		$form.slug || slugify(`${$form.brideName ?? ''}-${$form.groomName ?? ''}`) || '…'

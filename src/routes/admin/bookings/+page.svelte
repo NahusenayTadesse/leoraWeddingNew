@@ -1,77 +1,97 @@
 <script lang="ts">
+	import type { ColumnDef } from '@tanstack/table-core';
+	import { renderSnippet } from '@nahu/admin-kit/components/ui/data-table/index.js';
+	import DataTable from '@nahu/admin-kit/components/Table/data-table.svelte';
+	import FormDialog from '@nahu/admin-kit/formComponents/FormDialog.svelte';
+	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
 	import PageHeader from '$lib/components/admin/PageHeader.svelte';
-	import ActionForm from '$lib/components/admin/ActionForm.svelte';
-	import StatusBadge from '$lib/components/admin/StatusBadge.svelte';
-	import Filter from '$lib/components/admin/Filter.svelte';
-	import * as Card from '$lib/components/ui/card/index.js';
-	import * as Table from '$lib/components/ui/table/index.js';
-	import { formatETB } from '$lib/money';
+	import { bookingCancelSchema } from '$lib/schemas/admin';
+	import { date, longText, money, sortable, status } from '$lib/cells';
 
 	let { data } = $props();
-	let q = $state('');
-	let status = $state('all');
 
-	const rows = $derived(
-		data.rows.filter(
-			(r) =>
-				(status === 'all' || r.status === status) &&
-				`${r.vendor} ${r.couple}`.toLowerCase().includes(q.toLowerCase())
-		)
-	);
+	type Row = (typeof data.rows)[number];
+
+	let cancelling = $state<Row | null>(null);
+	let cancelOpen = $state(false);
+
+	function openCancel(row: Row) {
+		cancelling = row;
+		cancelOpen = true;
+	}
+
+	const columns: ColumnDef<Row>[] = [
+		{ id: 'id', accessorKey: 'id', header: sortable('#') },
+		{ id: 'couple', accessorKey: 'couple', header: sortable('Couple') },
+		{ id: 'vendor', accessorKey: 'vendor', header: sortable('Vendor') },
+		{
+			id: 'eventDate',
+			accessorKey: 'eventDate',
+			header: sortable('Event date'),
+			cell: ({ row }) => date(row.original.eventDate)
+		},
+		{
+			id: 'price',
+			accessorKey: 'price',
+			header: sortable('Price'),
+			meta: { align: 'right' },
+			cell: ({ row }) => money(row.original.price)
+		},
+		{
+			id: 'status',
+			accessorKey: 'status',
+			header: 'Status',
+			cell: ({ row }) => status(row.original.status)
+		},
+		{
+			id: 'note',
+			header: 'Note',
+			cell: ({ row }) =>
+				row.original.cancelledBy
+					? longText(
+							`By ${row.original.cancelledBy}${row.original.reason ? `: ${row.original.reason}` : ''}`
+						)
+					: ''
+		},
+		{ id: 'actions', header: '', cell: ({ row }) => renderSnippet(actionsCell, row.original) }
+	];
 </script>
+
+{#snippet actionsCell(row: Row)}
+	{#if row.status === 'pending'}
+		<Button size="sm" variant="destructive" onclick={() => openCancel(row)}>Cancel</Button>
+	{/if}
+{/snippet}
 
 <div class="space-y-6">
 	<PageHeader title="Bookings" description="Every vendor booking across the marketplace." />
-	<div class="flex flex-wrap items-center gap-3">
-		<Filter bind:value={q} placeholder="Search vendor or couple" />
-		<select bind:value={status} class="border-input bg-background h-9 rounded-md border px-3 text-sm" aria-label="Status">
-			<option value="all">All statuses</option>
-			<option value="pending">Pending</option>
-			<option value="confirmed">Confirmed</option>
-			<option value="cancelled">Cancelled</option>
-		</select>
-		<span class="text-muted-foreground text-sm">{rows.length} shown</span>
-	</div>
 
-	<Card.Root>
-		<Card.Content class="overflow-x-auto p-0">
-			<Table.Root>
-				<Table.Header>
-					<Table.Row>
-						<Table.Head>#</Table.Head>
-						<Table.Head>Couple</Table.Head>
-						<Table.Head>Vendor</Table.Head>
-						<Table.Head>Event date</Table.Head>
-						<Table.Head class="text-right">Price</Table.Head>
-						<Table.Head>Status</Table.Head>
-						<Table.Head class="text-right">Actions</Table.Head>
-					</Table.Row>
-				</Table.Header>
-				<Table.Body>
-					{#each rows as r (r.id)}
-						<Table.Row>
-							<Table.Cell>{r.id}</Table.Cell>
-							<Table.Cell class="font-medium">{r.couple}</Table.Cell>
-							<Table.Cell>{r.vendor}</Table.Cell>
-							<Table.Cell>{r.eventDate ?? '—'}</Table.Cell>
-							<Table.Cell class="text-right">{r.price === null ? '—' : formatETB(r.price)}</Table.Cell>
-							<Table.Cell>
-								<StatusBadge status={r.status} />
-								{#if r.cancelledBy}<div class="text-muted-foreground mt-1 text-xs">by {r.cancelledBy}{r.reason ? `: ${r.reason}` : ''}</div>{/if}
-							</Table.Cell>
-							<Table.Cell class="text-right">
-								{#if r.status === 'pending'}
-									<ActionForm action="?/cancel" fields={{ id: r.id }} label="Cancel" variant="destructive" confirmText="Cancel booking #{r.id}?">
-										<input name="reason" required placeholder="Reason" class="border-input bg-background h-8 w-36 rounded-md border px-2 text-sm" />
-									</ActionForm>
-								{/if}
-							</Table.Cell>
-						</Table.Row>
-					{:else}
-						<Table.Row><Table.Cell colspan={7} class="text-muted-foreground py-8 text-center">No bookings.</Table.Cell></Table.Row>
-					{/each}
-				</Table.Body>
-			</Table.Root>
-		</Card.Content>
-	</Card.Root>
+	<DataTable
+		{columns}
+		data={data.rows}
+		server={data.server}
+		facetKeys={['status']}
+		facetLabels={{ status: 'Status' }}
+		dateFilter="Event date"
+		fileName="Bookings"
+	/>
 </div>
+
+<FormDialog
+	title="Cancel booking #{cancelling?.id ?? ''}"
+	description="{cancelling?.couple ?? ''} with {cancelling?.vendor ?? ''}. The couple and the vendor both see the reason."
+	action="?/cancel"
+	data={data.cancelForm}
+	schema={bookingCancelSchema}
+	bind:open={cancelOpen}
+	seed={{ id: cancelling?.id }}
+	hideTrigger
+	resetOnSuccess
+	submitLabel="Cancel booking"
+>
+	{#snippet fields({ form, errors })}
+		<InputComp {form} {errors} name="id" type="hidden" />
+		<InputComp {form} {errors} name="reason" label="Reason" type="textarea" rows={3} required />
+	{/snippet}
+</FormDialog>

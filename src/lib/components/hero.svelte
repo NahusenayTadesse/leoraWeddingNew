@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
 	import {
 		Card,
 		CardContent,
 		CardDescription,
 		CardHeader,
 		CardTitle
-	} from '$lib/components/ui/card';
+	} from '@nahu/admin-kit/components/ui/card/index.js';
 	import { HeartIcon, CalendarIcon, DollarSignIcon, UsersIcon } from '@lucide/svelte';
-	import DarkMode from '$lib/components/DarkMode.svelte';
+	import DarkMode from '@nahu/admin-kit/components/shell/DarkMode.svelte';
 
 	const features = [
 		{

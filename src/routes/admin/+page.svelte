@@ -3,7 +3,7 @@
 	import ChartCard from '$lib/components/admin/ChartCard.svelte';
 	import Kpi from '$lib/components/admin/Kpi.svelte';
 	import PageHeader from '$lib/components/admin/PageHeader.svelte';
-	import * as Card from '$lib/components/ui/card/index.js';
+	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
 	import { formatETBWhole } from '$lib/money';
 	import {
 		Users,

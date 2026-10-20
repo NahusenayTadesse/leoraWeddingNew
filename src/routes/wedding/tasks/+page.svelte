@@ -1,66 +1,37 @@
 <script lang="ts">
-	import { superForm } from 'sveltekit-superforms';
-	import { zod4Client } from 'sveltekit-superforms/adapters';
-	import { enhance as formEnhance } from '$app/forms';
-	import { taskSchema } from '$lib/schemas/task';
-	import InputComp from '$lib/formComponents/InputComp.svelte';
-	import * as Card from '$lib/components/ui/card';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
-	import * as Tabs from '$lib/components/ui/tabs';
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Checkbox } from '$lib/components/ui/checkbox';
-	import { Progress } from '$lib/components/ui/progress';
-	import { Separator } from '$lib/components/ui/separator';
-	import { toast } from 'svelte-sonner';
-	import {
-		Plus,
-		Pencil,
-		Trash2,
-		Loader2,
-		ListChecks,
-		Sparkles,
-		CalendarClock
-	} from '@lucide/svelte';
+	import ActionForm from '@nahu/admin-kit/formComponents/ActionForm.svelte';
+	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
+	import { taskSchema, taskIdSchema, generateSchema } from '$lib/schemas/task';
+	import PageHeader from '@nahu/admin-kit/components/PageHeader.svelte';
+	import FormDialog from '@nahu/admin-kit/formComponents/FormDialog.svelte';
+	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
+	import LoadingBtn from '@nahu/admin-kit/formComponents/LoadingBtn.svelte';
+	import { createForm } from '@nahu/admin-kit/forms/createForm';
+	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
+	import * as Tabs from '@nahu/admin-kit/components/ui/tabs/index.js';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
+	import { Badge } from '@nahu/admin-kit/components/ui/badge/index.js';
+	import { Checkbox } from '@nahu/admin-kit/components/ui/checkbox/index.js';
+	import { Progress } from '@nahu/admin-kit/components/ui/progress/index.js';
+	import { Separator } from '@nahu/admin-kit/components/ui/separator/index.js';
+	import { Plus, Pencil, Trash2, ListChecks, Sparkles, CalendarClock } from '@lucide/svelte';
 
 	let { data } = $props();
 
-	let dialogOpen = $state(false);
-	let editingId = $state<number | null>(null);
-	let pendingDelete = $state<{ id: number; label: string } | null>(null);
+	type Task = (typeof data.tasks)[number];
+
+	let editing = $state<Task | null>(null);
+	let taskOpen = $state(false);
+	let removing = $state<Task | null>(null);
+	let removeOpen = $state(false);
 	let filter = $state('open');
 
-	const sf = superForm(data.form, {
-		id: 'task',
-		validators: zod4Client(taskSchema),
-		resetForm: true,
-		onUpdated: ({ form }) => {
-			if (form.valid && form.message) {
-				toast.success(form.message);
-				dialogOpen = false;
-				editingId = null;
-			}
-		}
-	});
-	const { form, errors, enhance, submitting } = sf;
-
-	const df = superForm(data.deleteForm, {
-		id: 'delete',
-		onUpdated: ({ form }) => {
-			if (form.message) toast.success(form.message);
-			pendingDelete = null;
-		}
-	});
-	const { form: deleteData, enhance: deleteEnhance, submitting: deleting } = df;
-
-	const gf = superForm(data.generateForm, {
-		id: 'generate',
-		onUpdated: ({ form }) => {
-			if (form.message) toast.success(form.message);
-		}
-	});
-	const { enhance: generateEnhance, submitting: generating } = gf;
+	// svelte-ignore state_referenced_locally
+	const { enhance: generateEnhance, delayed: generating } = createForm(
+		data.generateForm,
+		generateSchema,
+		{ id: 'generate' }
+	);
 
 	const today = new Date();
 	today.setHours(0, 0, 0, 0);
@@ -134,70 +105,66 @@
 	}
 
 	function openCreate() {
-		editingId = null;
-		$form.id = undefined;
-		$form.title = '';
-		$form.dueDate = '';
-		$form.isConfirmed = false;
-		dialogOpen = true;
+		editing = null;
+		taskOpen = true;
 	}
 
-	function openEdit(task: (typeof data.tasks)[number]) {
-		editingId = task.id;
-		$form.id = task.id;
-		$form.title = task.title ?? '';
-		$form.dueDate = task.dueDate ?? '';
-		$form.isConfirmed = task.isConfirmed ?? false;
-		dialogOpen = true;
+	function openEdit(task: Task) {
+		editing = task;
+		taskOpen = true;
 	}
 
-	function confirmDelete(task: (typeof data.tasks)[number]) {
-		pendingDelete = { id: task.id, label: task.title ?? 'This task' };
-		$deleteData.id = task.id;
+	function confirmDelete(task: Task) {
+		removing = task;
+		removeOpen = true;
 	}
+
+	const seed = $derived(
+		editing
+			? {
+					id: editing.id,
+					title: editing.title ?? '',
+					dueDate: editing.dueDate ?? '',
+					isConfirmed: editing.isConfirmed ?? false
+				}
+			: { id: undefined, title: '', dueDate: '', isConfirmed: false }
+	);
 </script>
 
 <div class="space-y-6">
-	<div class="flex flex-wrap items-start justify-between gap-4">
-		<div>
-			<h1 class="text-2xl font-semibold tracking-tight">Tasks</h1>
-			<p class="text-muted-foreground text-sm">
-				Your planning checklist, counted back from the wedding day.
-			</p>
-		</div>
-		<div class="flex gap-2">
+	<PageHeader
+		title="Tasks"
+		description="Your planning checklist, counted back from the wedding day."
+	>
+		{#snippet actions()}
 			{#if data.templateCount > 0}
 				<form method="POST" action="?/generate" use:generateEnhance>
-					<input type="hidden" name="confirm" value="yes" />
+					<HiddenField name="confirm" value="yes" />
 					<Button type="submit" variant="outline" disabled={$generating || !data.weddingDate}>
-						{#if $generating}
-							<Loader2 class="mr-2 size-4 animate-spin" />
-						{:else}
-							<Sparkles class="mr-2 size-4" />
-						{/if}
-						Suggest tasks
+						{#if $generating}<LoadingBtn name="Suggesting" />{:else}<Sparkles class="size-4" /> Suggest
+							tasks{/if}
 					</Button>
 				</form>
 			{/if}
 			<Button onclick={openCreate}>
-				<Plus class="mr-2 size-4" /> Add task
+				<Plus class="size-4" /> Add task
 			</Button>
-		</div>
-	</div>
+		{/snippet}
+	</PageHeader>
 
 	<!-- Summary -->
 	<Card.Root class="p-5">
 		<div class="grid gap-4 sm:grid-cols-3">
 			<div>
-				<p class="text-muted-foreground text-xs">Total</p>
+				<p class="text-xs text-muted-foreground">Total</p>
 				<p class="text-xl font-semibold">{total}</p>
 			</div>
 			<div>
-				<p class="text-muted-foreground text-xs">Completed</p>
+				<p class="text-xs text-muted-foreground">Completed</p>
 				<p class="text-xl font-semibold">{done}</p>
 			</div>
 			<div>
-				<p class="text-muted-foreground text-xs">Overdue</p>
+				<p class="text-xs text-muted-foreground">Overdue</p>
 				<p class="text-xl font-semibold" class:text-destructive={overdue > 0}>{overdue}</p>
 			</div>
 		</div>
@@ -205,7 +172,7 @@
 		{#if total > 0}
 			<div class="mt-5 space-y-2">
 				<Progress value={donePct} class="h-2" />
-				<p class="text-muted-foreground text-xs">
+				<p class="text-xs text-muted-foreground">
 					{done} of {total} done ({Math.round(donePct)}%)
 				</p>
 			</div>
@@ -227,24 +194,24 @@
 		<Card.Content>
 			{#if total === 0}
 				<div class="p-10 text-center">
-					<ListChecks class="text-muted-foreground mx-auto size-8" />
-					<p class="text-muted-foreground mt-3 text-sm">No tasks yet.</p>
+					<ListChecks class="mx-auto size-8 text-muted-foreground" />
+					<p class="mt-3 text-sm text-muted-foreground">No tasks yet.</p>
 					<div class="mt-4 flex justify-center gap-2">
 						{#if data.templateCount > 0 && data.weddingDate}
 							<form method="POST" action="?/generate" use:generateEnhance>
-								<input type="hidden" name="confirm" value="yes" />
+								<HiddenField name="confirm" value="yes" />
 								<Button type="submit" variant="outline" disabled={$generating}>
-									<Sparkles class="mr-2 size-4" /> Build my checklist
+									<Sparkles class="size-4" /> Build my checklist
 								</Button>
 							</form>
 						{/if}
 						<Button onclick={openCreate}>
-							<Plus class="mr-2 size-4" /> Add one
+							<Plus class="size-4" /> Add one
 						</Button>
 					</div>
 				</div>
 			{:else if visible.length === 0}
-				<div class="text-muted-foreground p-10 text-center text-sm">
+				<div class="p-10 text-center text-sm text-muted-foreground">
 					{filter === 'open' ? 'Everything is done. Nice.' : 'Nothing here yet.'}
 				</div>
 			{:else}
@@ -253,27 +220,27 @@
 						<div>
 							<div class="mb-2 flex items-center gap-2">
 								<h3
-									class="text-xs font-medium uppercase tracking-wide"
+									class="text-xs font-medium tracking-wide uppercase"
 									class:text-destructive={group.label === 'Overdue'}
 									class:text-muted-foreground={group.label !== 'Overdue'}
 								>
 									{group.label}
 								</h3>
 								<Separator class="flex-1" />
-								<span class="text-muted-foreground text-xs">{group.tasks.length}</span>
+								<span class="text-xs text-muted-foreground">{group.tasks.length}</span>
 							</div>
 
 							<ul class="divide-y rounded-lg border">
 								{#each group.tasks as task (task.id)}
 									{@const diff = dayDiff(task.dueDate)}
 									<li class="flex items-center gap-3 px-3 py-2.5">
-										<form
-											method="POST"
+										<ActionForm
 											action="?/toggle"
-											use:formEnhance={() => async ({ update }) =>
-												await update({ reset: false })}
+											submit={() =>
+												async ({ update }) =>
+													await update({ reset: false })}
 										>
-											<input type="hidden" name="id" value={task.id} />
+											<HiddenField name="id" value={task.id} />
 											<button
 												type="submit"
 												class="flex items-center"
@@ -281,7 +248,7 @@
 											>
 												<Checkbox checked={task.isConfirmed} class="pointer-events-none" />
 											</button>
-										</form>
+										</ActionForm>
 
 										<div class="min-w-0 flex-1">
 											<p
@@ -331,74 +298,52 @@
 	</Card.Root>
 </div>
 
-<!-- Create / edit -->
-<Dialog.Root bind:open={dialogOpen}>
-	<Dialog.Content class="sm:max-w-md">
-		<Dialog.Header>
-			<Dialog.Title>{editingId ? 'Edit task' : 'Add task'}</Dialog.Title>
-		</Dialog.Header>
+<FormDialog
+	title={editing ? 'Edit task' : 'Add task'}
+	action="?/save"
+	data={data.form}
+	schema={taskSchema}
+	bind:open={taskOpen}
+	{seed}
+	hideTrigger
+	submitLabel={editing ? 'Save changes' : 'Add task'}
+>
+	{#snippet fields({ form, errors })}
+		<InputComp {form} {errors} name="id" type="hidden" />
+		<InputComp {form} {errors} name="title" label="Task" placeholder="Book the photographer" />
+		<InputComp
+			{form}
+			{errors}
+			name="dueDate"
+			label="Due date (optional)"
+			type="date"
+			oldDays={true}
+			futureDays={true}
+			year={true}
+		/>
+		<InputComp
+			{form}
+			{errors}
+			name="isConfirmed"
+			label="Status"
+			type="checkboxSingle"
+			placeholder="Mark as completed"
+		/>
+	{/snippet}
+</FormDialog>
 
-		<form method="POST" action="?/save" use:enhance class="space-y-1">
-			<input type="hidden" name="id" bind:value={$form.id} />
-
-			<InputComp
-				label="task"
-				{form}
-				{errors}
-				name="title"
-				type="text"
-				placeholder="Book the photographer"
-			/>
-
-			<InputComp
-				label="due date (optional)"
-				{form}
-				{errors}
-				name="dueDate"
-				type="date"
-				oldDays={true}
-				futureDays={true}
-				year={true}
-			/>
-
-			<InputComp
-				label="status"
-				{form}
-				{errors}
-				name="isConfirmed"
-				type="checkboxSingle"
-				placeholder="Mark as completed"
-			/>
-
-			<Dialog.Footer class="pt-4">
-				<Button type="button" variant="outline" onclick={() => (dialogOpen = false)}>Cancel</Button>
-				<Button type="submit" disabled={$submitting}>
-					{#if $submitting}<Loader2 class="mr-2 size-4 animate-spin" />{/if}
-					{editingId ? 'Save changes' : 'Add task'}
-				</Button>
-			</Dialog.Footer>
-		</form>
-	</Dialog.Content>
-</Dialog.Root>
-
-<!-- Delete -->
-<AlertDialog.Root open={!!pendingDelete} onOpenChange={(v) => !v && (pendingDelete = null)}>
-	<AlertDialog.Content>
-		<AlertDialog.Header>
-			<AlertDialog.Title>Remove this task?</AlertDialog.Title>
-			<AlertDialog.Description>
-				{pendingDelete?.label} will be permanently removed from your checklist.
-			</AlertDialog.Description>
-		</AlertDialog.Header>
-		<form method="POST" action="?/delete" use:deleteEnhance>
-			<input type="hidden" name="id" bind:value={$deleteData.id} />
-			<AlertDialog.Footer>
-				<AlertDialog.Cancel type="button">Cancel</AlertDialog.Cancel>
-				<Button type="submit" variant="destructive" disabled={$deleting}>
-					{#if $deleting}<Loader2 class="mr-2 size-4 animate-spin" />{/if}
-					Remove
-				</Button>
-			</AlertDialog.Footer>
-		</form>
-	</AlertDialog.Content>
-</AlertDialog.Root>
+<FormDialog
+	title="Remove this task?"
+	description="{removing?.title ?? 'This task'} will be permanently removed from your checklist."
+	action="?/delete"
+	data={data.deleteForm}
+	schema={taskIdSchema}
+	bind:open={removeOpen}
+	seed={{ id: removing?.id }}
+	hideTrigger
+	submitLabel="Remove"
+>
+	{#snippet fields({ form, errors })}
+		<InputComp {form} {errors} name="id" type="hidden" />
+	{/snippet}
+</FormDialog>

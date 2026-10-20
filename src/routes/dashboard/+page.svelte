@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import * as Card from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Progress } from '$lib/components/ui/progress';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
+	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
+	import { Badge } from '@nahu/admin-kit/components/ui/badge/index.js';
+	import { Progress } from '@nahu/admin-kit/components/ui/progress/index.js';
 	import { toMoney, formatETB } from '$lib/money';
 	import { Star, CalendarDays, Users, Wallet, CheckCircle2 } from '@lucide/svelte';
 

@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import * as Card from '$lib/components/ui/card';
-	import * as Tabs from '$lib/components/ui/tabs';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Checkbox } from '$lib/components/ui/checkbox';
-	import { Label } from '$lib/components/ui/label';
-	import { Input } from '$lib/components/ui/input';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
+	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
+	import * as Tabs from '@nahu/admin-kit/components/ui/tabs/index.js';
+	import { Badge } from '@nahu/admin-kit/components/ui/badge/index.js';
+	import { Checkbox } from '@nahu/admin-kit/components/ui/checkbox/index.js';
+	import { Label } from '@nahu/admin-kit/components/ui/label/index.js';
+	import { Input } from '@nahu/admin-kit/components/ui/input/index.js';
 	import { formatPriceRange } from '$lib/price';
 	import { Star, Lock, ArrowRight } from '@lucide/svelte';
 

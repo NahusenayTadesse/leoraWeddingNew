@@ -2,8 +2,8 @@
 	import { page } from '$app/state';
 	import { Heart, User, CalendarHeart, Wallet, Users, ListChecks, Store, MessageSquare } from '@lucide/svelte';
 	import { cn } from '$lib/utils';
-	import * as Avatar from '$lib/components/ui/avatar';
-	import { Separator } from '$lib/components/ui/separator';
+	import * as Avatar from '@nahu/admin-kit/components/ui/avatar/index.js';
+	import { Separator } from '@nahu/admin-kit/components/ui/separator/index.js';
 	import { assetUrl } from '$lib/assetUrl';
 
 	let { data, children } = $props();

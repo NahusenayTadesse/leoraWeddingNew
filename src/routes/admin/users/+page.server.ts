@@ -1,71 +1,136 @@
-import { desc, eq, isNull, and } from 'drizzle-orm';
+import { and, count, desc, eq, like, or, sql } from 'drizzle-orm';
+import type { MySqlSelect } from 'drizzle-orm/mysql-core';
 import { z } from 'zod/v4';
+import { message, superValidate } from 'sveltekit-superforms';
+import { zod4 } from 'sveltekit-superforms/adapters';
+import {
+	buildWhere,
+	currentQuery,
+	facetCounts,
+	orderBy,
+	pagination,
+	parseTableQuery,
+	type WhereSpec
+} from '@nahu/admin-kit/server/queryFilters';
 import { db } from '$lib/server/db';
 import { user, session, roles, couples, vendors } from '$lib/server/db/schema';
-import { parse, ok, bad } from '$lib/server/adminAction';
+import { userBanSchema, userRoleSchema } from '$lib/schemas/admin';
+import { parse, ok } from '$lib/server/adminAction';
 import { audit } from '$lib/server/auditLog';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async () => {
-	const [users, roleList, coupleRows, vendorRows] = await Promise.all([
-		db
-			.select({
-				id: user.id,
-				name: user.name,
-				email: user.email,
-				emailVerified: user.emailVerified,
-				banned: user.banned,
-				banReason: user.banReason,
-				roleId: user.roleId,
-				roleName: roles.name,
-				createdAt: user.createdAt
-			})
-			.from(user)
-			.leftJoin(roles, eq(roles.id, user.roleId))
-			.orderBy(desc(user.createdAt))
-			.limit(1000),
+const FILTERS = ['kind', 'roleId', 'banned'] as const;
+type Filter = (typeof FILTERS)[number];
+
+/** Which profile the account owns: a vendor profile wins over a couple, as on the old page. */
+const kind = sql<'vendor' | 'couple' | 'none'>`case
+	when exists (select 1 from ${vendors} where ${vendors.userId} = ${user.id} and ${vendors.deletedAt} is null) then 'vendor'
+	when exists (select 1 from ${couples} where (${couples.partner1UserId} = ${user.id} or ${couples.partner2UserId} = ${user.id}) and ${couples.deletedAt} is null) then 'couple'
+	else 'none' end`;
+
+/** `banned` is nullable; null is "never banned". */
+const bannedState = sql<'banned' | 'active'>`if(coalesce(${user.banned}, false), 'banned', 'active')`;
+
+const SORTS = { name: user.name, email: user.email, createdAt: user.createdAt };
+
+const spec: WhereSpec<Filter> = {
+	search: (term) => or(like(user.name, `%${term}%`), like(user.email, `%${term}%`)),
+	dateColumn: user.createdAt,
+	filters: {
+		kind: (value) => sql`${kind} = ${value}`,
+		// `0` is the "No role" facet.
+		roleId: (value) => (value === '0' ? sql`${user.roleId} is null` : eq(user.roleId, Number(value))),
+		banned: (value) => sql`${bannedState} = ${value}`
+	}
+};
+
+function joined<T extends MySqlSelect>(query: T) {
+	return query.leftJoin(roles, eq(roles.id, user.roleId));
+}
+
+export const load: PageServerLoad = async ({ url }) => {
+	const query = parseTableQuery(url, FILTERS, 20, Object.keys(SORTS));
+	const where = buildWhere(query, spec);
+
+	const [rows, [{ total }], facets, roleList, banForm, roleForm] = await Promise.all([
+		joined(
+			db
+				.select({
+					id: user.id,
+					name: user.name,
+					email: user.email,
+					emailVerified: user.emailVerified,
+					banned: user.banned,
+					banReason: user.banReason,
+					roleId: user.roleId,
+					roleName: roles.name,
+					kind,
+					createdAt: user.createdAt
+				})
+				.from(user)
+				.$dynamic()
+		)
+			.where(where)
+			.orderBy(...(orderBy(query, SORTS) ?? [desc(user.createdAt)]))
+			.limit(query.limit)
+			.offset(query.offset),
+		joined(db.select({ total: count() }).from(user).$dynamic()).where(where),
+		facetCounts({
+			kind: () =>
+				joined(db.select({ value: kind, count: count() }).from(user).$dynamic())
+					.where(buildWhere(query, spec, { except: 'kind' }))
+					.groupBy(kind),
+			roleId: () =>
+				joined(
+					db
+						.select({
+							value: sql<number>`coalesce(${user.roleId}, 0)`,
+							label: sql<string>`coalesce(${roles.name}, 'No role')`,
+							count: count()
+						})
+						.from(user)
+						.$dynamic()
+				)
+					.where(buildWhere(query, spec, { except: 'roleId' }))
+					.groupBy(sql`coalesce(${user.roleId}, 0)`, sql`coalesce(${roles.name}, 'No role')`),
+			banned: () =>
+				joined(db.select({ value: bannedState, count: count() }).from(user).$dynamic())
+					.where(buildWhere(query, spec, { except: 'banned' }))
+					.groupBy(bannedState)
+		}),
 		db.select({ id: roles.id, name: roles.name }).from(roles).where(eq(roles.isActive, true)),
-		db
-			.select({ p1: couples.partner1UserId, p2: couples.partner2UserId })
-			.from(couples)
-			.where(isNull(couples.deletedAt)),
-		db.select({ userId: vendors.userId }).from(vendors).where(isNull(vendors.deletedAt))
+		superValidate(zod4(userBanSchema)),
+		superValidate(zod4(userRoleSchema))
 	]);
 
-	const coupleIds = new Set(coupleRows.flatMap((c) => [c.p1, c.p2]).filter(Boolean));
-	const vendorIds = new Set(vendorRows.map((v) => v.userId).filter(Boolean));
-
 	return {
+		rows,
 		roles: roleList,
-		users: users.map((u) => ({
-			...u,
-			kind: vendorIds.has(u.id) ? 'vendor' : coupleIds.has(u.id) ? 'couple' : 'none'
-		}))
+		server: { pagination: pagination(query, total), facets, filters: currentQuery(query) },
+		banForm,
+		roleForm
 	};
 };
 
-const idOnly = z.object({ id: z.string().min(1) });
-
 export const actions = {
 	ban: async (event) => {
-		const p = await parse(
-			event.request,
-			idOnly.extend({ reason: z.string().trim().max(250).optional() })
-		);
-		if ('error' in p) return p.error;
-		if (p.data.id === event.locals.user?.id) return bad("You can't ban your own account.");
+		const form = await superValidate(event.request, zod4(userBanSchema));
+		if (!form.valid) return message(form, { type: 'error', text: 'Invalid request' }, { status: 400 });
+		if (form.data.id === event.locals.user?.id) {
+			return message(form, { type: 'error', text: "You can't ban your own account." }, { status: 400 });
+		}
 		await db
 			.update(user)
-			.set({ banned: true, banReason: p.data.reason || null, banExpires: null })
-			.where(eq(user.id, p.data.id));
+			.set({ banned: true, banReason: form.data.reason || null, banExpires: null })
+			.where(eq(user.id, form.data.id));
 		// Pages already refuse banned users in hooks; deleting the session rows
 		// also closes the better-auth API, which would otherwise keep answering.
-		await db.delete(session).where(eq(session.userId, p.data.id));
-		await audit(event, 'user.ban', 'user', null, { userId: p.data.id, reason: p.data.reason });
-		return ok('User banned and signed out everywhere.');
+		await db.delete(session).where(eq(session.userId, form.data.id));
+		await audit(event, 'user.ban', 'user', null, { userId: form.data.id, reason: form.data.reason });
+		return message(form, { type: 'success', text: 'User banned and signed out everywhere.' });
 	},
 	unban: async (event) => {
-		const p = await parse(event.request, idOnly);
+		const p = await parse(event.request, z.object({ id: z.string().min(1) }));
 		if ('error' in p) return p.error;
 		await db
 			.update(user)
@@ -75,20 +140,22 @@ export const actions = {
 		return ok('User restored');
 	},
 	setRole: async (event) => {
-		const p = await parse(event.request, idOnly.extend({ roleId: z.coerce.number().int().min(0) }));
-		if ('error' in p) return p.error;
-		if (p.data.id === event.locals.user?.id) return bad("You can't change your own role.");
-		const roleId = p.data.roleId === 0 ? null : p.data.roleId;
+		const form = await superValidate(event.request, zod4(userRoleSchema));
+		if (!form.valid) return message(form, { type: 'error', text: 'Invalid request' }, { status: 400 });
+		if (form.data.id === event.locals.user?.id) {
+			return message(form, { type: 'error', text: "You can't change your own role." }, { status: 400 });
+		}
+		const roleId = form.data.roleId === 0 ? null : form.data.roleId;
 		if (roleId !== null) {
 			const [r] = await db
 				.select({ id: roles.id })
 				.from(roles)
 				.where(and(eq(roles.id, roleId), eq(roles.isActive, true)))
 				.limit(1);
-			if (!r) return bad('Unknown role');
+			if (!r) return message(form, { type: 'error', text: 'Unknown role' }, { status: 400 });
 		}
-		await db.update(user).set({ roleId }).where(eq(user.id, p.data.id));
-		await audit(event, 'user.setRole', 'user', null, { userId: p.data.id, roleId });
-		return ok('Role updated');
+		await db.update(user).set({ roleId }).where(eq(user.id, form.data.id));
+		await audit(event, 'user.setRole', 'user', null, { userId: form.data.id, roleId });
+		return message(form, { type: 'success', text: 'Role updated' });
 	}
 } satisfies Actions;

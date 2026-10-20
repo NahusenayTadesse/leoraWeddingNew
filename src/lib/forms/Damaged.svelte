@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
+	import { Button, buttonVariants } from '@nahu/admin-kit/components/ui/button/index.js';
 	import { PackageX as Minus } from '@lucide/svelte';
-	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import { ScrollArea } from '$lib/components/ui/scroll-area/index.js';
-	import LoadingBtn from '$lib/formComponents/LoadingBtn.svelte';
+	import * as Dialog from '@nahu/admin-kit/components/ui/dialog/index.js';
+	import { ScrollArea } from '@nahu/admin-kit/components/ui/scroll-area/index.js';
+	import LoadingBtn from '@nahu/admin-kit/formComponents/LoadingBtn.svelte';
 	import type { Infer, SuperValidated } from 'sveltekit-superforms';
 	import { superForm } from 'sveltekit-superforms';
 	import type { DamagedForm } from '$lib/ZodSchema';
-	import InputComp from '$lib/formComponents/InputComp.svelte';
+	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
 	let isOpen = $state(false);
 
 	let {
@@ -21,7 +21,7 @@
 	} = $props();
 	const { form, errors, enhance, delayed, message } = superForm(data, {});
 	import { toast } from 'svelte-sonner';
-	import type { Item } from '$lib/global.svelte';
+	import type { Item } from '@nahu/admin-kit/global';
 	$effect(() => {
 		if ($message) {
 			if ($message.type === 'error') {

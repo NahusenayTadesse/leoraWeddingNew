@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Star, MapPin } from '@lucide/svelte';
-	import { Badge } from '$lib/components/ui/badge/index.js';
+	import { Badge } from '@nahu/admin-kit/components/ui/badge/index.js';
 
 	type Vendor = {
 		id: number;

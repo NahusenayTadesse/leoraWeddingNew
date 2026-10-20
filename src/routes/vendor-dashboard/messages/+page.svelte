@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { enhance as formEnhance } from '$app/forms';
-	import * as Card from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
+	import ActionForm from '@nahu/admin-kit/formComponents/ActionForm.svelte';
+	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
+	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
+	import { Input } from '@nahu/admin-kit/components/ui/input/index.js';
 	import { cn } from '$lib/utils';
 	import { MessageSquare, Send } from '@lucide/svelte';
 
@@ -38,10 +39,12 @@
 
 <div class="mb-6">
 	<h1 class="text-2xl font-semibold tracking-tight">Messages</h1>
-	<p class="text-muted-foreground mt-1 text-sm">Conversations with couples about your services.</p>
+	<p class="mt-1 text-sm text-muted-foreground">Conversations with couples about your services.</p>
 </div>
 
-<Card.Root class="grid h-[70vh] min-h-[480px] grid-cols-1 gap-0 overflow-hidden p-0 md:grid-cols-[300px_1fr]">
+<Card.Root
+	class="grid h-[70vh] min-h-[480px] grid-cols-1 gap-0 overflow-hidden p-0 md:grid-cols-[300px_1fr]"
+>
 	<!-- Thread list -->
 	<div
 		class={cn(
@@ -49,12 +52,16 @@
 			data.activeCoupleId ? 'hidden md:flex' : 'flex'
 		)}
 	>
-		<div class="text-muted-foreground border-b px-4 py-3 text-xs font-semibold tracking-wide uppercase">
+		<div
+			class="border-b px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+		>
 			Inbox
 		</div>
 
 		{#if data.threads.length === 0}
-			<div class="text-muted-foreground flex flex-1 items-center justify-center px-6 text-center text-sm">
+			<div
+				class="flex flex-1 items-center justify-center px-6 text-center text-sm text-muted-foreground"
+			>
 				No conversations yet. Reply to a couple from your bookings to get started.
 			</div>
 		{:else}
@@ -62,24 +69,26 @@
 				<a
 					href="?couple={thread.coupleId}"
 					class={cn(
-						'hover:bg-accent flex gap-3 border-b px-4 py-3.5 transition-colors',
+						'flex gap-3 border-b px-4 py-3.5 transition-colors hover:bg-accent',
 						data.activeCoupleId === thread.coupleId && 'bg-accent'
 					)}
 				>
 					<div
-						class="bg-muted flex size-9 shrink-0 items-center justify-center rounded-full border text-xs font-bold"
+						class="flex size-9 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold"
 					>
 						{initials(thread.coupleName)}
 					</div>
 					<div class="min-w-0 flex-1">
 						<div class="flex items-center justify-between gap-2">
 							<h4 class="truncate text-sm font-medium">{thread.coupleName}</h4>
-							<time class="text-muted-foreground shrink-0 text-[11px]">{formatTime(thread.lastAt)}</time>
+							<time class="shrink-0 text-[11px] text-muted-foreground"
+								>{formatTime(thread.lastAt)}</time
+							>
 						</div>
-						<p class="text-muted-foreground mt-0.5 truncate text-xs">{thread.lastMessage}</p>
+						<p class="mt-0.5 truncate text-xs text-muted-foreground">{thread.lastMessage}</p>
 					</div>
 					{#if thread.unread > 0}
-						<span class="bg-primary mt-1.5 size-2 shrink-0 rounded-full"></span>
+						<span class="mt-1.5 size-2 shrink-0 rounded-full bg-primary"></span>
 					{/if}
 				</a>
 			{/each}
@@ -91,14 +100,16 @@
 		{#if data.activeThread}
 			<div class="flex items-center justify-between border-b px-5 py-3.5">
 				<div class="min-w-0">
-					<a href="?" class="text-muted-foreground mb-1 inline-block text-xs md:hidden">← Back</a>
+					<a href="?" class="mb-1 inline-block text-xs text-muted-foreground md:hidden">← Back</a>
 					<h3 class="truncate text-sm font-semibold">{data.activeThread.couple.coupleName}</h3>
 				</div>
 			</div>
 
 			<div class="flex-1 space-y-3 overflow-y-auto p-5">
 				{#if data.activeThread.messages.length === 0}
-					<div class="text-muted-foreground flex h-full items-center justify-center text-center text-sm">
+					<div
+						class="flex h-full items-center justify-center text-center text-sm text-muted-foreground"
+					>
 						Start the conversation with {data.activeThread.couple.coupleName}.
 					</div>
 				{:else}
@@ -109,8 +120,8 @@
 								class={cn(
 									'max-w-[70%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed',
 									mine
-										? 'bg-primary text-primary-foreground rounded-br-sm'
-										: 'bg-muted rounded-bl-sm'
+										? 'rounded-br-sm bg-primary text-primary-foreground'
+										: 'rounded-bl-sm bg-muted'
 								)}
 							>
 								{message.body}
@@ -123,10 +134,9 @@
 				{/if}
 			</div>
 
-			<form
-				method="POST"
+			<ActionForm
 				action="?/send"
-				use:formEnhance={() => {
+				submit={() => {
 					sending = true;
 					return async ({ update }) => {
 						sending = false;
@@ -136,18 +146,20 @@
 				}}
 				class="flex gap-2 border-t p-3.5"
 			>
-				<input type="hidden" name="coupleId" value={data.activeThread.couple.coupleId} />
+				<HiddenField name="coupleId" value={data.activeThread.couple.coupleId} />
 				<Input name="body" bind:value={body} placeholder="Type a message..." autocomplete="off" />
 				<Button type="submit" disabled={sending || !body.trim()}>
 					<Send class="size-4" />
 				</Button>
-			</form>
+			</ActionForm>
 
 			{#if form?.error}
-				<p class="text-destructive px-3.5 pb-3 text-xs">{form.error}</p>
+				<p class="px-3.5 pb-3 text-xs text-destructive">{form.error}</p>
 			{/if}
 		{:else}
-			<div class="text-muted-foreground flex flex-1 flex-col items-center justify-center gap-2 text-sm">
+			<div
+				class="flex flex-1 flex-col items-center justify-center gap-2 text-sm text-muted-foreground"
+			>
 				<MessageSquare class="size-8" />
 				Select a conversation to view messages
 			</div>

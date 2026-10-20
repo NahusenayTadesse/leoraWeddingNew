@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Heart } from '@lucide/svelte';
-	import { Dialog } from '$lib/components/ui/dialog/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import { Dialog } from '@nahu/admin-kit/components/ui/dialog/index.js';
+	import { Input } from '@nahu/admin-kit/components/ui/input/index.js';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
 	import { authModal, closeAuth } from '$lib/state.svelte.js';
 	import { goto } from '$app/navigation';
 

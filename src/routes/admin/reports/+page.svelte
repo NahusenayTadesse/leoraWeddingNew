@@ -3,12 +3,13 @@
 	import ChartCard from '$lib/components/admin/ChartCard.svelte';
 	import Kpi from '$lib/components/admin/Kpi.svelte';
 	import PageHeader from '$lib/components/admin/PageHeader.svelte';
-	import * as Card from '$lib/components/ui/card/index.js';
-	import * as Table from '$lib/components/ui/table/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
+	import type { ColumnDef } from '@tanstack/table-core';
+	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
+	import DataTable from '@nahu/admin-kit/components/Table/data-table.svelte';
+	import PeriodFilter from '@nahu/admin-kit/formComponents/PeriodFilter.svelte';
 	import { formatETB, formatETBWhole } from '$lib/money';
-	import { Download } from '@lucide/svelte';
+	import { sortable } from '$lib/cells';
 
 	let { data } = $props();
 
@@ -38,31 +39,65 @@
 		return `?from=${local(from)}&to=${local(to)}`;
 	}
 
-	const csvCell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-	function exportCsv() {
-		const header = ['Month', 'Subscriptions', 'Commission', 'Platform revenue', 'Booking volume', 'New couples', 'New vendors', 'Bookings'];
-		const rows = monthly.map((r) => [r.label, r.subscriptions, r.commission, r.platform, r.gmv, r.couples, r.vendors, r.bookings]);
-		const csv = [header, ...rows].map((r) => r.map(csvCell).join(',')).join('\n');
-		const a = document.createElement('a');
-		a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-		a.download = `leora-report-${data.from}_${data.to}.csv`;
-		a.click();
-		URL.revokeObjectURL(a.href);
-	}
+	type Month = (typeof monthly)[number];
+	type TopVendor = (typeof data.vendors)[number];
+
+	/** A money column with its total under it. */
+	const moneyColumn = (key: keyof Month & string, header: string): ColumnDef<Month> => ({
+		id: key,
+		accessorKey: key,
+		header,
+		meta: { align: 'right' },
+		cell: ({ row }) => formatETB(row.original[key] as number),
+		footer: ({ table }) =>
+			formatETB(table.getCoreRowModel().rows.reduce((sum, r) => sum + (r.original[key] as number), 0))
+	});
+	const countColumn = (key: keyof Month & string, header: string): ColumnDef<Month> => ({
+		id: key,
+		accessorKey: key,
+		header,
+		meta: { align: 'right' },
+		footer: ({ table }) =>
+			String(table.getCoreRowModel().rows.reduce((sum, r) => sum + (r.original[key] as number), 0))
+	});
+
+	const monthlyColumns: ColumnDef<Month>[] = [
+		{ id: 'label', accessorKey: 'label', header: 'Month', footer: 'Total' },
+		moneyColumn('subscriptions', 'Subscriptions'),
+		moneyColumn('commission', 'Commission'),
+		moneyColumn('platform', 'Platform'),
+		moneyColumn('gmv', 'GMV'),
+		countColumn('couples', 'Couples'),
+		countColumn('vendors', 'Vendors'),
+		countColumn('bookings', 'Bookings')
+	];
+
+	const vendorColumns: ColumnDef<TopVendor>[] = [
+		{ id: 'name', accessorKey: 'name', header: sortable('Vendor') },
+		{ id: 'payments', accessorKey: 'payments', header: sortable('Payments'), meta: { align: 'right' } },
+		{
+			id: 'gross',
+			accessorKey: 'gross',
+			header: sortable('Gross'),
+			meta: { align: 'right' },
+			cell: ({ row }) => formatETB(row.original.gross)
+		},
+		{
+			id: 'commission',
+			accessorKey: 'commission',
+			header: sortable('Commission'),
+			meta: { align: 'right' },
+			cell: ({ row }) => formatETB(row.original.commission)
+		}
+	];
 </script>
 
 <div class="space-y-6">
-	<PageHeader title="Reports" description="Revenue, growth and vendor performance for a date range.">
-		<Button variant="outline" onclick={exportCsv}><Download class="size-4" /> Export CSV</Button>
-	</PageHeader>
+	<PageHeader title="Reports" description="Revenue, growth and vendor performance for a date range." />
 
 	<Card.Root>
 		<Card.Content class="flex flex-wrap items-end gap-3 py-4">
-			<form method="GET" class="flex flex-wrap items-end gap-3">
-				<label class="text-sm">From <Input type="date" name="from" value={data.from} class="mt-1 w-40" /></label>
-				<label class="text-sm">To <Input type="date" name="to" value={data.to} class="mt-1 w-40" /></label>
-				<Button type="submit">Apply</Button>
-			</form>
+			<PeriodFilter from={data.from} to={data.to} />
 			<div class="flex gap-2">
 				{#each presets as p (p.m)}
 					<Button variant="ghost" size="sm" href={presetHref(p.m)}>{p.label}</Button>
@@ -105,63 +140,33 @@
 
 	<Card.Root>
 		<Card.Header><Card.Title class="text-base">Monthly breakdown</Card.Title></Card.Header>
-		<Card.Content class="overflow-x-auto">
-			<Table.Root>
-				<Table.Header>
-					<Table.Row>
-						<Table.Head>Month</Table.Head>
-						<Table.Head class="text-right">Subscriptions</Table.Head>
-						<Table.Head class="text-right">Commission</Table.Head>
-						<Table.Head class="text-right">Platform</Table.Head>
-						<Table.Head class="text-right">GMV</Table.Head>
-						<Table.Head class="text-right">Couples</Table.Head>
-						<Table.Head class="text-right">Vendors</Table.Head>
-						<Table.Head class="text-right">Bookings</Table.Head>
-					</Table.Row>
-				</Table.Header>
-				<Table.Body>
-					{#each monthly as r (r.label)}
-						<Table.Row>
-							<Table.Cell class="font-medium">{r.label}</Table.Cell>
-							<Table.Cell class="text-right">{formatETB(r.subscriptions)}</Table.Cell>
-							<Table.Cell class="text-right">{formatETB(r.commission)}</Table.Cell>
-							<Table.Cell class="text-right">{formatETB(r.platform)}</Table.Cell>
-							<Table.Cell class="text-right">{formatETB(r.gmv)}</Table.Cell>
-							<Table.Cell class="text-right">{r.couples}</Table.Cell>
-							<Table.Cell class="text-right">{r.vendors}</Table.Cell>
-							<Table.Cell class="text-right">{r.bookings}</Table.Cell>
-						</Table.Row>
-					{/each}
-				</Table.Body>
-			</Table.Root>
+		<Card.Content>
+			<DataTable
+				columns={monthlyColumns}
+				data={monthly}
+				search={false}
+				paginate={false}
+				height="auto"
+				fileName="leora-report-{data.from}_{data.to}"
+			/>
 		</Card.Content>
 	</Card.Root>
 
 	<Card.Root>
 		<Card.Header><Card.Title class="text-base">Top vendors</Card.Title></Card.Header>
-		<Card.Content class="overflow-x-auto">
-			<Table.Root>
-				<Table.Header>
-					<Table.Row>
-						<Table.Head>Vendor</Table.Head>
-						<Table.Head class="text-right">Payments</Table.Head>
-						<Table.Head class="text-right">Gross</Table.Head>
-						<Table.Head class="text-right">Commission</Table.Head>
-					</Table.Row>
-				</Table.Header>
-				<Table.Body>
-					{#each data.vendors as v (v.id)}
-						<Table.Row>
-							<Table.Cell class="font-medium">{v.name}</Table.Cell>
-							<Table.Cell class="text-right">{v.payments}</Table.Cell>
-							<Table.Cell class="text-right">{formatETB(v.gross)}</Table.Cell>
-							<Table.Cell class="text-right">{formatETB(v.commission)}</Table.Cell>
-						</Table.Row>
-					{:else}
-						<Table.Row><Table.Cell colspan={4} class="text-muted-foreground text-center">No payments in this range.</Table.Cell></Table.Row>
-					{/each}
-				</Table.Body>
-			</Table.Root>
+		<Card.Content>
+			{#if data.vendors.length}
+				<DataTable
+					columns={vendorColumns}
+					data={data.vendors}
+					search={false}
+					paginate={false}
+					height="auto"
+					fileName="leora-top-vendors-{data.from}_{data.to}"
+				/>
+			{:else}
+				<p class="text-muted-foreground py-6 text-center text-sm">No payments in this range.</p>
+			{/if}
 		</Card.Content>
 	</Card.Root>
 </div>

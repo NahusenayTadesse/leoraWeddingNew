@@ -1,4 +1,4 @@
-import { fail, redirect } from '@sveltejs/kit';
+import { redirect } from '@sveltejs/kit';
 import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { db } from '$lib/server/db';
@@ -12,6 +12,7 @@ import {
 	toDateInput
 } from '$lib/server/tasks';
 import { requireCoupleAndWedding } from '$lib/server/weddings';
+import { parse, bad } from '$lib/server/adminAction';
 import { and, eq } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -42,7 +43,7 @@ export const actions: Actions = {
 		const { couple } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(taskSchema), { id: 'task' });
-		if (!form.valid) return fail(400, { form });
+		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
 
 		const values = {
 			title: form.data.title,
@@ -51,7 +52,7 @@ export const actions: Actions = {
 		};
 
 		if (form.data.id) {
-			if (!(await assertTaskOwnership(form.data.id, couple!.id))) return fail(403, { form });
+			if (!(await assertTaskOwnership(form.data.id, couple!.id))) return message(form, { type: 'error', text: 'That is not yours to change.' }, { status: 403 });
 
 			await db
 				.update(tasksTable)
@@ -61,27 +62,28 @@ export const actions: Actions = {
 			await db.insert(tasksTable).values({ ...values, coupleId: couple!.id });
 		}
 
-		return message(form, form.data.id ? 'Task updated.' : 'Task added.');
+		return message(form, { type: 'success', text: form.data.id ? 'Task updated.' : 'Task added.' });
 	},
 
 	toggle: async ({ request, locals }) => {
 		const { couple } = await requireCoupleAndWedding(locals);
 
-		const form = await superValidate(request, zod4(taskIdSchema), { id: 'toggle' });
-		if (!form.valid) return fail(400, { form });
+		const p = await parse(request, taskIdSchema);
+		if ('error' in p) return p.error;
 
 		const [current] = await db
 			.select({ status: tasksTable.status })
 			.from(tasksTable)
-			.where(and(eq(tasksTable.id, form.data.id), eq(tasksTable.coupleId, couple!.id)))
+			.where(and(eq(tasksTable.id, p.data.id), eq(tasksTable.coupleId, couple!.id)))
 			.limit(1);
-		if (!current) return fail(403, { form });
+		if (!current) return bad('That task is not on your checklist.', 403);
 
 		await db
 			.update(tasksTable)
 			.set({ status: current.status === 'done' ? 'todo' : 'done' })
-			.where(and(eq(tasksTable.id, form.data.id), eq(tasksTable.coupleId, couple!.id)));
+			.where(and(eq(tasksTable.id, p.data.id), eq(tasksTable.coupleId, couple!.id)));
 
+		// Silent on success: the tick is the feedback.
 		return { success: true };
 	},
 
@@ -89,25 +91,25 @@ export const actions: Actions = {
 		const { couple } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(taskIdSchema), { id: 'delete' });
-		if (!form.valid) return fail(400, { form });
+		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
 
-		if (!(await assertTaskOwnership(form.data.id, couple!.id))) return fail(403, { form });
+		if (!(await assertTaskOwnership(form.data.id, couple!.id))) return message(form, { type: 'error', text: 'That is not yours to change.' }, { status: 403 });
 
 		await db
 			.delete(tasksTable)
 			.where(and(eq(tasksTable.id, form.data.id), eq(tasksTable.coupleId, couple!.id)));
 
-		return message(form, 'Task removed.');
+		return message(form, { type: 'success', text: 'Task removed.' });
 	},
 
 	generate: async ({ request, locals }) => {
 		const { couple, wedding } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(generateSchema), { id: 'generate' });
-		if (!form.valid) return fail(400, { form });
+		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
 
 		if (!wedding.weddingDate) {
-			return message(form, 'Set your wedding date first.', { status: 400 });
+			return message(form, { type: 'error', text: 'Set your wedding date first.' }, { status: 400 });
 		}
 
 		const [templates, existing] = await Promise.all([listTaskTemplates(), listTasks(couple!.id)]);
@@ -128,11 +130,11 @@ export const actions: Actions = {
 			}));
 
 		if (toInsert.length === 0) {
-			return message(form, 'Your checklist already has every suggested task.');
+			return message(form, { type: 'success', text: 'Your checklist already has every suggested task.' });
 		}
 
 		await db.insert(tasksTable).values(toInsert);
 
-		return message(form, `Added ${toInsert.length} task${toInsert.length === 1 ? '' : 's'}.`);
+		return message(form, { type: 'success', text: `Added ${toInsert.length} task${toInsert.length === 1 ? '' : 's'}.` });
 	}
 };

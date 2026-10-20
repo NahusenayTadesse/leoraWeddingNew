@@ -1,9 +1,9 @@
 <script lang="ts">
-	import * as Card from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Progress } from '$lib/components/ui/progress';
-	import { Separator } from '$lib/components/ui/separator';
+	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
+	import { Badge } from '@nahu/admin-kit/components/ui/badge/index.js';
+	import { Progress } from '@nahu/admin-kit/components/ui/progress/index.js';
+	import { Separator } from '@nahu/admin-kit/components/ui/separator/index.js';
 	import {
 		CalendarHeart,
 		Wallet,

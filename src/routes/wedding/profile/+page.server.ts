@@ -1,4 +1,4 @@
-import { fail } from '@sveltejs/kit';
+
 import { superValidate, setError, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { db } from '$lib/server/db';
@@ -32,7 +32,7 @@ export const actions: Actions = {
 	default: async ({ request, locals }) => {
 		const userId = locals.user!.id;
 		const form = await superValidate(request, zod4(coupleSchema));
-		if (!form.valid) return fail(400, { form });
+		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
 
 		const existing = await getCoupleByUserId(userId);
 
@@ -72,6 +72,6 @@ export const actions: Actions = {
 			throw e;
 		}
 
-		return message(form, existing ? 'Details updated.' : 'Your couple profile is ready!');
+		return message(form, { type: 'success', text: existing ? 'Details updated.' : 'Your couple profile is ready!' });
 	}
 };

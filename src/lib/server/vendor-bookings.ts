@@ -7,14 +7,20 @@ import {
 	couples,
 	messages
 } from '$lib/server/db/schema';
-import { and, asc, desc, eq, gte, inArray, isNull, like, lt, ne, or, sql } from 'drizzle-orm';
-import type { BookingFilters } from '$lib/schemas/vendor-bookings';
-
-export const PAGE_SIZE = 12;
+import { and, asc, count, desc, eq, gte, inArray, isNull, like, lt, ne, or, sql } from 'drizzle-orm';
+import type { MySqlSelect } from 'drizzle-orm/mysql-core';
+import {
+	buildWhere,
+	facetCounts,
+	orderBy,
+	type TableQuery,
+	type WhereSpec
+} from '@nahu/admin-kit/server/queryFilters';
+import type { BookingTab } from '$lib/schemas/vendor-bookings';
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
-function tabCondition(tab: BookingFilters['tab']) {
+function tabCondition(tab: BookingTab) {
 	const today = todayISO();
 	switch (tab) {
 		case 'pending':
@@ -32,76 +38,93 @@ function tabCondition(tab: BookingFilters['tab']) {
 	}
 }
 
-/** Bookings for the vendor dashboard: filtered, paged, with the latest quote merged in. */
-export async function listVendorBookings(vendorId: number, filters: BookingFilters) {
-	const conditions = [
-		eq(vendorBookings.vendorId, vendorId),
-		isNull(vendorBookings.deletedAt),
-		tabCondition(filters.tab)
-	];
+/** The table's column filters; the tab is separate, in `?tab=`. */
+export const BOOKING_FILTERS = ['serviceId'] as const;
+type BookingFilter = (typeof BOOKING_FILTERS)[number];
 
-	if (filters.q) {
-		const term = `%${filters.q}%`;
-		conditions.push(
+const coupleName = sql<string>`concat_ws(' & ', nullif(${couples.groomName}, ''), nullif(${couples.brideName}, ''))`;
+
+export const BOOKING_SORTS = {
+	couple: coupleName,
+	eventDate: vendorBookings.eventDate,
+	agreedPrice: vendorBookings.agreedPrice,
+	createdAt: vendorBookings.createdAt
+};
+
+function bookingSpec(vendorId: number, tab: BookingTab): WhereSpec<BookingFilter> {
+	return {
+		base: [eq(vendorBookings.vendorId, vendorId), isNull(vendorBookings.deletedAt), tabCondition(tab)],
+		search: (term) =>
 			or(
-				like(couples.groomName, term),
-				like(couples.brideName, term),
-				like(vendorServices.title, term)
-			)
-		);
-	}
-	if (filters.from) conditions.push(gte(vendorBookings.eventDate, filters.from));
-	if (filters.to) conditions.push(lt(vendorBookings.eventDate, filters.to));
-	if (filters.serviceId) conditions.push(eq(vendorBookings.serviceId, filters.serviceId));
+				like(couples.groomName, `%${term}%`),
+				like(couples.brideName, `%${term}%`),
+				like(vendorServices.title, `%${term}%`)
+			),
+		dateColumn: vendorBookings.eventDate,
+		filters: { serviceId: (v) => eq(vendorBookings.serviceId, Number(v)) }
+	};
+}
 
-	const where = and(...conditions.filter(Boolean));
+function joined<T extends MySqlSelect>(query: T) {
+	return query
+		.innerJoin(weddingPlans, eq(weddingPlans.id, vendorBookings.weddingPlanId))
+		.innerJoin(couples, eq(couples.id, weddingPlans.coupleId))
+		.leftJoin(vendorServices, eq(vendorServices.id, vendorBookings.serviceId));
+}
 
-	const orderBy =
-		filters.sort === 'date_desc'
-			? [desc(vendorBookings.eventDate)]
-			: filters.sort === 'created_desc'
-				? [desc(vendorBookings.createdAt)]
-				: filters.sort === 'price_desc'
-					? [desc(vendorBookings.agreedPrice)]
-					: [asc(vendorBookings.eventDate)];
+/**
+ * Bookings for the vendor dashboard's table: one tab, filtered, sorted and paged in SQL, with the
+ * latest quote merged in and the service facet counted over the whole tab.
+ */
+export async function listVendorBookings(
+	vendorId: number,
+	tab: BookingTab,
+	query: TableQuery<BookingFilter>
+) {
+	const spec = bookingSpec(vendorId, tab);
+	const where = buildWhere(query, spec);
 
-	const [rows, [{ total }]] = await Promise.all([
-		db
-			.select({
-				id: vendorBookings.id,
-				weddingPlanId: vendorBookings.weddingPlanId,
-				coupleId: weddingPlans.coupleId,
-				groomName: couples.groomName,
-				brideName: couples.brideName,
-				coupleEmail: couples.email,
-				couplePhone: couples.phone,
-				serviceId: vendorBookings.serviceId,
-				serviceTitle: vendorServices.title,
-				status: vendorBookings.status,
-				agreedPrice: vendorBookings.agreedPrice,
-				eventDate: vendorBookings.eventDate,
-				cancellationReason: vendorBookings.cancellationReason,
-				cancelledBy: vendorBookings.cancelledBy,
-				createdAt: vendorBookings.createdAt
-			})
-			.from(vendorBookings)
-			.innerJoin(weddingPlans, eq(weddingPlans.id, vendorBookings.weddingPlanId))
-			.innerJoin(couples, eq(couples.id, weddingPlans.coupleId))
-			.leftJoin(vendorServices, eq(vendorServices.id, vendorBookings.serviceId))
+	const [rows, [{ total }], facets] = await Promise.all([
+		joined(
+			db
+				.select({
+					id: vendorBookings.id,
+					weddingPlanId: vendorBookings.weddingPlanId,
+					coupleId: weddingPlans.coupleId,
+					coupleNames: coupleName,
+					coupleEmail: couples.email,
+					couplePhone: couples.phone,
+					serviceId: vendorBookings.serviceId,
+					serviceTitle: vendorServices.title,
+					status: vendorBookings.status,
+					agreedPrice: vendorBookings.agreedPrice,
+					eventDate: vendorBookings.eventDate,
+					cancellationReason: vendorBookings.cancellationReason,
+					cancelledBy: vendorBookings.cancelledBy,
+					createdAt: vendorBookings.createdAt
+				})
+				.from(vendorBookings)
+				.$dynamic()
+		)
 			.where(where)
-			.orderBy(...orderBy)
-			.limit(PAGE_SIZE)
-			.offset((filters.page - 1) * PAGE_SIZE),
-		db
-			.select({ total: sql<number>`count(*)` })
-			.from(vendorBookings)
-			.innerJoin(weddingPlans, eq(weddingPlans.id, vendorBookings.weddingPlanId))
-			.innerJoin(couples, eq(couples.id, weddingPlans.coupleId))
-			.leftJoin(vendorServices, eq(vendorServices.id, vendorBookings.serviceId))
-			.where(where)
+			.orderBy(...(orderBy(query, BOOKING_SORTS) ?? [asc(vendorBookings.eventDate)]))
+			.limit(query.limit)
+			.offset(query.offset),
+		joined(db.select({ total: count() }).from(vendorBookings).$dynamic()).where(where),
+		facetCounts({
+			serviceId: () =>
+				joined(
+					db
+						.select({ value: vendorServices.id, label: vendorServices.title, count: count() })
+						.from(vendorBookings)
+						.$dynamic()
+				)
+					.where(buildWhere(query, spec, { except: 'serviceId' }))
+					.groupBy(vendorServices.id, vendorServices.title)
+		})
 	]);
 
-	if (rows.length === 0) return { rows: [], total: Number(total) };
+	if (rows.length === 0) return { rows: [], total: Number(total), facets };
 
 	const bookingIds = rows.map((r) => r.id);
 	const quotes = await db
@@ -122,6 +145,7 @@ export async function listVendorBookings(vendorId: number, filters: BookingFilte
 	return {
 		rows: rows.map((r) => ({
 			...r,
+			coupleNames: r.coupleNames || 'Couple',
 			agreedPrice: r.agreedPrice ? Number(r.agreedPrice) : null,
 			quote: latestQuote.get(r.id)
 				? {
@@ -130,7 +154,8 @@ export async function listVendorBookings(vendorId: number, filters: BookingFilte
 					}
 				: null
 		})),
-		total: Number(total)
+		total: Number(total),
+		facets
 	};
 }
 

@@ -5,11 +5,12 @@ import { z } from 'zod/v4';
 import type { RequestEvent, ServerLoadEvent } from '@sveltejs/kit';
 import type { MySqlTable } from 'drizzle-orm/mysql-core';
 import { db } from '$lib/server/db';
-import { saveUploadedFile } from '$lib/server/upload';
+import { saveUploadedFile } from '@nahu/admin-kit/server/files';
 import { fromMoney } from '$lib/money';
+import { idSchema } from '$lib/schemas/common';
 
 /** Every content table is keyed by an autoincrement id. */
-export const idSchema = z.object({ id: z.coerce.number() });
+export { idSchema };
 
 /** Reused by every content form: an integer that decides display order. */
 export const sortOrderField = z.coerce.number().int().min(0).default(0);

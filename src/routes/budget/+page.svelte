@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { superForm } from 'sveltekit-superforms/client';
-	import { toast } from 'svelte-sonner';
-	import InputComp from '$lib/formComponents/InputComp.svelte';
-	import LoadingBtn from '$lib/formComponents/LoadingBtn.svelte';
-	import Errors from '$lib/formComponents/Errors.svelte';
-	import DialogComp from '$lib/formComponents/DialogComp.svelte';
+	import { createForm } from '@nahu/admin-kit/forms/createForm';
+	import { budgetSchema } from './schema';
+	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
+	import LoadingBtn from '@nahu/admin-kit/formComponents/LoadingBtn.svelte';
+	import Errors from '@nahu/admin-kit/formComponents/Errors.svelte';
+	import DialogComp from '@nahu/admin-kit/formComponents/DialogComp.svelte';
 	import Signup from '$lib/forms/Signup.svelte';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { Input } from '$lib/components/ui/input';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
+	import { Input } from '@nahu/admin-kit/components/ui/input/index.js';
 	import { Save, ArrowRight, RotateCcw, Scale, TriangleAlert } from '@lucide/svelte';
 
 	let { data } = $props();
@@ -15,15 +15,10 @@
 	// dataType: 'json' is required for the `allocations` array to survive the
 	// round trip. It makes the form JS-only, which is fine for a planner behind
 	// a sign-in prompt.
-	const { form, errors, enhance, delayed, message, allErrors } = superForm(data.form, {
+	// svelte-ignore state_referenced_locally
+	const { form, errors, enhance, delayed, allErrors } = createForm(data.form, budgetSchema, {
 		dataType: 'json',
 		resetForm: false
-	});
-
-	$effect(() => {
-		if (!$message) return;
-		if ($message.type === 'error') toast.error($message.text);
-		else toast.success($message.text);
 	});
 
 	// ── Palette ──────────────────────────────────────────────────────────────
@@ -43,12 +38,15 @@
 	const colorFor = (i: number) => PALETTE[i % PALETTE.length];
 
 	// ── Derived money ────────────────────────────────────────────────────────
+	/** Always a list: the schema defaults it, but the form's type says it may be absent. */
+	const allocations = $derived($form.allocations ?? []);
+
 	const totalBudget = $derived(Number($form.totalBudget) || 0);
 	const guestCount = $derived(Number($form.expectedGuests) || 0);
 
 	const rows = $derived(
 		data.categories.map((category, i) => {
-			const allocation = $form.allocations.find((a) => a.categoryId === category.id);
+			const allocation = allocations.find((a) => a.categoryId === category.id);
 			const percent = allocation?.percent ?? 0;
 			return {
 				...category,
@@ -82,16 +80,16 @@
 	// ── Allocation editing ───────────────────────────────────────────────────
 	function setPercent(categoryId: number, value: number) {
 		const clamped = Math.max(0, Math.min(100, Math.round(value) || 0));
-		$form.allocations = $form.allocations.map((a) =>
+		$form.allocations = allocations.map((a) =>
 			a.categoryId === categoryId ? { ...a, percent: clamped } : a
 		);
 	}
 
 	function splitEvenly() {
-		const n = $form.allocations.length;
+		const n = allocations.length;
 		if (!n) return;
 		const base = Math.floor(100 / n);
-		$form.allocations = $form.allocations.map((a, i) => ({
+		$form.allocations = allocations.map((a, i) => ({
 			...a,
 			// Give the remainder to the first few so it lands on exactly 100.
 			percent: base + (i < 100 - base * n ? 1 : 0)
@@ -102,7 +100,7 @@
 		if (allocatedPercent === 0) return splitEvenly();
 		const factor = 100 / allocatedPercent;
 		let running = 0;
-		$form.allocations = $form.allocations.map((a, i, arr) => {
+		$form.allocations = allocations.map((a, i, arr) => {
 			if (i === arr.length - 1) return { ...a, percent: Math.max(0, 100 - running) };
 			const next = Math.round(a.percent * factor);
 			running += next;

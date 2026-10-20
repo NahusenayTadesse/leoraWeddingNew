@@ -1,112 +1,49 @@
 <script lang="ts">
-	import { superForm } from 'sveltekit-superforms';
-	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
-	import * as Card from '$lib/components/ui/card/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import InputComp from '$lib/formComponents/InputComp.svelte';
-	import Errors from '$lib/formComponents/Errors.svelte';
+	import PageHeader from '@nahu/admin-kit/components/PageHeader.svelte';
+	import FormDialog from '@nahu/admin-kit/formComponents/FormDialog.svelte';
+	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
+	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
 	import { formatETB } from '$lib/money';
-	import { toast } from 'svelte-sonner';
-	import { Plus, Pencil, Trash2, Loader2, PackageOpen, Check } from '@lucide/svelte';
+	import { vendorPackageAddSchema, vendorPackageEditSchema } from '$lib/schemas/vendor-packages';
+	import { idSchema } from '$lib/schemas/common';
+	import { Plus, Pencil, Trash2, PackageOpen, Check } from '@lucide/svelte';
 
 	let { data } = $props();
 
-	let dialogOpen = $state(false);
-	let editingId = $state<number | null>(null);
-	let pendingDelete = $state<{ id: number; label: string } | null>(null);
+	type Row = (typeof data.rows)[number];
 
-	const addSf = superForm(data.addForm, {
-		id: 'add',
-		resetForm: true,
-		onUpdated: ({ form }) => {
-			if (form.valid && form.message?.type === 'success') {
-				toast.success(form.message.text);
-				dialogOpen = false;
-			} else if (form.message?.type === 'error') {
-				toast.error(form.message.text);
-			}
-		}
-	});
-	const {
-		form: addForm,
-		errors: addErrors,
-		enhance: addEnhance,
-		delayed: addDelayed,
-		allErrors: addAllErrors
-	} = addSf;
-
-	const editSf = superForm(data.editForm, {
-		id: 'edit',
-		resetForm: false,
-		onUpdated: ({ form }) => {
-			if (form.valid && form.message?.type === 'success') {
-				toast.success(form.message.text);
-				dialogOpen = false;
-				editingId = null;
-			} else if (form.message?.type === 'error') {
-				toast.error(form.message.text);
-			}
-		}
-	});
-	const {
-		form: editForm,
-		errors: editErrors,
-		enhance: editEnhance,
-		delayed: editDelayed,
-		allErrors: editAllErrors
-	} = editSf;
-
-	const deleteSf = superForm(data.deleteForm, {
-		id: 'delete',
-		onUpdated: ({ form }) => {
-			if (form.message) toast[form.message.type === 'error' ? 'error' : 'success'](form.message.text);
-			pendingDelete = null;
-		}
-	});
-	const { form: deleteForm, enhance: deleteEnhance, delayed: deleting } = deleteSf;
+	let editing = $state<Row | null>(null);
+	let addOpen = $state(false);
+	let editOpen = $state(false);
+	let removing = $state<Row | null>(null);
+	let removeOpen = $state(false);
 
 	function openCreate() {
-		editingId = null;
-		$addForm.name = '';
-		$addForm.price = undefined as unknown as number;
-		$addForm.description = '';
-		$addForm.inclusions = '';
-		dialogOpen = true;
+		addOpen = true;
 	}
 
-	function openEdit(pkg: (typeof data.rows)[number]) {
-		editingId = pkg.id;
-		$editForm.id = pkg.id;
-		$editForm.name = pkg.name;
-		$editForm.price = Number(pkg.price);
-		$editForm.description = pkg.description ?? '';
-		$editForm.inclusions = (pkg.inclusions ?? []).join('\n');
-		dialogOpen = true;
+	function openEdit(row: Row) {
+		editing = row;
+		editOpen = true;
 	}
 
-	function confirmDelete(pkg: (typeof data.rows)[number]) {
-		pendingDelete = { id: pkg.id, label: pkg.name };
-		$deleteForm.id = pkg.id;
+	function confirmDelete(row: Row) {
+		removing = row;
+		removeOpen = true;
 	}
 </script>
 
-<svelte:head>
-	<title>Packages — Vendor Portal</title>
-</svelte:head>
-
 <div class="space-y-6">
-	<div class="flex flex-wrap items-start justify-between gap-4">
-		<div>
-			<h1 class="text-2xl font-semibold tracking-tight">Packages</h1>
-			<p class="text-muted-foreground text-sm">
-				Priced bundles couples can pick straight from your listing.
-			</p>
-		</div>
-		<Button onclick={openCreate}>
-			<Plus class="mr-2 size-4" /> Add package
-		</Button>
-	</div>
+	<PageHeader
+		title="Packages"
+		tabTitle="Packages — Vendor Portal"
+		description="Priced bundles couples can pick straight from your listing."
+	>
+		{#snippet actions()}
+			<Button onclick={openCreate}><Plus class="size-4" /> Add package</Button>
+		{/snippet}
+	</PageHeader>
 
 	{#if data.rows.length === 0}
 		<Card.Root>
@@ -114,7 +51,7 @@
 				<PackageOpen class="text-muted-foreground mx-auto size-8" />
 				<p class="text-muted-foreground mt-3 text-sm">You haven't published any packages yet.</p>
 				<Button class="mt-4" onclick={openCreate}>
-					<Plus class="mr-2 size-4" /> Add your first package
+					<Plus class="size-4" /> Add your first package
 				</Button>
 			</Card.Content>
 		</Card.Root>
@@ -171,110 +108,77 @@
 	{/if}
 </div>
 
-<!-- Create / edit -->
-<Dialog.Root bind:open={dialogOpen}>
-	<Dialog.Content class="sm:max-w-md">
-		<Dialog.Header>
-			<Dialog.Title>{editingId ? 'Edit package' : 'Add package'}</Dialog.Title>
-		</Dialog.Header>
+<FormDialog
+	title="Add package"
+	action="?/add"
+	data={data.addForm}
+	schema={vendorPackageAddSchema}
+	bind:open={addOpen}
+	seed={{ name: '', description: '', inclusions: '' }}
+	hideTrigger
+	resetOnSuccess
+	submitLabel="Add package"
+>
+	{#snippet fields({ form, errors })}
+		<InputComp {form} {errors} name="name" label="Package name" />
+		<InputComp {form} {errors} name="price" label="Price (ETB)" type="number" min={0} />
+		<InputComp {form} {errors} name="description" label="Description" type="textarea" rows={3} />
+		<InputComp
+			{form}
+			{errors}
+			name="inclusions"
+			label="What's included (one per line)"
+			type="textarea"
+			rows={5}
+		/>
+	{/snippet}
+</FormDialog>
 
-		{#if editingId}
-			<form method="POST" action="?/edit" use:editEnhance class="space-y-1">
-				<input type="hidden" name="id" bind:value={$editForm.id} />
-				<Errors allErrors={$editAllErrors} />
-				<InputComp label="Package name" name="name" type="text" form={editForm} errors={editErrors} />
-				<InputComp
-					label="Price (ETB)"
-					name="price"
-					type="number"
-					placeholder="95,000"
-					form={editForm}
-					errors={editErrors}
-				/>
-				<InputComp
-					label="Description"
-					name="description"
-					type="textarea"
-					rows={3}
-					form={editForm}
-					errors={editErrors}
-				/>
-				<InputComp
-					label="What's included (one per line)"
-					name="inclusions"
-					type="textarea"
-					rows={5}
-					placeholder={'Full-day coverage\nEdited gallery\nEngagement session'}
-					form={editForm}
-					errors={editErrors}
-				/>
-				<Dialog.Footer class="pt-4">
-					<Button type="button" variant="outline" onclick={() => (dialogOpen = false)}>Cancel</Button>
-					<Button type="submit" disabled={$editDelayed}>
-						{#if $editDelayed}<Loader2 class="mr-2 size-4 animate-spin" />{/if}
-						Save changes
-					</Button>
-				</Dialog.Footer>
-			</form>
-		{:else}
-			<form method="POST" action="?/add" use:addEnhance class="space-y-1">
-				<Errors allErrors={$addAllErrors} />
-				<InputComp label="Package name" name="name" type="text" form={addForm} errors={addErrors} />
-				<InputComp
-					label="Price (ETB)"
-					name="price"
-					type="number"
-					placeholder="95,000"
-					form={addForm}
-					errors={addErrors}
-				/>
-				<InputComp
-					label="Description"
-					name="description"
-					type="textarea"
-					rows={3}
-					form={addForm}
-					errors={addErrors}
-				/>
-				<InputComp
-					label="What's included (one per line)"
-					name="inclusions"
-					type="textarea"
-					rows={5}
-					placeholder={'Full-day coverage\nEdited gallery\nEngagement session'}
-					form={addForm}
-					errors={addErrors}
-				/>
-				<Dialog.Footer class="pt-4">
-					<Button type="button" variant="outline" onclick={() => (dialogOpen = false)}>Cancel</Button>
-					<Button type="submit" disabled={$addDelayed}>
-						{#if $addDelayed}<Loader2 class="mr-2 size-4 animate-spin" />{/if}
-						Add package
-					</Button>
-				</Dialog.Footer>
-			</form>
-		{/if}
-	</Dialog.Content>
-</Dialog.Root>
+<FormDialog
+	title="Edit package"
+	action="?/edit"
+	data={data.editForm}
+	schema={vendorPackageEditSchema}
+	bind:open={editOpen}
+	seed={editing
+		? {
+				id: editing.id,
+				name: editing.name,
+				price: Number(editing.price),
+				description: editing.description ?? '',
+				inclusions: (editing.inclusions ?? []).join('\n')
+			}
+		: {}}
+	hideTrigger
+>
+	{#snippet fields({ form, errors })}
+		<InputComp {form} {errors} name="id" type="hidden" />
+		<InputComp {form} {errors} name="name" label="Package name" />
+		<InputComp {form} {errors} name="price" label="Price (ETB)" type="number" min={0} />
+		<InputComp {form} {errors} name="description" label="Description" type="textarea" rows={3} />
+		<InputComp
+			{form}
+			{errors}
+			name="inclusions"
+			label="What's included (one per line)"
+			type="textarea"
+			rows={5}
+		/>
+	{/snippet}
+</FormDialog>
 
-<!-- Delete -->
-<AlertDialog.Root open={!!pendingDelete} onOpenChange={(v) => !v && (pendingDelete = null)}>
-	<AlertDialog.Content>
-		<AlertDialog.Header>
-			<AlertDialog.Title>Remove this package?</AlertDialog.Title>
-			<AlertDialog.Description>
-				{pendingDelete?.label} will be removed from your public listing.
-			</AlertDialog.Description>
-		</AlertDialog.Header>
-		<form method="POST" action="?/delete" use:deleteEnhance>
-			<input type="hidden" name="id" bind:value={$deleteForm.id} />
-			<AlertDialog.Footer>
-				<AlertDialog.Cancel type="button">Cancel</AlertDialog.Cancel>
-				<Button type="submit" variant="destructive" disabled={$deleting}>
-					{#if $deleting}<Loader2 class="mr-2 size-4 animate-spin" />{/if}
-					Remove
-				</Button>
-			</AlertDialog.Footer>
-		</form>
-	</AlertDialog.Content>
-</AlertDialog.Root>
+<FormDialog
+	title="Remove this package?"
+	description="{removing?.name ?? ''} will be removed from your public listing."
+	action="?/delete"
+	data={data.deleteForm}
+	schema={idSchema}
+	bind:open={removeOpen}
+	seed={{ id: removing?.id }}
+	hideTrigger
+	submitLabel="Remove"
+>
+	{#snippet fields({ form, errors })}
+		<InputComp {form} {errors} name="id" type="hidden" />
+	{/snippet}
+</FormDialog>

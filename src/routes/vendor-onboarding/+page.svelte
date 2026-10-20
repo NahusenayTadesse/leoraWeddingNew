@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import { Label } from '$lib/components/ui/label/index.js';
-	import { superForm } from 'sveltekit-superforms';
-	import { toast } from 'svelte-sonner';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
+	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
+	import { createForm } from '@nahu/admin-kit/forms/createForm';
+	import { vendorOnboardingSchema } from '$lib/ZodSchema';
 	import { formatETB } from '$lib/money';
 	import { Check } from '@lucide/svelte';
 	import type { PageData } from './$types';
@@ -25,7 +24,8 @@
 	let stepIndex = $state(0);
 	const step = $derived(ORDER[stepIndex]);
 
-	const { form, errors, enhance, delayed, message } = superForm(data.form, {
+	// svelte-ignore state_referenced_locally
+	const { form, errors, enhance, delayed } = createForm(data.form, vendorOnboardingSchema, {
 		dataType: 'json',
 		resetForm: false,
 		// The page's own `load` redirects away once a vendor profile exists —
@@ -34,17 +34,29 @@
 		// and bounces past the success step before it ever renders.
 		invalidateAll: false,
 		onUpdated: ({ form: f }) => {
-			if (f.message?.type === 'success') {
-				stepIndex = ORDER.indexOf('success');
-			} else if (f.message?.type === 'error') {
-				toast.error(f.message.text);
-			}
+			if (f.message?.type === 'success') stepIndex = ORDER.indexOf('success');
 		}
 	});
 
 	const selectedCategory = $derived(data.categories.find((c) => c.id === $form.categoryId));
 	const selectedPlan = $derived(data.plans.find((p) => p.id === $form.planId));
 	const selectedPlanLabel = $derived(selectedPlan ? selectedPlan.name : 'Starter — Free');
+
+	/** The category step's cards. */
+	const categoryItems = $derived(
+		data.categories.map((c) => ({ value: c.id, name: c.icon ? `${c.icon} ${c.name}` : c.name }))
+	);
+
+	/** The plan step's cards: the free Starter tier (`0`), then the paid plans. */
+	const planItems = $derived([
+		{ value: 0, name: 'Starter — Free', description: 'Basic listing, up to 1 package', meta: 'ETB 0' },
+		...data.plans.map((plan) => ({
+			value: plan.id,
+			name: plan.name,
+			description: plan.features?.[0] ?? '',
+			meta: `${formatETB(plan.price)}${plan.billingCycle === 'monthly' ? '/mo' : ''}`
+		}))
+	]);
 
 	function next() {
 		if (stepIndex < ORDER.length - 1) stepIndex++;
@@ -86,144 +98,107 @@
 				<h2>Tell us about your business</h2>
 				<p class="sub">This information appears on your public Leora Events profile.</p>
 
-				<div class="field">
-					<Label for="businessName">Business name</Label>
-					<Input
-						id="businessName"
-						bind:value={$form.businessName}
-						placeholder="e.g. Mesk Studio Photography"
-					/>
-					{#if $errors.businessName}<span class="err">{$errors.businessName}</span>{/if}
-				</div>
-
+				<InputComp
+					{form}
+					{errors}
+					name="businessName"
+					label="Business name"
+					placeholder="e.g. Mesk Studio Photography"
+				/>
 				<div class="field-row">
-					<div class="field">
-						<Label for="city">City</Label>
-						<Input id="city" bind:value={$form.city} placeholder="Addis Ababa" />
-						{#if $errors.city}<span class="err">{$errors.city}</span>{/if}
-					</div>
-					<div class="field">
-						<Label for="phone">Phone number</Label>
-						<Input id="phone" bind:value={$form.phone} placeholder="+251 9__ ___ ___" />
-						{#if $errors.phone}<span class="err">{$errors.phone}</span>{/if}
-					</div>
-				</div>
-
-				<div class="field">
-					<Label for="bizEmail">Business email</Label>
-					<Input
-						id="bizEmail"
-						type="email"
-						bind:value={$form.email}
-						placeholder="hello@yourbusiness.com"
+					<InputComp {form} {errors} name="city" label="City" placeholder="Addis Ababa" />
+					<InputComp
+						{form}
+						{errors}
+						name="phone"
+						label="Phone number"
+						type="tel"
+						placeholder="+251 9__ ___ ___"
 					/>
-					{#if $errors.email}<span class="err">{$errors.email}</span>{/if}
 				</div>
-
-				<div class="field">
-					<Label for="description">Short description</Label>
-					<textarea
-						id="description"
-						bind:value={$form.description}
-						placeholder="Tell couples what makes your business special..."
-					></textarea>
-				</div>
+				<InputComp
+					{form}
+					{errors}
+					name="email"
+					label="Business email"
+					type="email"
+					placeholder="hello@yourbusiness.com"
+				/>
+				<InputComp
+					{form}
+					{errors}
+					name="description"
+					label="Short description"
+					type="textarea"
+					rows={4}
+					placeholder="Tell couples what makes your business special..."
+				/>
 			{:else if step === 2}
 				<h2>What category best fits your business?</h2>
 				<p class="sub">You can add more categories later from your Vendor Portal.</p>
 
-				<div class="cat-grid">
-					{#each data.categories as cat (cat.id)}
-						<button
-							type="button"
-							class="cat-chip"
-							class:selected={$form.categoryId === cat.id}
-							onclick={() => ($form.categoryId = cat.id)}
-						>
-							{#if cat.icon}<span class="cat-icon">{cat.icon}</span>{/if}
-							{cat.name}
-						</button>
-					{/each}
-				</div>
-				{#if $errors.categoryId}<span class="err">{$errors.categoryId}</span>{/if}
+				<InputComp
+					{form}
+					{errors}
+					name="categoryId"
+					label="Category"
+					hideLabel
+					type="imageSelect"
+					items={categoryItems}
+				/>
 			{:else if step === 3}
 				<h2>Create your first listing</h2>
 				<p class="sub">Add one package to get started — you can add more anytime.</p>
 
-				<div class="field">
-					<Label for="packageName">Package name</Label>
-					<Input
-						id="packageName"
-						bind:value={$form.packageName}
-						placeholder="e.g. Signature Package"
-					/>
-					{#if $errors.packageName}<span class="err">{$errors.packageName}</span>{/if}
-				</div>
-
+				<InputComp
+					{form}
+					{errors}
+					name="packageName"
+					label="Package name"
+					placeholder="e.g. Signature Package"
+				/>
 				<div class="field-row">
-					<div class="field">
-						<Label for="packagePrice">Starting price (ETB)</Label>
-						<Input
-							id="packagePrice"
-							inputmode="decimal"
-							bind:value={$form.packagePrice}
-							placeholder="95,000"
-						/>
-						{#if $errors.packagePrice}<span class="err">{$errors.packagePrice}</span>{/if}
-					</div>
-					<div class="field">
-						<Label for="packageCapacity">Guest capacity (if applicable)</Label>
-						<Input
-							id="packageCapacity"
-							inputmode="numeric"
-							bind:value={$form.packageCapacity}
-							placeholder="200"
-						/>
-					</div>
+					<InputComp
+						{form}
+						{errors}
+						name="packagePrice"
+						label="Starting price (ETB)"
+						type="number"
+						min={0}
+						placeholder="95000"
+					/>
+					<InputComp
+						{form}
+						{errors}
+						name="packageCapacity"
+						label="Guest capacity (if applicable)"
+						type="number"
+						min={0}
+						placeholder="200"
+					/>
 				</div>
-
-				<div class="field">
-					<Label for="packageIncludes">What's included</Label>
-					<textarea
-						id="packageIncludes"
-						bind:value={$form.packageIncludes}
-						placeholder="Full-day coverage, edited gallery, engagement session..."
-					></textarea>
-				</div>
+				<InputComp
+					{form}
+					{errors}
+					name="packageIncludes"
+					label="What's included"
+					type="textarea"
+					rows={4}
+					placeholder="Full-day coverage, edited gallery, engagement session..."
+				/>
 			{:else if step === 4}
 				<h2>Choose your plan</h2>
 				<p class="sub">Start free, upgrade anytime for more visibility.</p>
 
-				<button
-					type="button"
-					class="plan-option"
-					class:selected={!$form.planId}
-					onclick={() => ($form.planId = undefined)}
-				>
-					<div>
-						<h4>Starter — Free</h4>
-						<p class="plan-desc">Basic listing, up to 1 package</p>
-					</div>
-					<div class="price">ETB 0</div>
-				</button>
-
-				{#each data.plans as plan (plan.id)}
-					<button
-						type="button"
-						class="plan-option"
-						class:selected={$form.planId === plan.id}
-						onclick={() => ($form.planId = plan.id)}
-					>
-						<div>
-							<h4>{plan.name}</h4>
-							<p class="plan-desc">{plan.features?.[0] ?? ''}</p>
-						</div>
-						<div class="price">
-							{formatETB(plan.price)}{plan.billingCycle === 'monthly' ? '/mo' : ''}
-						</div>
-					</button>
-				{/each}
-
+				<InputComp
+					{form}
+					{errors}
+					name="planId"
+					label="Plan"
+					hideLabel
+					type="imageSelect"
+					items={planItems}
+				/>
 				<p class="fine-print">
 					Paid plans are billed monthly and can be cancelled anytime from Account Settings.
 				</p>
@@ -358,109 +333,12 @@
 		margin: 0 0 24px;
 	}
 
-	.field {
-		margin-bottom: 16px;
-		display: grid;
-		gap: 6px;
-	}
 	.field-row {
 		display: flex;
 		gap: 14px;
 	}
-	.field-row .field {
-		flex: 1;
-		min-width: 0;
-	}
-	.field textarea {
-		width: 100%;
-		padding: 11px 13px;
-		border-radius: 10px;
-		border: 1px solid var(--border);
-		background: var(--background);
-		color: var(--foreground);
-		font-family: inherit;
-		font-size: 14px;
-		outline: none;
-		resize: vertical;
-		min-height: 90px;
-	}
-	.field textarea:focus {
-		border-color: var(--leora-gold);
-	}
-	.err {
-		font-size: 12.5px;
-		color: var(--destructive);
-	}
 
-	.cat-grid {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 10px;
-		margin-bottom: 8px;
-	}
-	.cat-chip {
-		border: 1px solid var(--border);
-		border-radius: 12px;
-		padding: 14px 8px;
-		text-align: center;
-		font-size: 13px;
-		font-weight: 600;
-		cursor: pointer;
-		background: var(--background);
-		color: var(--foreground);
-		display: grid;
-		gap: 4px;
-		justify-items: center;
-	}
-	.cat-chip.selected {
-		border-color: var(--leora-gold);
-		background: var(--leora-gold-soft);
-		color: var(--leora-gold-dark);
-	}
-	:global(.dark) .cat-chip.selected {
-		color: var(--leora-gold);
-	}
-	.cat-icon {
-		font-size: 18px;
-	}
 
-	.plan-option {
-		width: 100%;
-		border: 1px solid var(--border);
-		border-radius: 14px;
-		padding: 16px 18px;
-		margin-bottom: 12px;
-		cursor: pointer;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		background: var(--background);
-		color: var(--foreground);
-		text-align: left;
-	}
-	.plan-option.selected {
-		border-color: var(--leora-gold);
-		background: var(--leora-gold-soft);
-	}
-	.plan-option h4 {
-		font-family: var(--font-display);
-		font-size: 15px;
-		font-weight: 700;
-		margin: 0;
-	}
-	.plan-desc {
-		font-size: 13px;
-		margin: 2px 0 0;
-	}
-	.plan-option .price {
-		font-family: var(--font-display);
-		font-weight: 800;
-		color: var(--leora-gold-dark);
-		white-space: nowrap;
-	}
-	:global(.dark) .plan-option .price {
-		color: var(--leora-gold);
-	}
 	.fine-print {
 		font-size: 12.5px;
 		margin-top: 10px;

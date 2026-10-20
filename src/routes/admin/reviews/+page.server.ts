@@ -1,4 +1,14 @@
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, count, desc, eq, isNull, like, or, sql } from 'drizzle-orm';
+import type { MySqlSelect } from 'drizzle-orm/mysql-core';
+import {
+	buildWhere,
+	currentQuery,
+	facetCounts,
+	orderBy,
+	pagination,
+	parseTableQuery,
+	type WhereSpec
+} from '@nahu/admin-kit/server/queryFilters';
 import { z } from 'zod/v4';
 import { db } from '$lib/server/db';
 import { vendorReviews, vendors } from '$lib/server/db/schema';
@@ -6,22 +16,69 @@ import { parse, ok, bad } from '$lib/server/adminAction';
 import { audit } from '$lib/server/auditLog';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async () => ({
-	rows: await db
-		.select({
-			id: vendorReviews.id,
-			rating: vendorReviews.rating,
-			title: vendorReviews.title,
-			comment: vendorReviews.comment,
-			createdAt: vendorReviews.createdAt,
-			vendor: vendors.businessName
+const FILTERS = ['rating'] as const;
+type Filter = (typeof FILTERS)[number];
+
+const SORTS = { vendor: vendors.businessName, rating: vendorReviews.rating, createdAt: vendorReviews.createdAt };
+
+const spec: WhereSpec<Filter> = {
+	base: [isNull(vendorReviews.deletedAt)],
+	search: (term) =>
+		or(
+			like(vendors.businessName, `%${term}%`),
+			like(vendorReviews.title, `%${term}%`),
+			like(vendorReviews.comment, `%${term}%`)
+		),
+	dateColumn: vendorReviews.createdAt,
+	filters: { rating: (v) => eq(vendorReviews.rating, Number(v)) }
+};
+
+function joined<T extends MySqlSelect>(query: T) {
+	return query.innerJoin(vendors, eq(vendors.id, vendorReviews.vendorId));
+}
+
+export const load: PageServerLoad = async ({ url }) => {
+	const query = parseTableQuery(url, FILTERS, 20, Object.keys(SORTS));
+	const where = buildWhere(query, spec);
+
+	const [rows, [{ total }], facets] = await Promise.all([
+		joined(
+			db
+				.select({
+					id: vendorReviews.id,
+					rating: vendorReviews.rating,
+					title: vendorReviews.title,
+					comment: vendorReviews.comment,
+					createdAt: vendorReviews.createdAt,
+					vendor: vendors.businessName
+				})
+				.from(vendorReviews)
+				.$dynamic()
+		)
+			.where(where)
+			.orderBy(...(orderBy(query, SORTS) ?? [desc(vendorReviews.createdAt)]))
+			.limit(query.limit)
+			.offset(query.offset),
+		joined(db.select({ total: count() }).from(vendorReviews).$dynamic()).where(where),
+		facetCounts({
+			rating: () =>
+				joined(
+					db
+						.select({
+							value: vendorReviews.rating,
+							label: sql<string>`concat(${vendorReviews.rating}, ' star', if(${vendorReviews.rating} = 1, '', 's'))`,
+							count: count()
+						})
+						.from(vendorReviews)
+						.$dynamic()
+				)
+					.where(buildWhere(query, spec, { except: 'rating' }))
+					.groupBy(vendorReviews.rating)
 		})
-		.from(vendorReviews)
-		.innerJoin(vendors, eq(vendors.id, vendorReviews.vendorId))
-		.where(isNull(vendorReviews.deletedAt))
-		.orderBy(desc(vendorReviews.createdAt))
-		.limit(500)
-});
+	]);
+
+	return { rows, server: { pagination: pagination(query, total), facets, filters: currentQuery(query) } };
+};
 
 export const actions = {
 	remove: async (event) => {

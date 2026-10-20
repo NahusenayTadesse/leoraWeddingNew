@@ -2,7 +2,7 @@
 	import './layout.css';
 	import { getFlash } from 'sveltekit-flash-message';
 	import { page, updated } from '$app/state';
-	import { Toaster } from '$lib/components/ui/sonner/index.js';
+	import { Toaster } from '@nahu/admin-kit/components/ui/sonner/index.js';
 	import { ProgressBar } from '@prgm/sveltekit-progress-bar';
 	import { toastmsg } from '$lib/global.svelte';
 
@@ -11,7 +11,7 @@
 	import { ModeWatcher } from 'mode-watcher';
 	import { fly } from 'svelte/transition';
 
-	import { Button } from '$lib/components/ui/button';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
 	import { toast } from 'svelte-sonner';
 
 	async function notifyBrowser(title: string, body: string) {
@@ -35,6 +35,15 @@
 	// }
 
 	// let iconify = $state('h-6 w-6 animate-ping');
+
+	// Results of plain form actions (the kit's `ConfirmAction`, `$lib/server/adminAction`).
+	// Superforms actions keep their message on the form and toast through `createForm`.
+	$effect(() => {
+		const message = (page.form as { message?: { type: string; text: string } } | null)?.message;
+		if (!message?.text) return;
+		if (message.type === 'error') toast.error(message.text);
+		else toast.success(message.text);
+	});
 
 	$effect(() => {
 		if (!$flash) return;
@@ -76,12 +85,17 @@
 	Routes that ship their own full-page shell (sidebar + own chrome) opt out of
 	the marketing header/footer. `/dashboard` is NOT one of them — it is the
 	couple's planner and carries the normal site header, as dashboard.php did.
+
+	`data-site-type` keeps the admin kit's dashboard typography (its h1–h4 and p sizes) off the
+	public site, which sizes its own headings with Tailwind.
 -->
 {#if !page.url.pathname.startsWith('/vendor-dashboard') && !page.url.pathname.startsWith('/admin')}
-	<Header data={data?.user?.name ?? ''} />
-	{@render children()}
-	<Footer />
-	<FloatingChat />
+	<div data-site-type>
+		<Header data={data?.user?.name ?? ''} />
+		{@render children()}
+		<Footer />
+		<FloatingChat />
+	</div>
 {:else}
 	{@render children()}
 {/if}

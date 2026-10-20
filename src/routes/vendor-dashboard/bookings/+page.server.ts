@@ -13,11 +13,12 @@ import {
 	listCouplesForBooking,
 	markThreadRead,
 	toDateInput,
-	PAGE_SIZE
+	BOOKING_FILTERS,
+	BOOKING_SORTS
 } from '$lib/server/vendor-bookings';
 import { fromMoney } from '$lib/money';
 import {
-	bookingFilters,
+	bookingTab,
 	confirmSchema,
 	cancelSchema,
 	quoteSchema,
@@ -27,14 +28,16 @@ import {
 	replySchema
 } from '$lib/schemas/vendor-bookings';
 import { idSchema as crudIdSchema } from '$lib/server/crud';
+import { currentQuery, pagination, parseTableQuery } from '@nahu/admin-kit/server/queryFilters';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const vendor = await requireVendor(locals, '/vendor-dashboard/bookings');
-	const filters = bookingFilters.parse(Object.fromEntries(url.searchParams));
+	const tab = bookingTab.catch('upcoming').parse(url.searchParams.get('tab') ?? undefined);
+	const query = parseTableQuery(url, BOOKING_FILTERS, 20, Object.keys(BOOKING_SORTS));
 
 	const [
-		{ rows, total },
+		{ rows, total, facets },
 		unread,
 		services,
 		couplesForBooking,
@@ -47,7 +50,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		rescheduleForm,
 		replyForm
 	] = await Promise.all([
-		listVendorBookings(vendor.id, filters),
+		listVendorBookings(vendor.id, tab, query),
 		unreadCountsByCouple(vendor.id, vendor.userId),
 		listVendorServices(vendor.id),
 		listCouplesForBooking(),
@@ -66,12 +69,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		bookings: rows.map((b) => ({
 			...b,
 			eventDate: toDateInput(b.eventDate),
-			coupleNames: [b.groomName, b.brideName].filter(Boolean).join(' & ') || 'Couple',
 			unread: unread.get(b.coupleId) ?? 0
 		})),
-		total,
-		pageSize: PAGE_SIZE,
-		filters,
+		tab,
+		server: { pagination: pagination(query, total), facets, filters: currentQuery(query) },
 		services: services.map((s) => ({ value: s.id, name: s.title })),
 		couples: couplesForBooking,
 		addForm,

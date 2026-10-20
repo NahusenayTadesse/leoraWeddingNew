@@ -1,4 +1,4 @@
-import { fail, redirect } from '@sveltejs/kit';
+import { redirect } from '@sveltejs/kit';
 import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { db } from '$lib/server/db';
@@ -22,7 +22,7 @@ export const load: PageServerLoad = async ({ parent }) => {
 
 	return {
 		items,
-		categoryItems: categories.map((c) => ({ value: String(c.id), name: c.name })),
+		categoryItems: categories.map((c) => ({ value: c.id, name: c.name })),
 		totalBudget: Number(wedding.totalBudget ?? 0),
 		form,
 		deleteForm
@@ -34,7 +34,7 @@ export const actions: Actions = {
 		const { couple } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(budgetItemSchema), { id: 'item' });
-		if (!form.valid) return fail(400, { form });
+		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
 
 		const values = {
 			name: form.data.name,
@@ -46,7 +46,7 @@ export const actions: Actions = {
 
 		if (form.data.id) {
 			if (!(await assertItemOwnership(form.data.id, couple!.id))) {
-				return fail(403, { form });
+				return message(form, { type: 'error', text: 'That is not yours to change.' }, { status: 403 });
 			}
 			await db
 				.update(budgetItems)
@@ -56,23 +56,23 @@ export const actions: Actions = {
 			await db.insert(budgetItems).values({ ...values, coupleId: couple!.id });
 		}
 
-		return message(form, form.data.id ? 'Line item updated.' : 'Line item added.');
+		return message(form, { type: 'success', text: form.data.id ? 'Line item updated.' : 'Line item added.' });
 	},
 
 	delete: async ({ request, locals }) => {
 		const { couple } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(deleteItemSchema), { id: 'delete' });
-		if (!form.valid) return fail(400, { form });
+		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
 
 		if (!(await assertItemOwnership(form.data.id, couple!.id))) {
-			return fail(403, { form });
+			return message(form, { type: 'error', text: 'That is not yours to change.' }, { status: 403 });
 		}
 
 		await db
 			.delete(budgetItems)
 			.where(and(eq(budgetItems.id, form.data.id), eq(budgetItems.coupleId, couple!.id)));
 
-		return message(form, 'Line item removed.');
+		return message(form, { type: 'success', text: 'Line item removed.' });
 	}
 };

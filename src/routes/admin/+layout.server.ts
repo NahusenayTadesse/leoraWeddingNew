@@ -1,12 +1,10 @@
-import { requireAdmin } from '$lib/server/admin';
 import type { LayoutServerLoad } from './$types';
 
 /**
- * Every admin route shares one gate: the signed-in account must carry the
- * 'Admin' role. `requireAdmin` throws its own redirect/403 — pages under here
- * can assume the visitor is an admin.
+ * Only admins get here: the kit's hook (`hooks.server.ts`, rules in `$lib/access`) has already
+ * refused everyone else, for actions as well as loads. This hands the menu what the viewer holds.
  */
-export const load: LayoutServerLoad = async ({ locals }) => {
-	const admin = await requireAdmin(locals);
-	return { admin };
-};
+export const load: LayoutServerLoad = ({ locals }) => ({
+	permList: locals.permList,
+	isSuperAdmin: locals.isSuperAdmin
+});

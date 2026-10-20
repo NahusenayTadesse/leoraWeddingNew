@@ -1,17 +1,18 @@
 <script lang="ts">
+	import ActionForm from '@nahu/admin-kit/formComponents/ActionForm.svelte';
+	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
 	import { formatPriceRange } from '$lib/price';
 	import { assetUrl } from '$lib/assetUrl';
 	import { goto } from '$app/navigation';
 	import { page as pageState } from '$app/state';
-	import { enhance as formEnhance } from '$app/forms';
-	import * as Card from '$lib/components/ui/card';
-	import * as Select from '$lib/components/ui/select';
-	import { Input } from '$lib/components/ui/input';
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Separator } from '$lib/components/ui/separator';
-	import { Checkbox } from '$lib/components/ui/checkbox';
-	import { Slider } from '$lib/components/ui/slider';
+	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
+	import * as Select from '@nahu/admin-kit/components/ui/select/index.js';
+	import { Input } from '@nahu/admin-kit/components/ui/input/index.js';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
+	import { Badge } from '@nahu/admin-kit/components/ui/badge/index.js';
+	import { Separator } from '@nahu/admin-kit/components/ui/separator/index.js';
+	import { Checkbox } from '@nahu/admin-kit/components/ui/checkbox/index.js';
+	import { Slider } from '@nahu/admin-kit/components/ui/slider/index.js';
 	import { SvelteSet } from 'svelte/reactivity';
 	import {
 		Search,
@@ -42,7 +43,8 @@
 		'from-chart-4/30 to-chart-4/5',
 		'from-chart-5/30 to-chart-5/5'
 	];
-	const mediaGradient = (categoryId: number) => MEDIA_GRADIENTS[categoryId % MEDIA_GRADIENTS.length];
+	const mediaGradient = (categoryId: number) =>
+		MEDIA_GRADIENTS[categoryId % MEDIA_GRADIENTS.length];
 
 	let query = $state(data.applied.q);
 	let debounce: ReturnType<typeof setTimeout>;
@@ -103,22 +105,22 @@
 <div class="mx-auto max-w-7xl px-4 py-10 lg:px-6">
 	<div class="max-w-xl">
 		<span
-			class="text-accent-foreground before:bg-primary inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase before:h-px before:w-3.5"
+			class="inline-flex items-center gap-2 text-xs font-bold tracking-widest text-accent-foreground uppercase before:h-px before:w-3.5 before:bg-primary"
 		>
 			Vendor Marketplace
 		</span>
-		<h1 class="font-display mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">
+		<h1 class="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
 			Find every vendor for your wedding
 		</h1>
-		<p class="text-muted-foreground mt-3 text-[15px]">
-			Verified photographers, venues, decorators, caterers and more — filter by category, region
-			and rating.
+		<p class="mt-3 text-[15px] text-muted-foreground">
+			Verified photographers, venues, decorators, caterers and more — filter by category, region and
+			rating.
 		</p>
 	</div>
 
 	<div class="mt-7 flex flex-wrap gap-3">
 		<div class="relative min-w-0 flex-1 sm:max-w-sm">
-			<Search class="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+			<Search class="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
 			<Input
 				bind:value={query}
 				oninput={onSearchInput}
@@ -142,7 +144,7 @@
 		<aside class="lg:sticky lg:top-20">
 			<Card.Root class="gap-0 p-5">
 				<div>
-					<h3 class="text-muted-foreground mb-3 text-xs font-bold tracking-wide uppercase">
+					<h3 class="mb-3 text-xs font-bold tracking-wide text-muted-foreground uppercase">
 						Category
 					</h3>
 					<div class="space-y-1">
@@ -153,7 +155,7 @@
 									onCheckedChange={() => toggleCategory(item.value)}
 								/>
 								<span class="flex-1 truncate">{item.name}</span>
-								<span class="text-muted-foreground text-xs">{item.count}</span>
+								<span class="text-xs text-muted-foreground">{item.count}</span>
 							</label>
 						{/each}
 					</div>
@@ -162,7 +164,7 @@
 				<Separator class="my-6" />
 
 				<div>
-					<h3 class="text-muted-foreground mb-3 text-xs font-bold tracking-wide uppercase">
+					<h3 class="mb-3 text-xs font-bold tracking-wide text-muted-foreground uppercase">
 						Region
 					</h3>
 					<Select.Root
@@ -183,7 +185,7 @@
 				<Separator class="my-6" />
 
 				<div>
-					<h3 class="text-muted-foreground mb-3 text-xs font-bold tracking-wide uppercase">
+					<h3 class="mb-3 text-xs font-bold tracking-wide text-muted-foreground uppercase">
 						Minimum rating
 					</h3>
 					<Slider
@@ -201,7 +203,7 @@
 					<Separator class="my-6" />
 					<button
 						type="button"
-						class="text-accent-foreground text-sm font-medium hover:underline"
+						class="text-sm font-medium text-accent-foreground hover:underline"
 						onclick={clearAllFilters}
 					>
 						Clear all filters
@@ -212,15 +214,15 @@
 
 		<!-- Results -->
 		<div>
-			<p class="text-muted-foreground mb-4 text-sm">
+			<p class="mb-4 text-sm text-muted-foreground">
 				Showing {data.total} vendor{data.total === 1 ? '' : 's'}
 			</p>
 
 			{#if data.vendors.length === 0}
 				<Card.Root class="p-14 text-center">
-					<Store class="text-muted-foreground mx-auto size-10" />
+					<Store class="mx-auto size-10 text-muted-foreground" />
 					<p class="mt-4 font-medium">No vendors match your filters</p>
-					<p class="text-muted-foreground mt-1 text-sm">
+					<p class="mt-1 text-sm text-muted-foreground">
 						Try widening your region, category or rating filters.
 					</p>
 				</Card.Root>
@@ -230,7 +232,7 @@
 						<Card.Root class="group overflow-hidden p-0 transition-shadow hover:shadow-md">
 							<div class="relative">
 								<a href="/vendors/{vendor.id}" class="block">
-									<div class="bg-muted relative aspect-4/3 overflow-hidden">
+									<div class="relative aspect-4/3 overflow-hidden bg-muted">
 										{#if vendor.cover}
 											<img
 												src={assetUrl(vendor.cover)}
@@ -256,16 +258,11 @@
 									</Badge>
 								{/if}
 
-								<form
-									method="POST"
-									action="?/favorite"
-									use:formEnhance
-									class="absolute top-3 right-3"
-								>
-									<input type="hidden" name="vendorId" value={vendor.id} />
+								<ActionForm action="?/favorite" class="absolute top-3 right-3">
+									<HiddenField name="vendorId" value={vendor.id} />
 									<button
 										type="submit"
-										class="bg-background/90 flex size-8 items-center justify-center rounded-full shadow-sm"
+										class="flex size-8 items-center justify-center rounded-full bg-background/90 shadow-sm"
 										aria-label={favorites.has(vendor.id) ? 'Remove from favourites' : 'Save vendor'}
 									>
 										<Heart
@@ -274,7 +271,7 @@
 												: 'text-foreground'}"
 										/>
 									</button>
-								</form>
+								</ActionForm>
 							</div>
 
 							<div class="p-4">
@@ -284,23 +281,25 @@
 											<h2 class="flex items-center gap-1.5 truncate font-semibold">
 												{vendor.businessName}
 												{#if vendor.isVerified}
-													<BadgeCheck class="text-primary size-4 shrink-0" />
+													<BadgeCheck class="size-4 shrink-0 text-primary" />
 												{/if}
 											</h2>
 										</a>
 										{#if vendor.categoryName}
-											<p class="text-muted-foreground mt-0.5 text-xs">{vendor.categoryName}</p>
+											<p class="mt-0.5 text-xs text-muted-foreground">{vendor.categoryName}</p>
 										{/if}
 									</div>
 
 									{#if vendor.reviewCount > 0}
-										<span class="text-accent-foreground shrink-0 text-xs font-bold whitespace-nowrap">
+										<span
+											class="shrink-0 text-xs font-bold whitespace-nowrap text-accent-foreground"
+										>
 											★ {vendor.avgRating?.toFixed(1)}
 										</span>
 									{/if}
 								</div>
 
-								<p class="text-muted-foreground mt-2 flex items-center gap-1 text-xs">
+								<p class="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
 									{#if vendor.city}
 										<MapPin class="size-3.5" />{vendor.city} ·
 									{/if}
@@ -311,7 +310,7 @@
 									<Separator class="my-3" />
 									<p class="text-sm font-semibold">
 										{formatPriceRange(vendor.priceMin, vendor.priceMax)}
-										<span class="text-muted-foreground text-xs font-normal">ETB from</span>
+										<span class="text-xs font-normal text-muted-foreground">ETB from</span>
 									</p>
 								{/if}
 							</div>
@@ -331,7 +330,7 @@
 							<ChevronLeft class="size-4" />
 						</Button>
 
-						<span class="text-muted-foreground px-3 text-sm">
+						<span class="px-3 text-sm text-muted-foreground">
 							Page {data.page} of {data.pages}
 						</span>
 

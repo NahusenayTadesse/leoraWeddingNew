@@ -1,10 +1,10 @@
 <script>
-	import { enhance } from '$app/forms';
-	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
+	import ActionForm from '@nahu/admin-kit/formComponents/ActionForm.svelte';
+	import { Button, buttonVariants } from '@nahu/admin-kit/components/ui/button/index.js';
 	import { Trash } from '@lucide/svelte';
-	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import { ScrollArea } from '$lib/components/ui/scroll-area/index.js';
-	import LoadingBtn from '$lib/formComponents/LoadingBtn.svelte';
+	import * as Dialog from '@nahu/admin-kit/components/ui/dialog/index.js';
+	import { ScrollArea } from '@nahu/admin-kit/components/ui/scroll-area/index.js';
+	import LoadingBtn from '@nahu/admin-kit/formComponents/LoadingBtn.svelte';
 	import { goto } from '$app/navigation';
 	let isOpen = $state(false);
 
@@ -26,10 +26,9 @@
 		<ScrollArea class="h-auto rounded-md border p-2">
 			<h5 class="text-center">Are you sure you want to Delete? This action is irreversable</h5>
 			<div class="flex flex-row items-center justify-center gap-4 pt-4">
-				<form
-					method="post"
+				<ActionForm
 					action="?/delete"
-					use:enhance={() => {
+					submit={() => {
 						deleting = true; // 1. start spinner
 
 						return async ({ result, update }) => {
@@ -51,7 +50,7 @@
 							<Trash /> Delete
 						{/if}
 					</Button>
-				</form>
+				</ActionForm>
 
 				<Button onclick={() => (isOpen = false)} size="lg">Cancel</Button>
 			</div>

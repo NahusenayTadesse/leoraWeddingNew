@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
+	import ActionForm from '@nahu/admin-kit/formComponents/ActionForm.svelte';
 	import type { ActionData } from './$types';
 
 	let { form }: { form: ActionData } = $props();
 </script>
 
 <h1>Login</h1>
-<form method="post" action="?/signInEmail" use:enhance>
+<ActionForm action="?/signInEmail">
 	<label>
 		Email
 		<input
@@ -38,5 +38,5 @@
 		class="rounded-md bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700"
 		>Register</button
 	>
-</form>
+</ActionForm>
 <p class="text-red-500">{form?.message ?? ''}</p>

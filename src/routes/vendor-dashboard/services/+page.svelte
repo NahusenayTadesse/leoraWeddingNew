@@ -1,93 +1,36 @@
 <script lang="ts">
-	import { superForm } from 'sveltekit-superforms';
-	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
-	import * as Card from '$lib/components/ui/card/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import InputComp from '$lib/formComponents/InputComp.svelte';
-	import Errors from '$lib/formComponents/Errors.svelte';
-	import { toast } from 'svelte-sonner';
+	import PageHeader from '@nahu/admin-kit/components/PageHeader.svelte';
+	import FormDialog from '@nahu/admin-kit/formComponents/FormDialog.svelte';
+	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
+	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
 	import { assetUrl } from '$lib/assetUrl';
-	import { Plus, Pencil, Trash2, Loader2, Sparkles, ImageOff } from '@lucide/svelte';
+	import { vendorServiceAddSchema, vendorServiceEditSchema } from '$lib/schemas/vendor-services';
+	import { idSchema } from '$lib/schemas/common';
+	import { Plus, Pencil, Trash2, Sparkles, ImageOff } from '@lucide/svelte';
 
 	let { data } = $props();
 
-	let dialogOpen = $state(false);
-	let editingId = $state<number | null>(null);
-	let pendingDelete = $state<{ id: number; label: string } | null>(null);
+	type Row = (typeof data.rows)[number];
 
-	const addSf = superForm(data.addForm, {
-		id: 'add',
-		resetForm: true,
-		onUpdated: ({ form }) => {
-			if (form.valid && form.message?.type === 'success') {
-				toast.success(form.message.text);
-				dialogOpen = false;
-			} else if (form.message?.type === 'error') {
-				toast.error(form.message.text);
-			}
-		}
-	});
-	const {
-		form: addForm,
-		errors: addErrors,
-		enhance: addEnhance,
-		delayed: addDelayed,
-		allErrors: addAllErrors
-	} = addSf;
-
-	const editSf = superForm(data.editForm, {
-		id: 'edit',
-		resetForm: false,
-		onUpdated: ({ form }) => {
-			if (form.valid && form.message?.type === 'success') {
-				toast.success(form.message.text);
-				dialogOpen = false;
-				editingId = null;
-			} else if (form.message?.type === 'error') {
-				toast.error(form.message.text);
-			}
-		}
-	});
-	const {
-		form: editForm,
-		errors: editErrors,
-		enhance: editEnhance,
-		delayed: editDelayed,
-		allErrors: editAllErrors
-	} = editSf;
-
-	const deleteSf = superForm(data.deleteForm, {
-		id: 'delete',
-		onUpdated: ({ form }) => {
-			if (form.message) toast[form.message.type === 'error' ? 'error' : 'success'](form.message.text);
-			pendingDelete = null;
-		}
-	});
-	const { form: deleteForm, enhance: deleteEnhance, delayed: deleting } = deleteSf;
+	let editing = $state<Row | null>(null);
+	let addOpen = $state(false);
+	let editOpen = $state(false);
+	let removing = $state<Row | null>(null);
+	let removeOpen = $state(false);
 
 	function openCreate() {
-		editingId = null;
-		$addForm.title = '';
-		$addForm.description = '';
-		$addForm.categoryId = undefined;
-		$addForm.currency = 'ETB';
-		dialogOpen = true;
+		addOpen = true;
 	}
 
-	function openEdit(service: (typeof data.rows)[number]) {
-		editingId = service.id;
-		$editForm.id = service.id;
-		$editForm.title = service.title;
-		$editForm.description = service.description ?? '';
-		$editForm.categoryId = service.categoryId ?? undefined;
-		$editForm.currency = service.currency;
-		dialogOpen = true;
+	function openEdit(row: Row) {
+		editing = row;
+		editOpen = true;
 	}
 
-	function confirmDelete(service: (typeof data.rows)[number]) {
-		pendingDelete = { id: service.id, label: service.title };
-		$deleteForm.id = service.id;
+	function confirmDelete(row: Row) {
+		removing = row;
+		removeOpen = true;
 	}
 
 	function categoryName(id: number | null) {
@@ -95,22 +38,16 @@
 	}
 </script>
 
-<svelte:head>
-	<title>Services — Vendor Portal</title>
-</svelte:head>
-
 <div class="space-y-6">
-	<div class="flex flex-wrap items-start justify-between gap-4">
-		<div>
-			<h1 class="text-2xl font-semibold tracking-tight">Services</h1>
-			<p class="text-muted-foreground text-sm">
-				What you offer. Couples browse these on your public listing.
-			</p>
-		</div>
-		<Button onclick={openCreate}>
-			<Plus class="mr-2 size-4" /> Add service
-		</Button>
-	</div>
+	<PageHeader
+		title="Services"
+		tabTitle="Services — Vendor Portal"
+		description="What you offer. Couples browse these on your public listing."
+	>
+		{#snippet actions()}
+			<Button onclick={openCreate}><Plus class="size-4" /> Add service</Button>
+		{/snippet}
+	</PageHeader>
 
 	{#if data.rows.length === 0}
 		<Card.Root>
@@ -118,7 +55,7 @@
 				<Sparkles class="text-muted-foreground mx-auto size-8" />
 				<p class="text-muted-foreground mt-3 text-sm">You haven't added any services yet.</p>
 				<Button class="mt-4" onclick={openCreate}>
-					<Plus class="mr-2 size-4" /> Add your first service
+					<Plus class="size-4" /> Add your first service
 				</Button>
 			</Card.Content>
 		</Card.Root>
@@ -165,103 +102,74 @@
 	{/if}
 </div>
 
-<!-- Create / edit -->
-<Dialog.Root bind:open={dialogOpen}>
-	<Dialog.Content class="sm:max-w-md">
-		<Dialog.Header>
-			<Dialog.Title>{editingId ? 'Edit service' : 'Add service'}</Dialog.Title>
-		</Dialog.Header>
+<FormDialog
+	title="Add service"
+	action="?/add"
+	data={data.addForm}
+	schema={vendorServiceAddSchema}
+	bind:open={addOpen}
+	seed={{ title: '', description: '', categoryId: undefined, currency: 'ETB' }}
+	hideTrigger
+	resetOnSuccess
+	multipart
+	submitLabel="Add service"
+>
+	{#snippet fields({ form, errors })}
+		<InputComp {form} {errors} name="title" label="Title" />
+		<InputComp {form} {errors} name="categoryId" label="Category" type="select" items={data.categories} />
+		<InputComp {form} {errors} name="description" label="Description" type="textarea" rows={4} />
+		<InputComp {form} {errors} name="featuredImage" label="Photo" type="file" />
+		<InputComp {form} {errors} name="currency" type="hidden" />
+	{/snippet}
+</FormDialog>
 
-		{#if editingId}
-			<form method="POST" action="?/edit" use:editEnhance enctype="multipart/form-data" class="space-y-1">
-				<input type="hidden" name="id" bind:value={$editForm.id} />
-				<Errors allErrors={$editAllErrors} />
-				<InputComp label="Title" name="title" type="text" form={editForm} errors={editErrors} />
-				<InputComp
-					label="Category"
-					name="categoryId"
-					type="select"
-					items={data.categories}
-					form={editForm}
-					errors={editErrors}
-				/>
-				<InputComp
-					label="Description"
-					name="description"
-					type="textarea"
-					rows={4}
-					form={editForm}
-					errors={editErrors}
-				/>
-				<InputComp
-					label="Photo"
-					name="featuredImage"
-					type="file"
-					image={data.rows.find((s) => s.id === editingId)?.featuredImage ?? ''}
-					form={editForm}
-					errors={editErrors}
-				/>
-				<input type="hidden" name="currency" bind:value={$editForm.currency} />
-				<Dialog.Footer class="pt-4">
-					<Button type="button" variant="outline" onclick={() => (dialogOpen = false)}>Cancel</Button>
-					<Button type="submit" disabled={$editDelayed}>
-						{#if $editDelayed}<Loader2 class="mr-2 size-4 animate-spin" />{/if}
-						Save changes
-					</Button>
-				</Dialog.Footer>
-			</form>
-		{:else}
-			<form method="POST" action="?/add" use:addEnhance enctype="multipart/form-data" class="space-y-1">
-				<Errors allErrors={$addAllErrors} />
-				<InputComp label="Title" name="title" type="text" form={addForm} errors={addErrors} />
-				<InputComp
-					label="Category"
-					name="categoryId"
-					type="select"
-					items={data.categories}
-					form={addForm}
-					errors={addErrors}
-				/>
-				<InputComp
-					label="Description"
-					name="description"
-					type="textarea"
-					rows={4}
-					form={addForm}
-					errors={addErrors}
-				/>
-				<InputComp label="Photo" name="featuredImage" type="file" form={addForm} errors={addErrors} />
-				<input type="hidden" name="currency" bind:value={$addForm.currency} />
-				<Dialog.Footer class="pt-4">
-					<Button type="button" variant="outline" onclick={() => (dialogOpen = false)}>Cancel</Button>
-					<Button type="submit" disabled={$addDelayed}>
-						{#if $addDelayed}<Loader2 class="mr-2 size-4 animate-spin" />{/if}
-						Add service
-					</Button>
-				</Dialog.Footer>
-			</form>
-		{/if}
-	</Dialog.Content>
-</Dialog.Root>
+<FormDialog
+	title="Edit service"
+	action="?/edit"
+	data={data.editForm}
+	schema={vendorServiceEditSchema}
+	bind:open={editOpen}
+	seed={editing
+		? {
+				id: editing.id,
+				title: editing.title,
+				description: editing.description ?? '',
+				categoryId: editing.categoryId ?? undefined,
+				currency: editing.currency
+			}
+		: {}}
+	hideTrigger
+	multipart
+>
+	{#snippet fields({ form, errors })}
+		<InputComp {form} {errors} name="id" type="hidden" />
+		<InputComp {form} {errors} name="title" label="Title" />
+		<InputComp {form} {errors} name="categoryId" label="Category" type="select" items={data.categories} />
+		<InputComp {form} {errors} name="description" label="Description" type="textarea" rows={4} />
+		<InputComp
+			{form}
+			{errors}
+			name="featuredImage"
+			label="Photo"
+			type="file"
+			image={editing?.featuredImage ?? ''}
+		/>
+		<InputComp {form} {errors} name="currency" type="hidden" />
+	{/snippet}
+</FormDialog>
 
-<!-- Delete -->
-<AlertDialog.Root open={!!pendingDelete} onOpenChange={(v) => !v && (pendingDelete = null)}>
-	<AlertDialog.Content>
-		<AlertDialog.Header>
-			<AlertDialog.Title>Remove this service?</AlertDialog.Title>
-			<AlertDialog.Description>
-				{pendingDelete?.label} will be removed from your public listing.
-			</AlertDialog.Description>
-		</AlertDialog.Header>
-		<form method="POST" action="?/delete" use:deleteEnhance>
-			<input type="hidden" name="id" bind:value={$deleteForm.id} />
-			<AlertDialog.Footer>
-				<AlertDialog.Cancel type="button">Cancel</AlertDialog.Cancel>
-				<Button type="submit" variant="destructive" disabled={$deleting}>
-					{#if $deleting}<Loader2 class="mr-2 size-4 animate-spin" />{/if}
-					Remove
-				</Button>
-			</AlertDialog.Footer>
-		</form>
-	</AlertDialog.Content>
-</AlertDialog.Root>
+<FormDialog
+	title="Remove this service?"
+	description="{removing?.title ?? ''} will be removed from your public listing."
+	action="?/delete"
+	data={data.deleteForm}
+	schema={idSchema}
+	bind:open={removeOpen}
+	seed={{ id: removing?.id }}
+	hideTrigger
+	submitLabel="Remove"
+>
+	{#snippet fields({ form, errors })}
+		<InputComp {form} {errors} name="id" type="hidden" />
+	{/snippet}
+</FormDialog>

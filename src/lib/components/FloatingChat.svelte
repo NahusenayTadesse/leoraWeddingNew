@@ -2,10 +2,10 @@
     import { tick } from 'svelte';
     import { Bot, Send, X, BotMessageSquare, Loader } from '@lucide/svelte';
 
-    import { Button } from '$lib/components/ui/button';
-    import * as Card from '$lib/components/ui/card';
-    import { Input } from '$lib/components/ui/input';
-    import * as Avatar from '$lib/components/ui/avatar';
+    import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
+    import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
+    import { Input } from '@nahu/admin-kit/components/ui/input/index.js';
+    import * as Avatar from '@nahu/admin-kit/components/ui/avatar/index.js';
 
     type ChatMessage = {
         role: 'user' | 'assistant';

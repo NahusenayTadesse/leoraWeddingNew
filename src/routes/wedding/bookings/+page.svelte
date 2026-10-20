@@ -1,16 +1,15 @@
 <script lang="ts">
-	import { superForm } from 'sveltekit-superforms';
-	import { zod4Client } from 'sveltekit-superforms/adapters';
+	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
+	import { createForm } from '@nahu/admin-kit/forms/createForm';
 	import { bookingSchema, paymentSchema } from '$lib/schemas/booking';
-	import InputComp from '$lib/formComponents/InputComp.svelte';
-	import * as Card from '$lib/components/ui/card';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
-	import * as Tabs from '$lib/components/ui/tabs';
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Progress } from '$lib/components/ui/progress';
-	import { toast } from 'svelte-sonner';
+	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
+	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
+	import * as Dialog from '@nahu/admin-kit/components/ui/dialog/index.js';
+	import * as AlertDialog from '@nahu/admin-kit/components/ui/alert-dialog/index.js';
+	import * as Tabs from '@nahu/admin-kit/components/ui/tabs/index.js';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
+	import { Badge } from '@nahu/admin-kit/components/ui/badge/index.js';
+	import { Progress } from '@nahu/admin-kit/components/ui/progress/index.js';
 	import {
 		Plus,
 		Loader2,
@@ -48,40 +47,41 @@
 	/** Set by the `?service=` preselect; applied once that service's options finish loading. */
 	let pendingServiceId = $state<number | null>(null);
 
-	const sf = superForm(data.form, {
+	// The kit's `createForm` toasts each action's message; these only close their dialogs.
+	// svelte-ignore state_referenced_locally
+	const { form, errors, enhance, submitting } = createForm(data.form, bookingSchema, {
 		id: 'booking',
-		validators: zod4Client(bookingSchema),
 		resetForm: true,
 		onUpdated: ({ form }) => {
-			if (form.valid && form.message) {
-				toast.success(form.message);
-				bookingOpen = false;
-			}
+			if (form.message?.type === 'success') bookingOpen = false;
 		}
 	});
-	const { form, errors, enhance, submitting } = sf;
 
-	const cf = superForm(data.cancelForm, {
+	// svelte-ignore state_referenced_locally
+	const {
+		form: cancelData,
+		enhance: cancelEnhance,
+		submitting: cancelling
+	} = createForm(data.cancelForm, undefined, {
 		id: 'cancel',
-		onUpdated: ({ form }) => {
-			if (form.message) toast.success(form.message);
+		onUpdated: () => {
 			pendingCancel = null;
 		}
 	});
-	const { form: cancelData, enhance: cancelEnhance, submitting: cancelling } = cf;
 
-	const pf = superForm(data.paymentForm, {
+	// svelte-ignore state_referenced_locally
+	const {
+		form: payData,
+		errors: payErrors,
+		enhance: payEnhance,
+		submitting: paying
+	} = createForm(data.paymentForm, paymentSchema, {
 		id: 'payment',
-		validators: zod4Client(paymentSchema),
 		resetForm: true,
 		onUpdated: ({ form }) => {
-			if (form.valid && form.message) {
-				toast.success(form.message);
-				paymentOpen = false;
-			}
+			if (form.message?.type === 'success') paymentOpen = false;
 		}
 	});
-	const { form: payData, errors: payErrors, enhance: payEnhance, submitting: paying } = pf;
 
 	// Refresh the service list whenever the chosen vendor changes.
 	$effect(() => {
@@ -100,7 +100,10 @@
 				if (cancelled) return;
 				serviceItems = items;
 
-				if (pendingServiceId && items.some((i: { value: string }) => i.value === String(pendingServiceId))) {
+				if (
+					pendingServiceId &&
+					items.some((i: { value: string }) => i.value === String(pendingServiceId))
+				) {
 					$form.serviceId = pendingServiceId;
 				}
 				pendingServiceId = null;
@@ -138,8 +141,7 @@
 		)
 	);
 
-	const etb = (n: number) =>
-		new Intl.NumberFormat('en-ET', { maximumFractionDigits: 0 }).format(n);
+	const etb = (n: number) => new Intl.NumberFormat('en-ET', { maximumFractionDigits: 0 }).format(n);
 
 	function statusVariant(status: string | null) {
 		if (status === 'confirmed') return 'default';
@@ -184,51 +186,50 @@
 		$cancelData.id = booking.id;
 	}
 
-    import { page as pageState } from '$app/state';
+	import { page as pageState } from '$app/state';
 
-// …after openBooking is defined
-// $effect(() => {
-// 	const preselect = Number(pageState.url.searchParams.get('vendor'));
-// 	if (!preselect || bookingOpen) return;
-// 	if (!data.vendorItems.some((v) => v.value === String(preselect))) return;
+	// …after openBooking is defined
+	// $effect(() => {
+	// 	const preselect = Number(pageState.url.searchParams.get('vendor'));
+	// 	if (!preselect || bookingOpen) return;
+	// 	if (!data.vendorItems.some((v) => v.value === String(preselect))) return;
 
-// 	openBooking();
-// 	$form.vendorId = preselect;
-// });
+	// 	openBooking();
+	// 	$form.vendorId = preselect;
+	// });
 
+	import { untrack } from 'svelte';
+	import { replaceState } from '$app/navigation';
 
-import { untrack } from 'svelte';
-import { replaceState } from '$app/navigation';
+	let preselectApplied = false; // plain let — not $state, so it's never a dependency
 
-let preselectApplied = false; // plain let — not $state, so it's never a dependency
+	$effect(() => {
+		const preselect = Number(pageState.url.searchParams.get('vendor'));
+		const preselectService = Number(pageState.url.searchParams.get('service'));
+		if (!preselect || preselectApplied) return;
+		if (!data.vendorItems.some((v) => v.value === String(preselect))) return;
 
-$effect(() => {
-	const preselect = Number(pageState.url.searchParams.get('vendor'));
-	const preselectService = Number(pageState.url.searchParams.get('service'));
-	if (!preselect || preselectApplied) return;
-	if (!data.vendorItems.some((v) => v.value === String(preselect))) return;
+		preselectApplied = true;
 
-	preselectApplied = true;
+		untrack(() => {
+			openBooking();
+			$form.vendorId = preselect;
+			if (preselectService) pendingServiceId = preselectService;
+		});
 
-	untrack(() => {
-		openBooking();
-		$form.vendorId = preselect;
-		if (preselectService) pendingServiceId = preselectService;
+		// drop the params so a refresh doesn't reopen the dialog
+		const url = new URL(pageState.url);
+		url.searchParams.delete('vendor');
+		url.searchParams.delete('service');
+		replaceState(url, pageState.state);
 	});
-
-	// drop the params so a refresh doesn't reopen the dialog
-	const url = new URL(pageState.url);
-	url.searchParams.delete('vendor');
-	url.searchParams.delete('service');
-	replaceState(url, pageState.state);
-});
 </script>
 
 <div class="space-y-6">
 	<div class="flex flex-wrap items-start justify-between gap-4">
 		<div>
 			<h1 class="text-2xl font-semibold tracking-tight">Bookings</h1>
-			<p class="text-muted-foreground text-sm">
+			<p class="text-sm text-muted-foreground">
 				Your vendors, what you agreed to pay, and what's still outstanding.
 			</p>
 		</div>
@@ -241,19 +242,19 @@ $effect(() => {
 	<Card.Root class="p-5">
 		<div class="grid gap-4 sm:grid-cols-4">
 			<div>
-				<p class="text-muted-foreground text-xs">Agreed total</p>
+				<p class="text-xs text-muted-foreground">Agreed total</p>
 				<p class="text-xl font-semibold">{etb(totalAgreed)}</p>
 			</div>
 			<div>
-				<p class="text-muted-foreground text-xs">Paid</p>
+				<p class="text-xs text-muted-foreground">Paid</p>
 				<p class="text-xl font-semibold">{etb(totalPaid)}</p>
 			</div>
 			<div>
-				<p class="text-muted-foreground text-xs">Awaiting confirmation</p>
+				<p class="text-xs text-muted-foreground">Awaiting confirmation</p>
 				<p class="text-xl font-semibold">{etb(totalPending)}</p>
 			</div>
 			<div>
-				<p class="text-muted-foreground text-xs">Outstanding</p>
+				<p class="text-xs text-muted-foreground">Outstanding</p>
 				<p class="text-xl font-semibold">{etb(totalBalance)}</p>
 			</div>
 		</div>
@@ -261,7 +262,7 @@ $effect(() => {
 		{#if totalAgreed > 0}
 			<div class="mt-5 space-y-2">
 				<Progress value={paidPct} class="h-2" />
-				<p class="text-muted-foreground text-xs">
+				<p class="text-xs text-muted-foreground">
 					{etb(totalPaid)} of {etb(totalAgreed)} ETB settled ({Math.round(paidPct)}%)
 				</p>
 			</div>
@@ -280,8 +281,8 @@ $effect(() => {
 	<!-- List -->
 	{#if data.bookings.length === 0}
 		<Card.Root class="p-10 text-center">
-			<Store class="text-muted-foreground mx-auto size-8" />
-			<p class="text-muted-foreground mt-3 text-sm">
+			<Store class="mx-auto size-8 text-muted-foreground" />
+			<p class="mt-3 text-sm text-muted-foreground">
 				{data.vendorItems.length === 0
 					? 'No vendors are available to book yet.'
 					: "You haven't booked any vendors yet."}
@@ -293,34 +294,32 @@ $effect(() => {
 			{/if}
 		</Card.Root>
 	{:else if visible.length === 0}
-		<Card.Root class="text-muted-foreground p-10 text-center text-sm">
+		<Card.Root class="p-10 text-center text-sm text-muted-foreground">
 			Nothing in this view.
 		</Card.Root>
 	{:else}
 		<div class="grid gap-4">
 			{#each visible as booking (booking.id)}
 				{@const pct =
-					booking.agreedPrice > 0
-						? Math.min(100, (booking.paid / booking.agreedPrice) * 100)
-						: 0}
-				<Card.Root class="p-5 {booking.status === 'cancelled' ? 'opacity-60': ''}">
+					booking.agreedPrice > 0 ? Math.min(100, (booking.paid / booking.agreedPrice) * 100) : 0}
+				<Card.Root class="p-5 {booking.status === 'cancelled' ? 'opacity-60' : ''}">
 					<div class="flex flex-wrap items-start justify-between gap-4">
 						<div class="min-w-0">
 							<div class="flex items-center gap-2">
 								<h3 class="truncate font-medium">{booking.vendorName}</h3>
 								{#if booking.vendorVerified}
-									<BadgeCheck class="text-primary size-4 shrink-0" />
+									<BadgeCheck class="size-4 shrink-0 text-primary" />
 								{/if}
 								<Badge variant={statusVariant(booking.status)} class="capitalize">
 									{booking.status}
 								</Badge>
 							</div>
 
-							<p class="text-muted-foreground mt-1 text-sm">
+							<p class="mt-1 text-sm text-muted-foreground">
 								{booking.serviceTitle ?? 'General booking'}
 							</p>
 
-							<div class="text-muted-foreground mt-3 flex flex-wrap gap-4 text-xs">
+							<div class="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
 								<span class="flex items-center gap-1.5">
 									<CalendarClock class="size-3.5" />
 									{eventLabel(booking.eventDate)}
@@ -328,7 +327,7 @@ $effect(() => {
 								{#if booking.vendorPhone}
 									<a
 										href="tel:{booking.vendorPhone}"
-										class="hover:text-foreground flex items-center gap-1.5"
+										class="flex items-center gap-1.5 hover:text-foreground"
 									>
 										<Phone class="size-3.5" />{booking.vendorPhone}
 									</a>
@@ -337,10 +336,10 @@ $effect(() => {
 						</div>
 
 						<div class="text-right">
-							<p class="text-muted-foreground text-xs">Agreed</p>
+							<p class="text-xs text-muted-foreground">Agreed</p>
 							<p class="text-lg font-semibold tabular-nums">{etb(booking.agreedPrice)}</p>
 							{#if booking.balance > 0 && booking.status !== 'cancelled'}
-								<p class="text-muted-foreground text-xs">
+								<p class="text-xs text-muted-foreground">
 									{etb(booking.balance)} outstanding
 								</p>
 							{:else if booking.agreedPrice > 0 && booking.balance === 0}
@@ -352,10 +351,12 @@ $effect(() => {
 					{#if booking.agreedPrice > 0 && booking.status !== 'cancelled'}
 						<div class="mt-4 space-y-1.5">
 							<Progress value={pct} class="h-1.5" />
-							<p class="text-muted-foreground text-xs">
+							<p class="text-xs text-muted-foreground">
 								{etb(booking.paid)} paid
 								{#if booking.pendingPaid > 0}
-									· <span class="text-foreground">{etb(booking.pendingPaid)} awaiting confirmation</span>
+									· <span class="text-foreground"
+										>{etb(booking.pendingPaid)} awaiting confirmation</span
+									>
 								{/if}
 							</p>
 						</div>
@@ -363,7 +364,12 @@ $effect(() => {
 
 					{#if booking.status !== 'cancelled'}
 						<div class="mt-4 flex flex-wrap justify-end gap-2 border-t pt-4">
-							<Button variant="ghost" size="sm" class="text-destructive" onclick={() => confirmCancel(booking)}>
+							<Button
+								variant="ghost"
+								size="sm"
+								class="text-destructive"
+								onclick={() => confirmCancel(booking)}
+							>
 								<Ban class="mr-2 size-4" /> Cancel
 							</Button>
 							<Button variant="outline" size="sm" onclick={() => openPayment(booking)}>
@@ -383,7 +389,8 @@ $effect(() => {
 		<Dialog.Header>
 			<Dialog.Title>Request a booking</Dialog.Title>
 			<Dialog.Description>
-				The vendor confirms from their side. Agreed price can be left at zero until you settle on one.
+				The vendor confirms from their side. Agreed price can be left at zero until you settle on
+				one.
 			</Dialog.Description>
 		</Dialog.Header>
 
@@ -400,7 +407,7 @@ $effect(() => {
 
 			{#if $form.vendorId}
 				{#if loadingServices}
-					<p class="text-muted-foreground px-1 py-2 text-sm">Loading services…</p>
+					<p class="px-1 py-2 text-sm text-muted-foreground">Loading services…</p>
 				{:else if serviceItems.length > 0}
 					<InputComp
 						label="service (optional)"
@@ -412,7 +419,7 @@ $effect(() => {
 						placeholder="Choose a service"
 					/>
 				{:else}
-					<p class="text-muted-foreground px-1 py-2 text-sm">
+					<p class="px-1 py-2 text-sm text-muted-foreground">
 						This vendor hasn't listed individual services — that's fine, carry on.
 					</p>
 				{/if}
@@ -440,7 +447,8 @@ $effect(() => {
 			/>
 
 			<Dialog.Footer class="pt-4">
-				<Button type="button" variant="outline" onclick={() => (bookingOpen = false)}>Cancel</Button>
+				<Button type="button" variant="outline" onclick={() => (bookingOpen = false)}>Cancel</Button
+				>
 				<Button type="submit" disabled={$submitting}>
 					{#if $submitting}<Loader2 class="mr-2 size-4 animate-spin" />{/if}
 					Send request
@@ -463,7 +471,7 @@ $effect(() => {
 		</Dialog.Header>
 
 		<form method="POST" action="?/pay" use:payEnhance class="space-y-1">
-			<input type="hidden" name="bookingId" bind:value={$payData.bookingId} />
+			<HiddenField name="bookingId" value={$payData.bookingId} />
 
 			<InputComp
 				label="amount (ETB)"
@@ -505,7 +513,8 @@ $effect(() => {
 			/>
 
 			<Dialog.Footer class="pt-4">
-				<Button type="button" variant="outline" onclick={() => (paymentOpen = false)}>Cancel</Button>
+				<Button type="button" variant="outline" onclick={() => (paymentOpen = false)}>Cancel</Button
+				>
 				<Button type="submit" disabled={$paying}>
 					{#if $paying}<Loader2 class="mr-2 size-4 animate-spin" />{/if}
 					<Wallet class="mr-2 size-4" /> Log payment
@@ -521,12 +530,12 @@ $effect(() => {
 		<AlertDialog.Header>
 			<AlertDialog.Title>Cancel this booking?</AlertDialog.Title>
 			<AlertDialog.Description>
-				Your booking with {pendingCancel?.label} will be marked cancelled and the vendor will be
-				notified. Any payments already logged stay on record.
+				Your booking with {pendingCancel?.label} will be marked cancelled and the vendor will be notified.
+				Any payments already logged stay on record.
 			</AlertDialog.Description>
 		</AlertDialog.Header>
 		<form method="POST" action="?/cancel" use:cancelEnhance>
-			<input type="hidden" name="id" bind:value={$cancelData.id} />
+			<HiddenField name="id" value={$cancelData.id} />
 			<AlertDialog.Footer>
 				<AlertDialog.Cancel type="button">Keep booking</AlertDialog.Cancel>
 				<Button type="submit" variant="destructive" disabled={$cancelling}>

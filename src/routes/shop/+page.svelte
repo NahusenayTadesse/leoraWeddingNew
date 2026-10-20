@@ -1,11 +1,11 @@
 <script lang="ts">
 	import ProductCard from '$lib/components/product-card.svelte';
-	import { Input } from '$lib/components/ui/input';
-	import { Checkbox } from '$lib/components/ui/checkbox';
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Skeleton } from '$lib/components/ui/skeleton';
-	import Label from '$lib/components/ui/label/label.svelte';
+	import { Input } from '@nahu/admin-kit/components/ui/input/index.js';
+	import { Checkbox } from '@nahu/admin-kit/components/ui/checkbox/index.js';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
+	import { Badge } from '@nahu/admin-kit/components/ui/badge/index.js';
+	import { Skeleton } from '@nahu/admin-kit/components/ui/skeleton/index.js';
+	import Label from '@nahu/admin-kit/components/ui/label/label.svelte';
 	import { SearchIcon, XIcon, SlidersHorizontalIcon, BadgeCheckIcon } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { page, navigating } from '$app/state';

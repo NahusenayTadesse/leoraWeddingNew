@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import * as Card from '$lib/components/ui/card';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
+	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
 	import * as Accordion from '$lib/components/ui/accordion';
-	import { Badge } from '$lib/components/ui/badge';
+	import { Badge } from '@nahu/admin-kit/components/ui/badge/index.js';
 	import { ArrowRight, Check, Star, ShieldCheck } from '@lucide/svelte';
 	import { inview, animateCount } from '$lib/actions/inview';
 

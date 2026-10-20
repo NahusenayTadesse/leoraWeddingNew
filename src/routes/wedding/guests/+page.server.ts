@@ -1,4 +1,4 @@
-import { fail, redirect } from '@sveltejs/kit';
+import { redirect } from '@sveltejs/kit';
 import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { db } from '$lib/server/db';
@@ -6,6 +6,7 @@ import { guestLists } from '$lib/server/db/schema';
 import { guestSchema, bulkGuestSchema, guestIdSchema } from '$lib/schemas/guest';
 import { listGuests, assertGuestOwnership, parseGuestLines } from '$lib/server/guests';
 import { requireCoupleAndWedding } from '$lib/server/weddings';
+import { parse, bad } from '$lib/server/adminAction';
 import { and, eq } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -34,7 +35,7 @@ export const actions: Actions = {
 		const { couple } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(guestSchema), { id: 'guest' });
-		if (!form.valid) return fail(400, { form });
+		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
 
 		const values = {
 			fullName: form.data.fullName,
@@ -44,7 +45,7 @@ export const actions: Actions = {
 		};
 
 		if (form.data.id) {
-			if (!(await assertGuestOwnership(form.data.id, couple!.id))) return fail(403, { form });
+			if (!(await assertGuestOwnership(form.data.id, couple!.id))) return message(form, { type: 'error', text: 'That is not yours to change.' }, { status: 403 });
 
 			await db
 				.update(guestLists)
@@ -54,18 +55,18 @@ export const actions: Actions = {
 			await db.insert(guestLists).values({ ...values, coupleId: couple!.id });
 		}
 
-		return message(form, form.data.id ? 'Guest updated.' : 'Guest added.');
+		return message(form, { type: 'success', text: form.data.id ? 'Guest updated.' : 'Guest added.' });
 	},
 
 	bulk: async ({ request, locals }) => {
 		const { couple } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(bulkGuestSchema), { id: 'bulk' });
-		if (!form.valid) return fail(400, { form });
+		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
 
 		const parsed = parseGuestLines(form.data.names);
 		if (parsed.length === 0) {
-			return message(form, 'No usable names found in that list.', { status: 400 });
+			return message(form, { type: 'error', text: 'No usable names found in that list.' }, { status: 400 });
 		}
 
 		await db.insert(guestLists).values(
@@ -78,27 +79,28 @@ export const actions: Actions = {
 			}))
 		);
 
-		return message(form, `Added ${parsed.length} guest${parsed.length === 1 ? '' : 's'}.`);
+		return message(form, { type: 'success', text: `Added ${parsed.length} guest${parsed.length === 1 ? '' : 's'}.` });
 	},
 
 	toggle: async ({ request, locals }) => {
 		const { couple } = await requireCoupleAndWedding(locals);
 
-		const form = await superValidate(request, zod4(guestIdSchema), { id: 'toggle' });
-		if (!form.valid) return fail(400, { form });
+		const p = await parse(request, guestIdSchema);
+		if ('error' in p) return p.error;
 
 		const [current] = await db
 			.select({ rsvpStatus: guestLists.rsvpStatus })
 			.from(guestLists)
-			.where(and(eq(guestLists.id, form.data.id), eq(guestLists.coupleId, couple!.id)))
+			.where(and(eq(guestLists.id, p.data.id), eq(guestLists.coupleId, couple!.id)))
 			.limit(1);
-		if (!current) return fail(403, { form });
+		if (!current) return bad('That guest is not on your list.', 403);
 
 		await db
 			.update(guestLists)
 			.set({ rsvpStatus: current.rsvpStatus === 'confirmed' ? 'pending' : 'confirmed' })
-			.where(and(eq(guestLists.id, form.data.id), eq(guestLists.coupleId, couple!.id)));
+			.where(and(eq(guestLists.id, p.data.id), eq(guestLists.coupleId, couple!.id)));
 
+		// Silent on success: the tick in the row is the feedback.
 		return { success: true };
 	},
 
@@ -106,14 +108,14 @@ export const actions: Actions = {
 		const { couple } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(guestIdSchema), { id: 'delete' });
-		if (!form.valid) return fail(400, { form });
+		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
 
-		if (!(await assertGuestOwnership(form.data.id, couple!.id))) return fail(403, { form });
+		if (!(await assertGuestOwnership(form.data.id, couple!.id))) return message(form, { type: 'error', text: 'That is not yours to change.' }, { status: 403 });
 
 		await db
 			.delete(guestLists)
 			.where(and(eq(guestLists.id, form.data.id), eq(guestLists.coupleId, couple!.id)));
 
-		return message(form, 'Guest removed.');
+		return message(form, { type: 'success', text: 'Guest removed.' });
 	}
 };

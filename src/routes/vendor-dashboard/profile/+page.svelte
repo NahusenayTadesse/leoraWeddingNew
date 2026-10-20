@@ -1,23 +1,18 @@
 <script lang="ts">
-	import { superForm } from 'sveltekit-superforms';
-	import { toast } from 'svelte-sonner';
-	import FormCard from '$lib/formComponents/FormCard.svelte';
-	import InputComp from '$lib/formComponents/InputComp.svelte';
-	import Errors from '$lib/formComponents/Errors.svelte';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { Badge } from '$lib/components/ui/badge/index.js';
+	import { createForm } from '@nahu/admin-kit/forms/createForm';
+	import { vendorProfileSchema } from '$lib/schemas/vendor-profile';
+	import FormCard from '@nahu/admin-kit/formComponents/FormCard.svelte';
+	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
+	import Errors from '@nahu/admin-kit/formComponents/Errors.svelte';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
+	import { Badge } from '@nahu/admin-kit/components/ui/badge/index.js';
 	import { Loader2 } from '@lucide/svelte';
 
 	let { data } = $props();
 
-	const { form, errors, enhance, delayed, allErrors, message } = superForm(data.form, {
+	// svelte-ignore state_referenced_locally
+	const { form, errors, enhance, delayed, allErrors } = createForm(data.form, vendorProfileSchema, {
 		resetForm: false
-	});
-
-	$effect(() => {
-		if (!$message) return;
-		if ($message.type === 'error') toast.error($message.text);
-		else toast.success($message.text);
 	});
 
 	const STATUS_VARIANT: Record<string, 'secondary' | 'default' | 'destructive'> = {

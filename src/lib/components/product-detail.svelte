@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import { enhance as formEnhance } from '$app/forms';
+	import ActionForm from '@nahu/admin-kit/formComponents/ActionForm.svelte';
+	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
+	import { Badge } from '@nahu/admin-kit/components/ui/badge/index.js';
 	import {
 		ShareIcon,
 		CalendarPlusIcon,
@@ -83,11 +84,11 @@
 	<div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
 		<!-- Vendor details -->
 		<div
-			class="bg-card mb-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-4 shadow-sm"
+			class="mb-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border bg-card p-4 shadow-sm"
 		>
 			<a href="/vendors/{vendorId}" class="group flex min-w-0 items-center gap-3">
 				<div
-					class="bg-muted text-muted-foreground flex size-12 shrink-0 items-center justify-center rounded-full"
+					class="flex size-12 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"
 				>
 					<StoreIcon class="size-6" />
 				</div>
@@ -95,10 +96,12 @@
 					<div class="flex items-center gap-1.5 font-semibold group-hover:underline">
 						<span class="truncate">{vendor}</span>
 						{#if vendorVerified}
-							<BadgeCheckIcon class="text-primary size-4 shrink-0" />
+							<BadgeCheckIcon class="size-4 shrink-0 text-primary" />
 						{/if}
 					</div>
-					<div class="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+					<div
+						class="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground"
+					>
 						{#if vendorReviewCount > 0}
 							<span class="flex items-center gap-1">
 								<StarIcon class="size-3.5 fill-amber-400 text-amber-400" />
@@ -115,13 +118,13 @@
 			</a>
 
 			<div class="flex shrink-0 gap-2">
-				<form method="POST" action="?/favorite" use:formEnhance>
-					<input type="hidden" name="vendorId" value={vendorId} />
+				<ActionForm action="?/favorite">
+					<HiddenField name="vendorId" value={vendorId} />
 					<Button type="submit" variant="outline">
 						<HeartIcon class="mr-2 size-4 {isFavorite ? 'fill-red-500 text-red-500' : ''}" />
 						{isFavorite ? 'Saved' : 'Save'}
 					</Button>
-				</form>
+				</ActionForm>
 
 				<Button href="/wedding/messages?vendor={vendorId}" variant="outline">
 					<MessageSquareIcon class="mr-2 size-4" /> Message

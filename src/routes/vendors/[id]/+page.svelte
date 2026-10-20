@@ -1,20 +1,19 @@
 <script lang="ts">
+	import ActionForm from '@nahu/admin-kit/formComponents/ActionForm.svelte';
+	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
 	import { formatPriceRange } from '$lib/price';
 	import { assetUrl } from '$lib/assetUrl';
-	import { superForm } from 'sveltekit-superforms';
-	import { zod4Client } from 'sveltekit-superforms/adapters';
-	import { enhance as formEnhance } from '$app/forms';
+	import { createForm } from '@nahu/admin-kit/forms/createForm';
 	import { reviewSchema } from '$lib/schemas/review';
-	import InputComp from '$lib/formComponents/InputComp.svelte';
-	import * as Card from '$lib/components/ui/card';
-	import * as Tabs from '$lib/components/ui/tabs';
-	import * as Avatar from '$lib/components/ui/avatar';
-	import * as Select from '$lib/components/ui/select';
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Separator } from '$lib/components/ui/separator';
-	import { Progress } from '$lib/components/ui/progress';
-	import { toast } from 'svelte-sonner';
+	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
+	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
+	import * as Tabs from '@nahu/admin-kit/components/ui/tabs/index.js';
+	import * as Avatar from '@nahu/admin-kit/components/ui/avatar/index.js';
+	import * as Select from '@nahu/admin-kit/components/ui/select/index.js';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
+	import { Badge } from '@nahu/admin-kit/components/ui/badge/index.js';
+	import { Separator } from '@nahu/admin-kit/components/ui/separator/index.js';
+	import { Progress } from '@nahu/admin-kit/components/ui/progress/index.js';
 	import {
 		Star,
 		BadgeCheck,
@@ -43,15 +42,11 @@
 
 	let tab = $state('services');
 
-	const sf = superForm(data.form, {
+	// svelte-ignore state_referenced_locally
+	const { form, errors, enhance, submitting } = createForm(data.form, reviewSchema, {
 		id: 'review',
-		validators: zod4Client(reviewSchema),
-		resetForm: false,
-		onUpdated: ({ form }) => {
-			if (form.valid && form.message) toast.success(form.message);
-		}
+		resetForm: false
 	});
-	const { form, errors, enhance, submitting } = sf;
 
 	const stars = (rating: number | null) => Math.round(rating ?? 0);
 
@@ -66,8 +61,7 @@
 			.join(', ')
 	);
 
-	const etb = (n: number) =>
-		new Intl.NumberFormat('en-ET', { maximumFractionDigits: 0 }).format(n);
+	const etb = (n: number) => new Intl.NumberFormat('en-ET', { maximumFractionDigits: 0 }).format(n);
 
 	function priceLabel(service: (typeof data.services)[number]) {
 		if (service.prices.length === 0) return null;
@@ -93,7 +87,7 @@
 </svelte:head>
 
 <div class="mx-auto max-w-6xl px-4 py-8 lg:px-6">
-	<a href="/vendors" class="text-muted-foreground hover:text-foreground mb-6 inline-block text-sm">
+	<a href="/vendors" class="mb-6 inline-block text-sm text-muted-foreground hover:text-foreground">
 		← Back to vendors
 	</a>
 
@@ -107,7 +101,7 @@
 				{/if}
 			</div>
 
-			<div class="text-muted-foreground mt-3 flex flex-wrap items-center gap-4 text-sm">
+			<div class="mt-3 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
 				{#if data.vendor.categoryName}
 					<span>{data.vendor.categoryName}</span>
 				{/if}
@@ -137,13 +131,13 @@
 		</div>
 
 		<div class="flex gap-2">
-			<form method="POST" action="?/favorite" use:formEnhance>
-				<input type="hidden" name="vendorId" value={data.vendor.id} />
+			<ActionForm action="?/favorite">
+				<HiddenField name="vendorId" value={data.vendor.id} />
 				<Button type="submit" variant="outline">
 					<Heart class="mr-2 size-4 {data.isFavorite ? 'fill-red-500 text-red-500' : ''}" />
 					{data.isFavorite ? 'Saved' : 'Save'}
 				</Button>
-			</form>
+			</ActionForm>
 
 			<Button href="/wedding/messages?vendor={data.vendor.id}" variant="outline">
 				<MessageSquare class="mr-2 size-4" /> Message
@@ -171,8 +165,8 @@
 				<Tabs.Content value="services" class="mt-6">
 					{#if data.services.length === 0}
 						<Card.Root class="p-10 text-center">
-							<Store class="text-muted-foreground mx-auto size-8" />
-							<p class="text-muted-foreground mt-3 text-sm">
+							<Store class="mx-auto size-8 text-muted-foreground" />
+							<p class="mt-3 text-sm text-muted-foreground">
 								This vendor hasn't listed individual services yet. Get in touch for a quote.
 							</p>
 						</Card.Root>
@@ -181,7 +175,7 @@
 							{#each data.services as service (service.id)}
 								{@const cover = service.featuredImage || service.images[0]}
 								<Card.Root class="overflow-hidden p-0">
-									<div class="bg-muted aspect-video">
+									<div class="aspect-video bg-muted">
 										{#if cover}
 											<img
 												src={assetUrl(cover)}
@@ -190,7 +184,7 @@
 												class="size-full object-cover"
 											/>
 										{:else}
-											<div class="text-muted-foreground flex size-full items-center justify-center">
+											<div class="flex size-full items-center justify-center text-muted-foreground">
 												<Store class="size-8" />
 											</div>
 										{/if}
@@ -198,14 +192,14 @@
 									<div class="p-4">
 										<h3 class="font-medium">{service.title}</h3>
 										{#if service.description}
-											<p class="text-muted-foreground mt-1 line-clamp-3 text-sm">
+											<p class="mt-1 line-clamp-3 text-sm text-muted-foreground">
 												{service.description}
 											</p>
 										{/if}
 										{#if priceLabel(service)}
 											<p class="mt-3 font-semibold">{priceLabel(service)}</p>
 											{#if service.prices.length > 1}
-												<p class="text-muted-foreground text-xs">
+												<p class="text-xs text-muted-foreground">
 													{service.prices.length} package options
 												</p>
 											{/if}
@@ -221,9 +215,9 @@
 				<Tabs.Content value="about" class="mt-6">
 					<Card.Root class="p-6">
 						{#if data.vendor.description}
-							<p class="whitespace-pre-line leading-relaxed">{data.vendor.description}</p>
+							<p class="leading-relaxed whitespace-pre-line">{data.vendor.description}</p>
 						{:else}
-							<p class="text-muted-foreground text-sm">
+							<p class="text-sm text-muted-foreground">
 								This vendor hasn't added a description yet.
 							</p>
 						{/if}
@@ -231,8 +225,10 @@
 						{#if formatPriceRange(data.vendor.priceMin, data.vendor.priceMax)}
 							<Separator class="my-6" />
 							<div>
-								<p class="text-muted-foreground text-xs">Typical price range</p>
-								<p class="mt-1 font-medium">{formatPriceRange(data.vendor.priceMin, data.vendor.priceMax)}</p>
+								<p class="text-xs text-muted-foreground">Typical price range</p>
+								<p class="mt-1 font-medium">
+									{formatPriceRange(data.vendor.priceMin, data.vendor.priceMax)}
+								</p>
 							</div>
 						{/if}
 					</Card.Root>
@@ -254,7 +250,7 @@
 											/>
 										{/each}
 									</div>
-									<p class="text-muted-foreground mt-1 text-xs">
+									<p class="mt-1 text-xs text-muted-foreground">
 										{data.vendor.reviewCount} review{data.vendor.reviewCount === 1 ? '' : 's'}
 									</p>
 								</div>
@@ -262,15 +258,13 @@
 								<div class="min-w-0 flex-1 space-y-1.5">
 									{#each data.buckets as bucket (bucket.star)}
 										<div class="flex items-center gap-3 text-xs">
-											<span class="text-muted-foreground w-3">{bucket.star}</span>
+											<span class="w-3 text-muted-foreground">{bucket.star}</span>
 											<Star class="size-3 fill-amber-400 text-amber-400" />
 											<Progress
-												value={data.reviews.length
-													? (bucket.count / data.reviews.length) * 100
-													: 0}
+												value={data.reviews.length ? (bucket.count / data.reviews.length) * 100 : 0}
 												class="h-1.5 flex-1"
 											/>
-											<span class="text-muted-foreground w-6 text-right">{bucket.count}</span>
+											<span class="w-6 text-right text-muted-foreground">{bucket.count}</span>
 										</div>
 									{/each}
 								</div>
@@ -302,14 +296,14 @@
 												>
 													<Star
 														class="size-7 transition-transform hover:scale-110 {s <=
-														($form.rating ?? 0)
+														Number($form.rating ?? 0)
 															? 'fill-amber-400 text-amber-400'
 															: 'text-muted-foreground/30'}"
 													/>
 												</button>
 											{/each}
 										</div>
-										<input type="hidden" name="rating" bind:value={$form.rating} />
+										<HiddenField name="rating" value={$form.rating} />
 										{#if $errors.rating}
 											<p class="mt-2 text-sm text-red-500">{$errors.rating}</p>
 										{/if}
@@ -336,9 +330,9 @@
 						</Card.Root>
 					{:else}
 						<Card.Root class="p-6 text-center">
-							<MessageSquare class="text-muted-foreground mx-auto size-7" />
-							<p class="text-muted-foreground mt-3 text-sm">
-								<a href="/login" class="text-foreground font-medium underline">Sign in</a> to leave a
+							<MessageSquare class="mx-auto size-7 text-muted-foreground" />
+							<p class="mt-3 text-sm text-muted-foreground">
+								<a href="/login" class="font-medium text-foreground underline">Sign in</a> to leave a
 								review.
 							</p>
 						</Card.Root>
@@ -346,7 +340,7 @@
 
 					<!-- Review list -->
 					{#if data.reviews.length === 0}
-						<p class="text-muted-foreground py-6 text-center text-sm">
+						<p class="py-6 text-center text-sm text-muted-foreground">
 							No reviews yet. Be the first.
 						</p>
 					{:else}
@@ -364,7 +358,7 @@
 										<div class="min-w-0 flex-1">
 											<div class="flex flex-wrap items-center gap-2">
 												<p class="text-sm font-medium">{review.authorName}</p>
-												<span class="text-muted-foreground text-xs">
+												<span class="text-xs text-muted-foreground">
 													{reviewDate(review.createdAt)}
 												</span>
 											</div>
@@ -398,13 +392,13 @@
 				<div class="mt-4 space-y-3 text-sm">
 					<a
 						href="tel:{data.vendor.phone}"
-						class="text-muted-foreground hover:text-foreground flex items-center gap-2"
+						class="flex items-center gap-2 text-muted-foreground hover:text-foreground"
 					>
 						<Phone class="size-4" />{data.vendor.phone}
 					</a>
 
 					{#if fullAddress}
-						<p class="text-muted-foreground flex items-start gap-2">
+						<p class="flex items-start gap-2 text-muted-foreground">
 							<MapPin class="mt-0.5 size-4 shrink-0" />{fullAddress}
 						</p>
 					{/if}
@@ -414,7 +408,7 @@
 							href={data.vendor.googleMapsUrl}
 							target="_blank"
 							rel="noopener noreferrer"
-							class="text-primary flex items-center gap-2 hover:underline"
+							class="flex items-center gap-2 text-primary hover:underline"
 						>
 							<ExternalLink class="size-4" /> Open in Google Maps
 						</a>
@@ -426,7 +420,7 @@
 				<Button class="w-full" href="/wedding/bookings?vendor={data.vendor.id}">
 					<CalendarPlus class="mr-2 size-4" /> Request booking
 				</Button>
-				<p class="text-muted-foreground mt-3 text-center text-xs">
+				<p class="mt-3 text-center text-xs text-muted-foreground">
 					You'll confirm the date and price in your dashboard.
 				</p>
 			</Card.Root>
@@ -439,7 +433,7 @@
 
 		<div>
 			<h2 class="text-2xl font-semibold tracking-tight">Services &amp; packages</h2>
-			<p class="text-muted-foreground mt-1 text-sm">
+			<p class="mt-1 text-sm text-muted-foreground">
 				Pick a package and request a booking — the vendor confirms the date and price with you
 				directly.
 			</p>
@@ -449,7 +443,7 @@
 					{@const cover = service.featuredImage || service.images[0]}
 					{@const chosen = priceFor(service)}
 					<Card.Root class="flex flex-col overflow-hidden p-0">
-						<div class="bg-muted aspect-video">
+						<div class="aspect-video bg-muted">
 							{#if cover}
 								<img
 									src={assetUrl(cover)}
@@ -458,7 +452,7 @@
 									class="size-full object-cover"
 								/>
 							{:else}
-								<div class="text-muted-foreground flex size-full items-center justify-center">
+								<div class="flex size-full items-center justify-center text-muted-foreground">
 									<Store class="size-8" />
 								</div>
 							{/if}
@@ -467,7 +461,7 @@
 						<div class="flex flex-1 flex-col p-4">
 							<h3 class="font-medium">{service.title}</h3>
 							{#if service.description}
-								<p class="text-muted-foreground mt-1 line-clamp-2 text-sm">
+								<p class="mt-1 line-clamp-2 text-sm text-muted-foreground">
 									{service.description}
 								</p>
 							{/if}
@@ -479,12 +473,15 @@
 									onValueChange={(v) => (selectedPackage[service.id] = v)}
 								>
 									<Select.Trigger class="mt-3 w-full">
-										{chosen ? `${chosen.amount} — ${etb(chosen.price)} ${service.currency}` : 'Choose a package'}
+										{chosen
+											? `${chosen.amount} — ${etb(chosen.price)} ${service.currency}`
+											: 'Choose a package'}
 									</Select.Trigger>
 									<Select.Content>
 										{#each service.prices as p (p.amount)}
 											<Select.Item value={p.amount}>
-												{p.amount} — {etb(p.price)} {service.currency}
+												{p.amount} — {etb(p.price)}
+												{service.currency}
 											</Select.Item>
 										{/each}
 									</Select.Content>
@@ -492,7 +489,7 @@
 							{:else if chosen}
 								<p class="mt-3 font-semibold">{etb(chosen.price)} {service.currency}</p>
 							{:else}
-								<p class="text-muted-foreground mt-3 text-sm">Contact for pricing</p>
+								<p class="mt-3 text-sm text-muted-foreground">Contact for pricing</p>
 							{/if}
 
 							<div class="mt-auto pt-4">

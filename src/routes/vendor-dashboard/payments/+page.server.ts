@@ -33,8 +33,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			.leftJoin(weddingPlans, eq(weddingPlans.id, bookingPayments.weddingPlanId))
 			.leftJoin(couples, eq(couples.id, weddingPlans.coupleId))
 			.where(and(eq(bookingPayments.payeeVendorId, vendor.id), isNull(bookingPayments.deletedAt)))
-			.orderBy(desc(bookingPayments.createdAt))
-			.limit(200),
+			.orderBy(desc(bookingPayments.createdAt)),
 		db
 			.select({ balance: vendorWallets.balance })
 			.from(vendorWallets)

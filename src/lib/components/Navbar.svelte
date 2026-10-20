@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { Heart, Menu, X } from '@lucide/svelte';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
 	import { openAuth } from '$lib/state.svelte.js';
 
 	let mobileOpen = $state(false);
@@ -58,7 +58,7 @@
 				>
 					Sign In
 				</button>
-				<Button size="md" class="hidden md:inline-flex" href="/budget">Start Planning</Button>
+				<Button class="hidden md:inline-flex" href="/budget">Start Planning</Button>
 
 				<!-- Mobile hamburger -->
 				<button

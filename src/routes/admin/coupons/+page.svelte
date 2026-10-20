@@ -1,77 +1,112 @@
 <script lang="ts">
+	import type { ColumnDef } from '@tanstack/table-core';
+	import { renderSnippet } from '@nahu/admin-kit/components/ui/data-table/index.js';
+	import DataTable from '@nahu/admin-kit/components/Table/data-table.svelte';
+	import ConfirmAction from '@nahu/admin-kit/components/ConfirmAction.svelte';
+	import FormDialog from '@nahu/admin-kit/formComponents/FormDialog.svelte';
+	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
 	import PageHeader from '$lib/components/admin/PageHeader.svelte';
-	import ActionForm from '$lib/components/admin/ActionForm.svelte';
-	import StatusBadge from '$lib/components/admin/StatusBadge.svelte';
-	import * as Card from '$lib/components/ui/card/index.js';
-	import * as Table from '$lib/components/ui/table/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { enhance } from '$app/forms';
-	import { toast } from 'svelte-sonner';
+	import { couponCreateSchema } from '$lib/schemas/admin';
 	import { formatETB } from '$lib/money';
+	import { date, sortable, status } from '$lib/cells';
 
 	let { data } = $props();
-	let formEl: HTMLFormElement;
-	const expired = (d: Date | string | null) => !!d && new Date(d) < new Date();
+
+	type Row = (typeof data.rows)[number];
+
+	const typeItems = [
+		{ value: 'percent', name: 'Percent off' },
+		{ value: 'flat', name: 'Flat ETB off' }
+	];
+
+	const columns: ColumnDef<Row>[] = [
+		{ id: 'code', accessorKey: 'code', header: sortable('Code'), meta: { class: 'font-mono font-medium' } },
+		{
+			id: 'type',
+			accessorKey: 'type',
+			header: 'Discount',
+			cell: ({ row }) =>
+				row.original.type === 'percent' ? `${row.original.value}%` : formatETB(row.original.value)
+		},
+		{
+			id: 'usesCount',
+			accessorKey: 'usesCount',
+			header: sortable('Used'),
+			cell: ({ row }) =>
+				`${row.original.usesCount}${row.original.maxUses ? ` / ${row.original.maxUses}` : ''}`
+		},
+		{
+			id: 'expiresAt',
+			accessorKey: 'expiresAt',
+			header: sortable('Expires'),
+			cell: ({ row }) => (row.original.expiresAt ? date(row.original.expiresAt) : 'Never')
+		},
+		{
+			id: 'state',
+			accessorKey: 'state',
+			header: 'Status',
+			cell: ({ row }) => status(row.original.state)
+		},
+		{ id: 'actions', header: '', cell: ({ row }) => renderSnippet(actionsCell, row.original) }
+	];
 </script>
 
+{#snippet actionsCell(c: Row)}
+	<div class="flex justify-end gap-2">
+		<ConfirmAction
+			action="?/toggle"
+			fields={{ id: c.id }}
+			label={c.isActive ? 'Pause' : 'Activate'}
+			variant="outline"
+			title="{c.isActive ? 'Pause' : 'Activate'} coupon {c.code}?"
+			description={c.isActive
+				? 'Couples can no longer apply it until it is activated again.'
+				: 'Couples can apply it at checkout again.'}
+		/>
+		<ConfirmAction
+			action="?/remove"
+			fields={{ id: c.id }}
+			label="Delete"
+			variant="destructive"
+			title="Delete coupon {c.code}?"
+		/>
+	</div>
+{/snippet}
+
 <div class="space-y-6">
-	<PageHeader title="Coupons" description="Discount codes couples can apply at checkout." />
+	<PageHeader title="Coupons" description="Discount codes couples can apply at checkout.">
+		<FormDialog
+			title="New coupon"
+			action="?/create"
+			data={data.createForm}
+			schema={couponCreateSchema}
+			triggerLabel="New coupon"
+			submitLabel="Create"
+			resetOnSuccess
+		>
+			{#snippet fields({ form, errors })}
+				<InputComp {form} {errors} name="code" label="Code" placeholder="WELCOME20" required />
+				<InputComp {form} {errors} name="type" label="Type" type="select" items={typeItems} />
+				<InputComp {form} {errors} name="value" label="Value" type="number" min={0} required />
+				<InputComp {form} {errors} name="maxUses" label="Max uses (empty for unlimited)" type="number" min={1} />
+				<InputComp
+					{form}
+					{errors}
+					name="expiresAt"
+					label="Expires (optional)"
+					type="date"
+					oldDays={false}
+					futureDays
+				/>
+			{/snippet}
+		</FormDialog>
+	</PageHeader>
 
-	<Card.Root>
-		<Card.Header><Card.Title class="text-base">New coupon</Card.Title></Card.Header>
-		<Card.Content>
-			<form
-				bind:this={formEl}
-				method="POST"
-				action="?/create"
-				class="flex flex-wrap items-end gap-3"
-				use:enhance={() => async ({ result, update }) => {
-					const msg = (result as { data?: { message?: string } }).data?.message;
-					if (result.type === 'success') {
-						toast.success(msg ?? 'Created');
-						formEl.reset();
-					} else if (result.type === 'failure') toast.error(msg ?? 'Could not create coupon');
-					await update({ reset: false });
-				}}
-			>
-				<label class="text-sm">Code<Input name="code" required placeholder="WELCOME20" class="mt-1 w-40 uppercase" /></label>
-				<label class="text-sm">Type
-					<select name="type" class="border-input bg-background mt-1 block h-9 rounded-md border px-3 text-sm">
-						<option value="percent">Percent off</option>
-						<option value="flat">Flat ETB off</option>
-					</select>
-				</label>
-				<label class="text-sm">Value<Input name="value" type="number" step="0.01" min="0" required class="mt-1 w-28" /></label>
-				<label class="text-sm">Max uses<Input name="maxUses" type="number" min="1" placeholder="∞" class="mt-1 w-24" /></label>
-				<label class="text-sm">Expires<Input name="expiresAt" type="date" class="mt-1 w-40" /></label>
-				<Button type="submit">Create</Button>
-			</form>
-		</Card.Content>
-	</Card.Root>
-
-	<Card.Root><Card.Content class="overflow-x-auto p-0">
-		<Table.Root>
-			<Table.Header><Table.Row>
-				<Table.Head>Code</Table.Head><Table.Head>Discount</Table.Head><Table.Head>Used</Table.Head><Table.Head>Expires</Table.Head><Table.Head>Status</Table.Head><Table.Head class="text-right">Actions</Table.Head>
-			</Table.Row></Table.Header>
-			<Table.Body>
-				{#each data.rows as c (c.id)}
-					<Table.Row>
-						<Table.Cell class="font-mono font-medium">{c.code}</Table.Cell>
-						<Table.Cell>{c.type === 'percent' ? `${c.value}%` : formatETB(c.value)}</Table.Cell>
-						<Table.Cell>{c.usesCount}{c.maxUses ? ` / ${c.maxUses}` : ''}</Table.Cell>
-						<Table.Cell>{c.expiresAt ? new Date(c.expiresAt).toLocaleDateString() : 'Never'}</Table.Cell>
-						<Table.Cell><StatusBadge status={expired(c.expiresAt) ? 'expired' : c.isActive ? 'active' : 'paused'} /></Table.Cell>
-						<Table.Cell class="space-x-2 text-right">
-							<ActionForm action="?/toggle" fields={{ id: c.id }} label={c.isActive ? 'Pause' : 'Activate'} />
-							<ActionForm action="?/remove" fields={{ id: c.id }} label="Delete" variant="destructive" confirmText="Delete coupon {c.code}?" />
-						</Table.Cell>
-					</Table.Row>
-				{:else}
-					<Table.Row><Table.Cell colspan={6} class="text-muted-foreground py-8 text-center">No coupons yet.</Table.Cell></Table.Row>
-				{/each}
-			</Table.Body>
-		</Table.Root>
-	</Card.Content></Card.Root>
+	<DataTable
+		{columns}
+		data={data.rows}
+		facetKeys={['type', 'state']}
+		facetLabels={{ type: 'Type', state: 'Status' }}
+		fileName="Coupons"
+	/>
 </div>

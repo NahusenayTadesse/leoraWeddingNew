@@ -1,24 +1,15 @@
 <script lang="ts">
-	import { superForm } from 'sveltekit-superforms';
-	import { zod4Client } from 'sveltekit-superforms/adapters';
+	import { createForm } from '@nahu/admin-kit/forms/createForm';
 	import { weddingSchema, WEDDING_STYLES } from '$lib/schemas/wedding';
-	import InputComp from '$lib/formComponents/InputComp.svelte';
-	import * as Card from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
-	import { toast } from 'svelte-sonner';
+	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
+	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
 	import { CalendarHeart, Loader2, Users, Wallet } from '@lucide/svelte';
 
 	let { data } = $props();
 
-	const sf = superForm(data.form, {
-		validators: zod4Client(weddingSchema),
-		resetForm: false,
-		onUpdated: ({ form }) => {
-			if (form.message) toast.success(form.message);
-		}
-	});
-
-	const { form, errors, enhance, submitting } = sf;
+	// svelte-ignore state_referenced_locally
+	const { form, errors, enhance, submitting } = createForm(data.form, weddingSchema, { resetForm: false });
 
 	const styleItems = WEDDING_STYLES.map((s) => ({ value: s, name: s }));
 
@@ -32,7 +23,7 @@
 	});
 
 	const perGuest = $derived(
-		$form.totalBudget > 0 && $form.expectedGuests > 0
+		Number($form.totalBudget) > 0 && Number($form.expectedGuests) > 0
 			? Math.round(Number($form.totalBudget) / Number($form.expectedGuests))
 			: null
 	);

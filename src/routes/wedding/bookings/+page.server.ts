@@ -1,4 +1,4 @@
-import { fail, redirect } from '@sveltejs/kit';
+import { redirect } from '@sveltejs/kit';
 import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { db } from '$lib/server/db';
@@ -56,11 +56,11 @@ export const actions: Actions = {
 		const { couple, wedding } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(bookingSchema), { id: 'booking' });
-		if (!form.valid) return fail(400, { form });
+		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
 
 		if (form.data.serviceId) {
 			const ok = await serviceBelongsToVendor(form.data.serviceId, form.data.vendorId);
-			if (!ok) return message(form, "That service doesn't belong to the chosen vendor.", { status: 400 });
+			if (!ok) return message(form, { type: 'error', text: "That service doesn't belong to the chosen vendor." }, { status: 400 });
 		}
 
 		await db.insert(vendorBookings).values({
@@ -89,20 +89,20 @@ export const actions: Actions = {
 			});
 		}
 
-		return message(form, 'Booking request sent. The vendor will confirm shortly.');
+		return message(form, { type: 'success', text: 'Booking request sent. The vendor will confirm shortly.' });
 	},
 
 	cancel: async ({ request, locals }) => {
 		const { wedding } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(bookingIdSchema), { id: 'cancel' });
-		if (!form.valid) return fail(400, { form });
+		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
 
 		const booking = await getBookingForWedding(form.data.id, wedding.id);
-		if (!booking) return fail(403, { form });
+		if (!booking) return message(form, { type: 'error', text: 'That is not yours to change.' }, { status: 403 });
 
 		if (booking.status === 'cancelled') {
-			return message(form, 'That booking is already cancelled.');
+			return message(form, { type: 'success', text: 'That booking is already cancelled.' });
 		}
 
 		await db
@@ -116,20 +116,20 @@ export const actions: Actions = {
 				)
 			);
 
-		return message(form, 'Booking cancelled.');
+		return message(form, { type: 'success', text: 'Booking cancelled.' });
 	},
 
 	pay: async ({ request, locals }) => {
 		const { wedding } = await requireCoupleAndWedding(locals);
 
 		const form = await superValidate(request, zod4(paymentSchema), { id: 'payment' });
-		if (!form.valid) return fail(400, { form });
+		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
 
 		const booking = await getBookingForWedding(form.data.bookingId, wedding.id);
-		if (!booking) return fail(403, { form });
+		if (!booking) return message(form, { type: 'error', text: 'That is not yours to change.' }, { status: 403 });
 
 		if (booking.status === 'cancelled') {
-			return message(form, "You can't record a payment on a cancelled booking.", { status: 400 });
+			return message(form, { type: 'error', text: "You can't record a payment on a cancelled booking." }, { status: 400 });
 		}
 
 		await db.insert(bookingPayments).values({
@@ -145,6 +145,6 @@ export const actions: Actions = {
 			transactionReference: form.data.transactionReference || null
 		});
 
-		return message(form, 'Payment logged. It shows as pending until the vendor confirms it.');
+		return message(form, { type: 'success', text: 'Payment logged. It shows as pending until the vendor confirms it.' });
 	}
 };

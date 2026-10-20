@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Button } from '$lib/components/ui/button';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
 	import { MenuIcon, XIcon } from '@lucide/svelte';
 	import AvatarSettings from './AvatarSettings.svelte';
 	import ThemeToggle from './theme-toggle.svelte';

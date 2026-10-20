@@ -1,36 +1,25 @@
 <script lang="ts">
-	import { superForm } from 'sveltekit-superforms';
-	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import * as Card from '$lib/components/ui/card/index.js';
-	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import InputComp from '$lib/formComponents/InputComp.svelte';
-	import Errors from '$lib/formComponents/Errors.svelte';
-	import DataTable from '$lib/components/Table/data-table.svelte';
+	import type { ColumnDef } from '@tanstack/table-core';
+	import * as Dialog from '@nahu/admin-kit/components/ui/dialog/index.js';
+	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
+	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
+	import FormDialog from '@nahu/admin-kit/formComponents/FormDialog.svelte';
+	import DataTable from '@nahu/admin-kit/components/Table/data-table.svelte';
+	import PageHeader from '$lib/components/admin/PageHeader.svelte';
+	import { subscriptionPlanEditSchema } from '$lib/schemas/admin';
 	import { formatETB } from '$lib/money';
-	import { toast } from 'svelte-sonner';
-	import { Pencil, Loader2, Users, CreditCard } from '@lucide/svelte';
-	import { subscriberColumns, type SubscriberRow } from './columns';
+	import { date, sortable, status, words } from '$lib/cells';
+	import { Pencil, Users, CreditCard } from '@lucide/svelte';
 
 	let { data } = $props();
 
-	let editingId = $state<number | null>(null);
-	let subscribersFor = $state<{ id: number; name: string } | null>(null);
+	type Plan = (typeof data.plans)[number];
+	type Subscriber = (typeof data.subscribers)[number];
 
-	const editSf = superForm(data.editForm, {
-		id: 'edit',
-		resetForm: false,
-		onUpdated: ({ form }) => {
-			if (form.valid && form.message?.type === 'success') {
-				toast.success(form.message.text);
-				editingId = null;
-			} else if (form.message?.type === 'error') {
-				toast.error(form.message.text);
-			}
-		}
-	});
-	const { form: editForm, errors: editErrors, enhance: editEnhance, delayed: editDelayed, allErrors: editAllErrors } =
-		editSf;
+	let editing = $state<Plan | null>(null);
+	let editOpen = $state(false);
+	let subscribersFor = $state<{ id: number; name: string } | null>(null);
 
 	const billingItems = [
 		{ value: 'one_time', name: 'One-time' },
@@ -38,45 +27,37 @@
 		{ value: 'yearly', name: 'Yearly' }
 	];
 
-	function openEdit(plan: (typeof data.plans)[number]) {
-		editingId = plan.id;
-		$editForm.id = plan.id;
-		$editForm.name = plan.name;
-		$editForm.price = plan.price;
-		$editForm.billingCycle = plan.billingCycle;
-		$editForm.features = (plan.features ?? []).join('\n');
+	function openEdit(plan: Plan) {
+		editing = plan;
+		editOpen = true;
 	}
 
-	const columns = subscriberColumns({ status: statusCell, dates: datesCell });
+	const columns: ColumnDef<Subscriber>[] = [
+		{ id: 'name', accessorKey: 'name', header: sortable('Name') },
+		{ id: 'email', accessorKey: 'email', header: 'Email', cell: ({ row }) => row.original.email ?? '—' },
+		{ id: 'kind', accessorKey: 'kind', header: 'Account', cell: ({ row }) => words(row.original.kind) },
+		{ id: 'status', accessorKey: 'status', header: 'Status', cell: ({ row }) => status(row.original.status) },
+		{
+			id: 'startedAt',
+			accessorKey: 'startedAt',
+			header: sortable('Since'),
+			cell: ({ row }) => date(row.original.startedAt)
+		},
+		{
+			id: 'expiresAt',
+			accessorKey: 'expiresAt',
+			header: sortable('Expires'),
+			cell: ({ row }) => (row.original.expiresAt ? date(row.original.expiresAt) : 'No expiry')
+		}
+	];
 
 	const subscribersForPlan = $derived(
 		subscribersFor ? data.subscribers.filter((s) => s.planId === subscribersFor!.id) : []
 	);
 </script>
 
-<svelte:head>
-	<title>Subscriptions — Admin Console</title>
-</svelte:head>
-
-{#snippet statusCell(row: SubscriberRow)}
-	<Badge variant={row.status === 'active' ? 'default' : row.status === 'expired' ? 'outline' : 'destructive'}>
-		{row.status}
-	</Badge>
-{/snippet}
-
-{#snippet datesCell(row: SubscriberRow)}
-	<span class="text-muted-foreground text-xs">
-		{row.startedAt ? new Date(row.startedAt).toLocaleDateString() : '—'}
-		→
-		{row.expiresAt ? new Date(row.expiresAt).toLocaleDateString() : 'no expiry'}
-	</span>
-{/snippet}
-
 <div class="space-y-6">
-	<div>
-		<h1 class="text-2xl font-semibold tracking-tight">Subscriptions</h1>
-		<p class="text-muted-foreground text-sm">Edit plan pricing and see who's subscribed to each.</p>
-	</div>
+	<PageHeader title="Subscriptions" description="Edit plan pricing and see who's subscribed to each." />
 
 	<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 		{#each data.plans as plan (plan.id)}
@@ -125,43 +106,32 @@
 	</div>
 </div>
 
-<!-- Edit price -->
-<Dialog.Root open={editingId !== null} onOpenChange={(v) => !v && (editingId = null)}>
-	<Dialog.Content class="sm:max-w-md">
-		<Dialog.Header>
-			<Dialog.Title>Edit plan</Dialog.Title>
-		</Dialog.Header>
-		<form method="POST" action="?/edit" use:editEnhance class="space-y-1">
-			<input type="hidden" name="id" bind:value={$editForm.id} />
-			<Errors allErrors={$editAllErrors} />
-			<InputComp label="Plan name" name="name" type="text" form={editForm} errors={editErrors} />
-			<InputComp label="Price (ETB)" name="price" type="number" placeholder="0" form={editForm} errors={editErrors} />
-			<InputComp
-				label="Billing cycle"
-				name="billingCycle"
-				type="select"
-				items={billingItems}
-				form={editForm}
-				errors={editErrors}
-			/>
-			<InputComp
-				label="Features (one per line)"
-				name="features"
-				type="textarea"
-				rows={5}
-				form={editForm}
-				errors={editErrors}
-			/>
-			<Dialog.Footer class="pt-4">
-				<Button type="button" variant="outline" onclick={() => (editingId = null)}>Cancel</Button>
-				<Button type="submit" disabled={$editDelayed}>
-					{#if $editDelayed}<Loader2 class="mr-2 size-4 animate-spin" />{/if}
-					Save changes
-				</Button>
-			</Dialog.Footer>
-		</form>
-	</Dialog.Content>
-</Dialog.Root>
+<FormDialog
+	title="Edit {editing?.name ?? 'plan'}"
+	action="?/edit"
+	data={data.editForm}
+	schema={subscriptionPlanEditSchema}
+	bind:open={editOpen}
+	seed={editing
+		? {
+				id: editing.id,
+				name: editing.name,
+				price: editing.price,
+				billingCycle: editing.billingCycle,
+				features: (editing.features ?? []).join('\n')
+			}
+		: {}}
+	hideTrigger
+	submitLabel="Save changes"
+>
+	{#snippet fields({ form, errors })}
+		<InputComp {form} {errors} name="id" type="hidden" />
+		<InputComp {form} {errors} name="name" label="Plan name" />
+		<InputComp {form} {errors} name="price" label="Price (ETB)" type="number" min={0} />
+		<InputComp {form} {errors} name="billingCycle" label="Billing cycle" type="select" items={billingItems} />
+		<InputComp {form} {errors} name="features" label="Features (one per line)" type="textarea" rows={5} />
+	{/snippet}
+</FormDialog>
 
 <!-- Subscriber list -->
 <Dialog.Root open={subscribersFor !== null} onOpenChange={(v) => !v && (subscribersFor = null)}>
@@ -172,7 +142,14 @@
 		{#if subscribersForPlan.length === 0}
 			<p class="text-muted-foreground py-8 text-center text-sm">No one is subscribed to this plan yet.</p>
 		{:else}
-			<DataTable data={subscribersForPlan} {columns} fileName="Subscribers" />
+			<DataTable
+				data={subscribersForPlan}
+				{columns}
+				variant="compact"
+				facetKeys={['kind', 'status']}
+				facetLabels={{ kind: 'Account', status: 'Status' }}
+				fileName="Subscribers — {subscribersFor?.name}"
+			/>
 		{/if}
 	</Dialog.Content>
 </Dialog.Root>

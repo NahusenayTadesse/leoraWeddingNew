@@ -1,94 +1,145 @@
 <script lang="ts">
+	import type { ColumnDef } from '@tanstack/table-core';
+	import { renderSnippet } from '@nahu/admin-kit/components/ui/data-table/index.js';
+	import DataTable from '@nahu/admin-kit/components/Table/data-table.svelte';
+	import FormDialog from '@nahu/admin-kit/formComponents/FormDialog.svelte';
+	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
+	import ConfirmAction from '@nahu/admin-kit/components/ConfirmAction.svelte';
+	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
 	import PageHeader from '$lib/components/admin/PageHeader.svelte';
-	import ActionForm from '$lib/components/admin/ActionForm.svelte';
-	import StatusBadge from '$lib/components/admin/StatusBadge.svelte';
-	import Filter from '$lib/components/admin/Filter.svelte';
-	import * as Card from '$lib/components/ui/card/index.js';
-	import * as Table from '$lib/components/ui/table/index.js';
-	import { Badge } from '$lib/components/ui/badge/index.js';
+	import { userBanSchema, userRoleSchema } from '$lib/schemas/admin';
+	import { date, sortable, status, words } from '$lib/cells';
 
 	let { data } = $props();
-	let q = $state('');
-	let kind = $state('all');
 
-	const rows = $derived(
-		data.users.filter(
-			(u) =>
-				(kind === 'all' || u.kind === kind) &&
-				(`${u.name} ${u.email}`.toLowerCase().includes(q.toLowerCase()))
-		)
-	);
+	type Row = (typeof data.rows)[number];
+
+	let target = $state<Row | null>(null);
+	let banOpen = $state(false);
+	let roleOpen = $state(false);
+
+	const roleItems = $derived([
+		{ value: 0, name: 'No role' },
+		...data.roles.map((r) => ({ value: r.id, name: r.name }))
+	]);
+
+	const columns: ColumnDef<Row>[] = [
+		{ id: 'name', accessorKey: 'name', header: sortable('User') },
+		{
+			id: 'email',
+			accessorKey: 'email',
+			header: sortable('Email'),
+			cell: ({ row }) => `${row.original.email}${row.original.emailVerified ? '' : ' · unverified'}`
+		},
+		{
+			id: 'kind',
+			accessorKey: 'kind',
+			header: 'Type',
+			cell: ({ row }) => (row.original.kind === 'none' ? '—' : words(row.original.kind))
+		},
+		{
+			id: 'roleId',
+			accessorKey: 'roleName',
+			header: 'Role',
+			cell: ({ row }) => row.original.roleName ?? 'No role'
+		},
+		{
+			id: 'banned',
+			header: 'Status',
+			cell: ({ row }) =>
+				row.original.banned
+					? status('banned', row.original.banReason ? `Banned: ${row.original.banReason}` : 'Banned')
+					: status('active')
+		},
+		{
+			id: 'createdAt',
+			accessorKey: 'createdAt',
+			header: sortable('Joined'),
+			cell: ({ row }) => date(row.original.createdAt)
+		},
+		{ id: 'actions', header: '', cell: ({ row }) => renderSnippet(actionsCell, row.original) }
+	];
 </script>
 
-<div class="space-y-6">
-	<PageHeader title="Users" description="Accounts, roles and access. Banned users are signed out on their next request." />
-
-	<div class="flex flex-wrap items-center gap-3">
-		<Filter bind:value={q} placeholder="Search name or email" />
-		<select bind:value={kind} class="border-input bg-background h-9 rounded-md border px-3 text-sm" aria-label="Account type">
-			<option value="all">All accounts</option>
-			<option value="couple">Couples</option>
-			<option value="vendor">Vendors</option>
-			<option value="none">No profile</option>
-		</select>
-		<span class="text-muted-foreground text-sm">{rows.length} shown</span>
+{#snippet actionsCell(row: Row)}
+	<div class="flex justify-end gap-2">
+		<Button
+			size="sm"
+			variant="outline"
+			onclick={() => {
+				target = row;
+				roleOpen = true;
+			}}>Role</Button
+		>
+		{#if row.banned}
+			<ConfirmAction
+				action="?/unban"
+				fields={{ id: row.id }}
+				label="Unban"
+				variant="outline"
+				title="Unban {row.email}?"
+				description="They can sign in again straight away."
+			/>
+		{:else}
+			<Button
+				size="sm"
+				variant="destructive"
+				onclick={() => {
+					target = row;
+					banOpen = true;
+				}}>Ban</Button
+			>
+		{/if}
 	</div>
+{/snippet}
 
-	<Card.Root>
-		<Card.Content class="overflow-x-auto p-0">
-			<Table.Root>
-				<Table.Header>
-					<Table.Row>
-						<Table.Head>User</Table.Head>
-						<Table.Head>Type</Table.Head>
-						<Table.Head>Role</Table.Head>
-						<Table.Head>Status</Table.Head>
-						<Table.Head>Joined</Table.Head>
-						<Table.Head class="text-right">Actions</Table.Head>
-					</Table.Row>
-				</Table.Header>
-				<Table.Body>
-					{#each rows as u (u.id)}
-						<Table.Row>
-							<Table.Cell>
-								<div class="font-medium">{u.name}</div>
-								<div class="text-muted-foreground text-xs">{u.email}{u.emailVerified ? '' : ' · unverified'}</div>
-							</Table.Cell>
-							<Table.Cell class="capitalize">{u.kind === 'none' ? '—' : u.kind}</Table.Cell>
-							<Table.Cell>
-								<ActionForm action="?/setRole" fields={{ id: u.id }} label="Set">
-									<select name="roleId" class="border-input bg-background h-8 rounded-md border px-2 text-sm" aria-label="Role for {u.name}">
-										<option value="0" selected={!u.roleId}>No role</option>
-										{#each data.roles as r (r.id)}
-											<option value={r.id} selected={u.roleId === r.id}>{r.name}</option>
-										{/each}
-									</select>
-								</ActionForm>
-							</Table.Cell>
-							<Table.Cell>
-								{#if u.banned}
-									<StatusBadge status="banned" />
-									{#if u.banReason}<div class="text-muted-foreground mt-1 text-xs">{u.banReason}</div>{/if}
-								{:else}
-									<Badge variant="outline">active</Badge>
-								{/if}
-							</Table.Cell>
-							<Table.Cell class="text-muted-foreground text-sm">{new Date(u.createdAt).toLocaleDateString()}</Table.Cell>
-							<Table.Cell class="text-right">
-								{#if u.banned}
-									<ActionForm action="?/unban" fields={{ id: u.id }} label="Unban" />
-								{:else}
-									<ActionForm action="?/ban" fields={{ id: u.id }} label="Ban" variant="destructive" confirmText="Ban {u.email}?">
-										<input name="reason" placeholder="Reason" class="border-input bg-background h-8 w-32 rounded-md border px-2 text-sm" />
-									</ActionForm>
-								{/if}
-							</Table.Cell>
-						</Table.Row>
-					{:else}
-						<Table.Row><Table.Cell colspan={6} class="text-muted-foreground py-8 text-center">No users match.</Table.Cell></Table.Row>
-					{/each}
-				</Table.Body>
-			</Table.Root>
-		</Card.Content>
-	</Card.Root>
+<div class="space-y-6">
+	<PageHeader
+		title="Users"
+		description="Accounts, roles and access. Banned users are signed out on their next request."
+	/>
+
+	<DataTable
+		{columns}
+		data={data.rows}
+		server={data.server}
+		facetKeys={['kind', 'roleId', 'banned']}
+		facetLabels={{ kind: 'Account type', roleId: 'Role', banned: 'Status' }}
+		dateFilter="Joined"
+		fileName="Users"
+	/>
 </div>
+
+<FormDialog
+	title="Role for {target?.name ?? ''}"
+	action="?/setRole"
+	data={data.roleForm}
+	schema={userRoleSchema}
+	bind:open={roleOpen}
+	seed={{ id: target?.id, roleId: target?.roleId ?? 0 }}
+	hideTrigger
+	submitLabel="Save role"
+>
+	{#snippet fields({ form, errors })}
+		<InputComp {form} {errors} name="id" type="hidden" />
+		<InputComp {form} {errors} name="roleId" label="Role" type="select" items={roleItems} />
+	{/snippet}
+</FormDialog>
+
+<FormDialog
+	title="Ban {target?.email ?? ''}?"
+	description="They are signed out everywhere and refused until unbanned."
+	action="?/ban"
+	data={data.banForm}
+	schema={userBanSchema}
+	bind:open={banOpen}
+	seed={{ id: target?.id }}
+	hideTrigger
+	resetOnSuccess
+	submitLabel="Ban user"
+>
+	{#snippet fields({ form, errors })}
+		<InputComp {form} {errors} name="id" type="hidden" />
+		<InputComp {form} {errors} name="reason" label="Reason (optional)" type="textarea" rows={3} />
+	{/snippet}
+</FormDialog>

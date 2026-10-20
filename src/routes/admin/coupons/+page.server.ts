@@ -1,5 +1,8 @@
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod/v4';
+import { message, setError, superValidate } from 'sveltekit-superforms';
+import { zod4 } from 'sveltekit-superforms/adapters';
+import { couponCreateSchema } from '$lib/schemas/admin';
 import { db } from '$lib/server/db';
 import { coupons } from '$lib/server/db/schema';
 import { parse, ok, bad } from '$lib/server/adminAction';
@@ -14,6 +17,7 @@ export const load: PageServerLoad = async () => {
 		.where(isNull(coupons.deletedAt))
 		.orderBy(desc(coupons.createdAt));
 	return {
+		createForm: await superValidate(zod4(couponCreateSchema)),
 		rows: rows.map((c) => ({
 			id: c.id,
 			code: c.code,
@@ -22,49 +26,42 @@ export const load: PageServerLoad = async () => {
 			maxUses: c.maxUses,
 			usesCount: c.usesCount,
 			expiresAt: c.expiresAt,
-			isActive: c.isActive
+			isActive: c.isActive,
+			/** What the status column shows and filters on. */
+			state: (c.expiresAt && c.expiresAt < new Date() ? 'expired' : c.isActive ? 'active' : 'paused') as
+				| 'expired'
+				| 'active'
+				| 'paused'
 		}))
 	};
 };
 
 const idOnly = z.object({ id: z.coerce.number().int().positive() });
 
-const createSchema = z
-	.object({
-		code: z
-			.string()
-			.trim()
-			.toUpperCase()
-			.regex(/^[A-Z0-9_-]{3,40}$/, 'Code: 3–40 letters, numbers, - or _'),
-		type: z.enum(['percent', 'flat']),
-		value: z.coerce.number().positive('Value must be above 0').max(99_999_999),
-		maxUses: z.preprocess((v) => (v === '' ? undefined : v), z.coerce.number().int().positive().optional()),
-		expiresAt: z.preprocess((v) => (v === '' ? undefined : v), z.coerce.date().optional())
-	})
-	.refine((d) => d.type !== 'percent' || d.value <= 100, { message: 'A percent coupon cannot exceed 100' });
-
 export const actions = {
 	create: async (event) => {
-		const p = await parse(event.request, createSchema);
-		if ('error' in p) return p.error;
+		const form = await superValidate(event.request, zod4(couponCreateSchema));
+		if (!form.valid) {
+			return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
+		}
 		const [dupe] = await db
 			.select({ id: coupons.id })
 			.from(coupons)
-			.where(and(eq(coupons.code, p.data.code), isNull(coupons.deletedAt)));
-		if (dupe) return bad(`Coupon ${p.data.code} already exists`);
+			.where(and(eq(coupons.code, form.data.code), isNull(coupons.deletedAt)));
+		if (dupe) return setError(form, 'code', `Coupon ${form.data.code} already exists`);
 		const [row] = await db
 			.insert(coupons)
 			.values({
-				code: p.data.code,
-				type: p.data.type,
-				value: fromMoney(p.data.value),
-				maxUses: p.data.maxUses ?? null,
-				expiresAt: p.data.expiresAt ?? null,
+				code: form.data.code,
+				type: form.data.type,
+				value: fromMoney(form.data.value),
+				maxUses: form.data.maxUses ?? null,
+				expiresAt: form.data.expiresAt ? new Date(form.data.expiresAt) : null,
 				createdBy: event.locals.user?.id
 			})
 			.$returningId();
-		await audit(event, 'coupon.create', 'coupon', row.id, { code: p.data.code });
-		return ok(`Coupon ${p.data.code} created`);
+		await audit(event, 'coupon.create', 'coupon', row.id, { code: form.data.code });
+		return message(form, { type: 'success', text: `Coupon ${form.data.code} created` });
 	},
 	toggle: async (event) => {
 		const p = await parse(event.request, idOnly);

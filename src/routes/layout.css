@@ -1,9 +1,11 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
+/*
+ * The admin kit's theme without its Google-hosted Inter: Tailwind, tw-animate, the kit's own
+ * `@source`, the `dark` variant and its base styles. Both faces are bundled from fontsource below.
+ * Everything in `:root` / `.dark` here wins over the kit's weightless defaults.
+ */
+@import '@nahu/admin-kit/styles/theme.base.css';
 @import '@fontsource-variable/inter';
 @import '@fontsource-variable/plus-jakarta-sans';
-
-@custom-variant dark (&:is(.dark *));
 
 /*
  * Leora Events theme.
@@ -81,8 +83,10 @@
 	--sidebar-border: oklch(0.9258 0.0116 84.5795);
 	--sidebar-ring: oklch(0.7665 0.1387 91.0594);
 
-	/* PHP sets Plus Jakarta Sans on headings, Inter on body text. */
-	--font-sans: 'Inter Variable', system-ui, sans-serif;
+	/* PHP sets Plus Jakarta Sans on headings, Inter on body text. The kit reads its faces from
+	   the --kit-font-* variables, for the dashboards and its own components alike. */
+	--kit-font-sans: 'Inter Variable', system-ui, sans-serif;
+	--kit-font-head: 'Plus Jakarta Sans Variable', 'Inter Variable', sans-serif;
 	--font-display: 'Plus Jakarta Sans Variable', 'Inter Variable', sans-serif;
 	--font-serif: Georgia, serif;
 	--font-mono: ui-monospace, monospace;
@@ -207,7 +211,6 @@
 	--color-sidebar-border: var(--sidebar-border);
 	--color-sidebar-ring: var(--sidebar-ring);
 
-	--font-sans: var(--font-sans);
 	--font-display: var(--font-display);
 	--font-mono: var(--font-mono);
 	--font-serif: var(--font-serif);

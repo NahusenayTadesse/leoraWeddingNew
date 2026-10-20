@@ -1,4 +1,4 @@
-import { error, fail, redirect } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { db } from '$lib/server/db';
@@ -59,7 +59,7 @@ export const actions: Actions = {
 
 		const vendorId = Number(params.id);
 		const form = await superValidate(request, zod4(reviewSchema), { id: 'review' });
-		if (!form.valid) return fail(400, { form });
+		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
 
 		const vendor = await getVendor(vendorId);
 		if (!vendor) throw error(404, 'Vendor not found');
@@ -77,14 +77,14 @@ export const actions: Actions = {
 			);
 		}
 
-		return message(form, result.updated ? 'Your review was updated.' : 'Thanks for your review!');
+		return message(form, { type: 'success', text: result.updated ? 'Your review was updated.' : 'Thanks for your review!' });
 	},
 
 	favorite: async ({ request, locals, url }) => {
 		if (!locals.user) throw redirect(302, `/login?redirectTo=${encodeURIComponent(url.pathname)}`);
 
 		const form = await superValidate(request, zod4(favoriteSchema), { id: 'favorite' });
-		if (!form.valid) return fail(400, { form });
+		if (!form.valid) return message(form, { type: 'error', text: 'Please check the form for errors' }, { status: 400 });
 
 		await toggleFavorite(locals.user.id, form.data.vendorId);
 

@@ -7,6 +7,9 @@ declare global {
 		interface Locals {
 			user?: User;
 			session?: Session;
+			/** Set by the kit's hook (`kitHandle`); only filled in under `/admin`. */
+			permList: string[];
+			isSuperAdmin: boolean;
 		}
 
 		// interface Error {}

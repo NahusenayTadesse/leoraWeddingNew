@@ -1,10 +1,10 @@
 <script lang="ts">
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
-	import * as Avatar from '$lib/components/ui/avatar/index.js';
+	import ActionForm from '@nahu/admin-kit/formComponents/ActionForm.svelte';
+	import * as DropdownMenu from '@nahu/admin-kit/components/ui/dropdown-menu/index.js';
+	import * as Avatar from '@nahu/admin-kit/components/ui/avatar/index.js';
 
 	import { LogOut, KeyRound } from '@lucide/svelte';
-	import { enhance } from '$app/forms';
-	import LoadingBtn from '$lib/formComponents/LoadingBtn.svelte';
+	import LoadingBtn from '@nahu/admin-kit/formComponents/LoadingBtn.svelte';
 	import { goto } from '$app/navigation';
 	let { data }: { data: string | undefined } = $props();
 
@@ -29,10 +29,9 @@
 				<KeyRound /> Change Password
 			</DropdownMenu.Item>
 			<DropdownMenu.Item>
-				<form
-					method="post"
+				<ActionForm
 					action="/?/logout"
-					use:enhance={() => {
+					submit={() => {
 						deleting = true; // 1. start spinner
 
 						return async ({ update }) => {
@@ -52,7 +51,7 @@
 							<LogOut /> Logout
 						{/if}
 					</button>
-				</form></DropdownMenu.Item
+				</ActionForm></DropdownMenu.Item
 			>
 		</DropdownMenu.Group>
 	</DropdownMenu.Content>

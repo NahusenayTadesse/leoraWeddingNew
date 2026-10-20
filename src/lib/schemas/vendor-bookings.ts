@@ -15,20 +15,9 @@ const money = z.coerce
 
 /* ---------- URL filters (parsed in load, never posted) ---------- */
 
+/** Which bookings the table shows; `?tab=`. Search, filters, sort and paging are the table's own. */
 export const bookingTab = z.enum(['upcoming', 'pending', 'confirmed', 'past', 'cancelled', 'all']);
-export const bookingSort = z.enum(['date_asc', 'date_desc', 'created_desc', 'price_desc']);
-
-export const bookingFilters = z.object({
-	tab: bookingTab.catch('upcoming'),
-	q: z.string().trim().max(100).catch(''),
-	from: isoDate.optional().catch(undefined),
-	to: isoDate.optional().catch(undefined),
-	serviceId: z.coerce.number().int().positive().optional().catch(undefined),
-	sort: bookingSort.catch('date_asc'),
-	page: z.coerce.number().int().min(1).max(9999).catch(1)
-});
-
-export type BookingFilters = z.infer<typeof bookingFilters>;
+export type BookingTab = z.infer<typeof bookingTab>;
 
 /* ---------- actions ---------- */
 

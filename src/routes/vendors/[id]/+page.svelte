@@ -31,6 +31,32 @@
 
 	let { data } = $props();
 
+	/**
+	 * Structured data for search results (business, location, rating). `<` is escaped so a
+	 * description can't close the script tag.
+	 */
+	const jsonLd = $derived(
+		JSON.stringify({
+			'@context': 'https://schema.org',
+			'@type': 'LocalBusiness',
+			name: data.vendor.businessName,
+			description: data.vendor.description ?? undefined,
+			telephone: data.vendor.phone ?? undefined,
+			address: data.vendor.city
+				? { '@type': 'PostalAddress', addressLocality: data.vendor.city, addressCountry: 'ET' }
+				: undefined,
+			priceRange: formatPriceRange(data.vendor.priceMin, data.vendor.priceMax) ?? undefined,
+			aggregateRating:
+				data.vendor.reviewCount > 0 && data.vendor.avgRating
+					? {
+							'@type': 'AggregateRating',
+							ratingValue: data.vendor.avgRating,
+							reviewCount: data.vendor.reviewCount
+						}
+					: undefined
+		}).replace(/</g, '\\u003c')
+	);
+
 	type Calendar = { month: string; blocked: string[]; booked: string[] };
 	let calendar = $state<Calendar | null>(null);
 
@@ -95,6 +121,9 @@
 <svelte:head>
 	<title>{data.vendor.businessName} · Leora Events</title>
 	<meta name="description" content={data.vendor.description ?? data.vendor.businessName} />
+	<meta property="og:title" content="{data.vendor.businessName} · Leora Events" />
+	<meta property="og:description" content={data.vendor.description ?? data.vendor.businessName} />
+	{@html `<script type="application/ld+json">${jsonLd}</script>`}
 </svelte:head>
 
 <div class="mx-auto max-w-6xl px-4 py-8 lg:px-6">

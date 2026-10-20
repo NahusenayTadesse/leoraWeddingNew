@@ -65,6 +65,13 @@
 
 <svelte:head>
 	<link rel="icon" href="/leora-logo.jpg" />
+	<!-- Defaults for link previews; pages add their own title/description. -->
+	<meta property="og:site_name" content="Leora Events" />
+	<meta property="og:type" content="website" />
+	<meta property="og:url" content={page.url.origin + page.url.pathname} />
+	<meta property="og:image" content="{page.url.origin}/leora-logo.jpg" />
+	<meta name="twitter:card" content="summary" />
+	<link rel="canonical" href={page.url.origin + page.url.pathname} />
 </svelte:head>
 <ModeWatcher />
 

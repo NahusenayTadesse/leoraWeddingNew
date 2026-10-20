@@ -133,13 +133,21 @@ export const actions: Actions = {
 					inclusions: inclusions.length ? inclusions : undefined
 				});
 
+				// Only a free vendor plan starts here. A paid one used to become active with no
+				// payment at all; it is now bought on /vendor-dashboard/plan.
 				if (planId) {
-					await tx.insert(vendorSubscriptions).values({
-						vendorId: vendorRow.id,
-						planId,
-						status: 'active',
-						startsAt: new Date().toISOString().slice(0, 10)
-					});
+					const [plan] = await tx
+						.select({ price: subscriptionPlans.price, audience: subscriptionPlans.audience })
+						.from(subscriptionPlans)
+						.where(eq(subscriptionPlans.id, planId));
+					if (plan?.audience === 'vendor' && Number(plan.price) === 0) {
+						await tx.insert(vendorSubscriptions).values({
+							vendorId: vendorRow.id,
+							planId,
+							status: 'active',
+							startsAt: new Date().toISOString().slice(0, 10)
+						});
+					}
 				}
 			});
 		} catch (error) {
@@ -153,6 +161,9 @@ export const actions: Actions = {
 
 		// Stays on the wizard — the success step (with its "Go to Vendor Portal"
 		// button) is part of the same card in the PHP flow, not a redirect.
-		return message(form, { type: 'success', text: 'Listing created.' });
+		return message(form, {
+			type: 'success',
+			text: 'Listing created. It goes live once our team approves it. You can activate your plan from Vendor Portal → Plan.'
+		});
 	}
 };

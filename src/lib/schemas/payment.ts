@@ -44,7 +44,7 @@ export const planTransferSchema = planPaySchema.extend(transferFields);
 
 /** Staff decisions on the admin Payments page. */
 export const reviewSchema = z.object({
-	kind: z.enum(['booking', 'plan']),
+	kind: z.enum(['booking', 'plan', 'vendor_plan']),
 	id: z.coerce.number().int().positive(),
 	reason: z.string().trim().max(500).default('')
 });

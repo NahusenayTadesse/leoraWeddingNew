@@ -38,6 +38,7 @@ import {
 	serviceBelongsToVendor,
 	getVendorForMessage,
 	getServiceTitle,
+	respondToQuote,
 	toDateInput
 } from '$lib/server/bookings';
 import { requireCoupleAndWedding } from '$lib/server/weddings';
@@ -309,5 +310,27 @@ export const actions: Actions = {
 			link: '/vendor-dashboard/bookings'
 		});
 		return ok('Contract signed.');
+	},
+
+	/** Accept or decline a vendor's quote. Accepting sets the booking's agreed price. */
+	respondQuote: async ({ request, locals }) => {
+		const { wedding } = await requireCoupleAndWedding(locals);
+		const p = await parse(
+			request,
+			z.object({ quoteId: z.coerce.number().int().positive(), accept: z.enum(['yes', 'no']) })
+		);
+		if ('error' in p) return p.error;
+		const accept = p.data.accept === 'yes';
+		const result = await respondToQuote(p.data.quoteId, wedding.id, accept);
+		if (!result) return bad('That quote is no longer open.');
+		await notify(result.vendorUserId, {
+			type: accept ? 'quote_accepted' : 'quote_declined',
+			title: accept ? 'Quote accepted' : 'Quote declined',
+			body: accept
+				? `The couple accepted your quote of ETB ${result.price} for booking #${result.bookingId}.`
+				: `The couple declined your quote for booking #${result.bookingId}.`,
+			link: '/vendor-dashboard/bookings'
+		});
+		return ok(accept ? 'Quote accepted — the agreed price is updated.' : 'Quote declined.');
 	}
 };

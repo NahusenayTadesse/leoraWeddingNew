@@ -417,6 +417,27 @@
 						</div>
 					{/if}
 
+					{#each booking.quotes as quote (quote.id)}
+						<div class="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-(--leora-gold) bg-(--leora-gold-soft) p-3 text-sm">
+							<div>
+								<p class="font-medium">Quote: {etb(quote.proposedPrice)} ETB</p>
+								{#if quote.notes}<p class="text-muted-foreground">{quote.notes}</p>{/if}
+							</div>
+							<div class="flex gap-2">
+								<ActionForm action="?/respondQuote" fields={{ quoteId: quote.id, accept: 'no' }}>
+									{#snippet children({ busy })}
+										<Button type="submit" variant="ghost" size="sm" disabled={!!busy}>Decline</Button>
+									{/snippet}
+								</ActionForm>
+								<ActionForm action="?/respondQuote" fields={{ quoteId: quote.id, accept: 'yes' }}>
+									{#snippet children({ busy })}
+										<Button type="submit" size="sm" disabled={!!busy}>Accept</Button>
+									{/snippet}
+								</ActionForm>
+							</div>
+						</div>
+					{/each}
+
 					{#if booking.payments.length}
 						<details class="mt-3 text-sm">
 							<summary class="cursor-pointer text-xs font-medium text-muted-foreground">

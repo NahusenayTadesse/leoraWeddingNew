@@ -4,6 +4,7 @@ import {
 	Building2,
 	CalendarCheck,
 	CalendarDays,
+	Crown,
 	CreditCard,
 	Gavel,
 	Landmark,
@@ -46,5 +47,6 @@ export const VENDOR_NAVIGATION: NavItem[] = [
 	{ title: 'Bookings', url: '/vendor-dashboard/bookings', icon: CalendarCheck },
 	{ title: 'Availability', url: '/vendor-dashboard/availability', icon: CalendarDays },
 	{ title: 'Payments', url: '/vendor-dashboard/payments', icon: Wallet },
+	{ title: 'Plan', url: '/vendor-dashboard/plan', icon: Crown },
 	{ title: 'Messages', url: '/vendor-dashboard/messages', icon: MessageSquare }
 ];

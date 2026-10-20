@@ -43,6 +43,13 @@
       "when": 1792511573905,
       "tag": "0005_contract_signatures",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1792512024151,
+      "tag": "0006_vendor_plan_payments",
+      "breakpoints": true
     }
   ]
 }

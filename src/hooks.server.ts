@@ -13,18 +13,12 @@ import { paraglideMiddleware } from '$lib/paraglide/server';
 
 configureKit({ db, loginPath: '/login' });
 
-/**
- * Background work for this process: Chapa payments nobody came back for are re-verified every
- * ten minutes (`reconcileStale`). One Node process is assumed; with several, run it in one only
- * (set RUN_JOBS=false on the others).
- */
+/** Background jobs (payment reconcile, plan expiry, reminders) — see $lib/server/jobs. */
 export const init: ServerInit = async () => {
 	if (building || process.env.RUN_JOBS === 'false') return;
-	const { reconcileStale } = await import('$lib/server/payments');
-	const tick = () =>
-		reconcileStale().catch((err) => console.error('[jobs] reconcile-payments failed:', err));
-	setInterval(tick, 10 * 60_000).unref();
-	setTimeout(tick, 30_000).unref();
+	const { runJobs } = await import('$lib/server/jobs');
+	setInterval(runJobs, 10 * 60_000).unref();
+	setTimeout(runJobs, 30_000).unref();
 };
 
 /** Unexpected errors: logged with a short id the user can quote; no internals in the response. */

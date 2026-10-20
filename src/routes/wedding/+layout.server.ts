@@ -15,7 +15,14 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 	const wedding = couple ? await getWeddingByCoupleId(couple.id) : null;
 
 	// Pages that can't function without a wedding record.
-	const needsWedding = ['/wedding/budget', '/wedding/guests', '/wedding/tasks', '/wedding/bookings'];
+	const needsWedding = [
+		'/wedding/budget',
+		'/wedding/guests',
+		'/wedding/tasks',
+		'/wedding/bookings',
+		'/wedding/events',
+		'/wedding/seating'
+	];
 	if (!wedding && needsWedding.some((p) => url.pathname.startsWith(p))) {
 		throw redirect(302, '/wedding/wedding');
 	}

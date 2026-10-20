@@ -92,12 +92,16 @@ async function reviewTab() {
 				createdAt: payments.createdAt,
 				couple: coupleName,
 				payerEmail: couples.email,
+				vendorId: payments.vendorId,
+				vendorName: vendors.businessName,
+				vendorEmail: vendors.email,
 				plan: subscriptionPlans.name,
 				bank: bankAccounts.bankName,
 				account: bankAccounts.accountNumber
 			})
 			.from(payments)
 			.leftJoin(couples, eq(couples.id, payments.coupleId))
+			.leftJoin(vendors, eq(vendors.id, payments.vendorId))
 			.leftJoin(subscriptionPlans, eq(subscriptionPlans.id, payments.subscriptionPlanId))
 			.leftJoin(bankAccounts, eq(bankAccounts.id, payments.bankAccountId))
 			.where(and(eq(payments.status, 'pending'), eq(payments.paymentMethod, 'bank_transfer')))
@@ -118,12 +122,12 @@ async function reviewTab() {
 			createdAt: r.createdAt
 		})),
 		...planRows.map((r) => ({
-			kind: 'plan' as PaymentKind,
+			kind: (r.vendorId ? 'vendor_plan' : 'plan') as PaymentKind,
 			id: r.id,
 			amount: toMoney(r.amount),
-			payer: r.couple || '—',
-			payerEmail: r.payerEmail,
-			forWhat: `${r.plan ?? 'Plan'} plan`,
+			payer: r.vendorId ? (r.vendorName ?? 'Vendor') : r.couple || '—',
+			payerEmail: r.vendorId ? r.vendorEmail : r.payerEmail,
+			forWhat: `${r.plan ?? 'Plan'} ${r.vendorId ? 'vendor ' : ''}plan`,
 			bank: r.bank ? `${r.bank} · ${r.account}` : '—',
 			receiptFile: r.receiptFile,
 			note: r.note,
@@ -221,7 +225,8 @@ const planSpec: WhereSpec<(typeof PLAN_FILTERS)[number]> = {
 		method: (v) => eq(payments.paymentMethod, v as typeof payments.paymentMethod._.data)
 	}
 };
-const planJoined = <T extends MySqlSelect>(q: T) => q.leftJoin(couples, eq(couples.id, payments.coupleId));
+const planJoined = <T extends MySqlSelect>(q: T) =>
+	q.leftJoin(couples, eq(couples.id, payments.coupleId)).leftJoin(vendors, eq(vendors.id, payments.vendorId));
 
 async function planTab(query: TableQuery<(typeof PLAN_FILTERS)[number]>) {
 	const where = buildWhere(query, planSpec);
@@ -237,7 +242,8 @@ async function planTab(query: TableQuery<(typeof PLAN_FILTERS)[number]>) {
 					receiptFile: payments.receiptFile,
 					paidAt: payments.paidAt,
 					createdAt: payments.createdAt,
-					couple: coupleName
+					couple: coupleName,
+					vendorName: vendors.businessName
 				})
 				.from(payments)
 				.$dynamic()
@@ -260,7 +266,11 @@ async function planTab(query: TableQuery<(typeof PLAN_FILTERS)[number]>) {
 	]);
 
 	return {
-		rows: rows.map((p) => ({ ...p, amount: toMoney(p.amount), couple: p.couple || '—' })),
+		rows: rows.map((p) => ({
+			...p,
+			amount: toMoney(p.amount),
+			couple: p.couple || (p.vendorName ? `${p.vendorName} (vendor)` : '—')
+		})),
 		server: { pagination: pagination(query, total), facets, filters: currentQuery(query) }
 	};
 }

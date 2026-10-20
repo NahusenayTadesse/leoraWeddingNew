@@ -1,6 +1,19 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Heart, User, CalendarHeart, Wallet, Users, ListChecks, Store, MessageSquare } from '@lucide/svelte';
+	import {
+		Heart,
+		User,
+		CalendarHeart,
+		CalendarRange,
+		Wallet,
+		Users,
+		Armchair,
+		ListChecks,
+		Store,
+		Bookmark,
+		MessageSquare
+	} from '@lucide/svelte';
+	import { m } from '$lib/paraglide/messages.js';
 	import { cn } from '$lib/utils';
 	import * as Avatar from '@nahu/admin-kit/components/ui/avatar/index.js';
 	import { Separator } from '@nahu/admin-kit/components/ui/separator/index.js';
@@ -13,9 +26,12 @@
 		{ href: '/wedding/profile', label: 'Couple details', icon: User },
 		{ href: '/wedding/wedding', label: 'Wedding', icon: CalendarHeart },
 		{ href: '/wedding/budget', label: 'Budget', icon: Wallet },
+		{ href: '/wedding/events', label: m.nav_events(), icon: CalendarRange },
 		{ href: '/wedding/guests', label: 'Guests', icon: Users },
+		{ href: '/wedding/seating', label: m.nav_seating(), icon: Armchair },
 		{ href: '/wedding/tasks', label: 'Tasks', icon: ListChecks },
 		{ href: '/wedding/bookings', label: 'Bookings', icon: Store },
+		{ href: '/wedding/saved', label: m.nav_saved(), icon: Bookmark },
 		{ href: '/wedding/messages', label: 'Messages', icon: MessageSquare }
 	];
 

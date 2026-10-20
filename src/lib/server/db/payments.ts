@@ -135,6 +135,8 @@ export const payments = mysqlTable(
 		id: intPk(),
 		/** SET NULL, not CASCADE — see the note on bookingPayments. */
 		coupleId: int('couple_id').references(() => couples.id, { onDelete: 'set null' }),
+		/** Set instead of `coupleId` when a vendor buys a vendor plan (Growth, Featured). */
+		vendorId: int('vendor_id').references(() => vendors.id, { onDelete: 'set null' }),
 		subscriptionId: int('subscription_id').references(() => subscriptions.id, {
 			onDelete: 'set null'
 		}),
@@ -173,6 +175,7 @@ export const payments = mysqlTable(
 	},
 	(table) => [
 		index('payments_couple_idx').on(table.coupleId),
+		index('payments_vendor_idx').on(table.vendorId),
 		index('payments_status_idx').on(table.status),
 		index('payments_receipt_idx').on(table.receiptFile),
 		// The gateway's reference is the idempotency key: a retried or

@@ -30,11 +30,16 @@ export const GET: RequestHandler = async ({ params, request, locals, url }) => {
 			: await db
 					.select({ id: payments.id })
 					.from(payments)
-					.innerJoin(couples, eq(couples.id, payments.coupleId))
+					.leftJoin(couples, eq(couples.id, payments.coupleId))
+					.leftJoin(vendors, eq(vendors.id, payments.vendorId))
 					.where(
 						and(
 							eq(payments.receiptFile, params.name!),
-							or(eq(couples.partner1UserId, userId), eq(couples.partner2UserId, userId))
+							or(
+								eq(couples.partner1UserId, userId),
+								eq(couples.partner2UserId, userId),
+								eq(vendors.userId, userId)
+							)
 						)
 					)
 					.limit(1);

@@ -1,8 +1,9 @@
 /**
  * The payment pipeline for both money flows (see db/payments.ts):
  *
- *   booking  — a couple paying a vendor through Leora   → `booking_payments`, tx_ref `bk-…`
- *   plan     — a couple buying a Leora plan              → `payments`,         tx_ref `pl-…`
+ *   booking      — a couple paying a vendor through Leora → `booking_payments`, tx_ref `bk-…`
+ *   plan         — a couple buying a Leora plan           → `payments`,         tx_ref `pl-…`
+ *   vendor_plan  — a vendor buying a vendor plan          → `payments`,         tx_ref `vp-…`
  *
  * Each attempt is one row, written `pending` before the customer leaves for Chapa so a webhook
  * that beats them back can be matched. A row becomes paid in exactly two ways:
@@ -29,20 +30,23 @@ import {
 	vendors
 } from '$lib/server/db/schema';
 import { confirmBookingPayment } from '$lib/server/bookingPayments';
-import { activateSubscription } from '$lib/server/subscriptions';
+import { activateSubscription, activateVendorPlan } from '$lib/server/subscriptions';
 import { notify, notifyAdmins } from '$lib/server/notify';
 import { formatETB, fromMoney, toMoney } from '$lib/money';
 import { initializeTransaction, verifyTransaction } from './chapa';
 
-export type PaymentKind = 'booking' | 'plan';
+export type PaymentKind = 'booking' | 'plan' | 'vendor_plan';
 
 /** Money comparisons get a cent of slack for decimal round-tripping. */
 const TOLERANCE = 0.01;
 
 const RETURN_PATH: Record<PaymentKind, string> = {
 	booking: '/wedding/bookings',
-	plan: '/pricing'
+	plan: '/pricing',
+	vendor_plan: '/vendor-dashboard/plan'
 };
+
+const TX_PREFIX: Record<PaymentKind, string> = { booking: 'bk', plan: 'pl', vendor_plan: 'vp' };
 
 /** Something the customer can be told: the record can't be paid, the account is wrong… */
 export class PaymentRefused extends Error {
@@ -62,13 +66,13 @@ export class PaymentStartError extends Error {
 
 /** `bk-12-a1b2c3d4e5`: kind, record, and enough randomness that attempts never collide. */
 export function newTxRef(kind: PaymentKind, id: number) {
-	return `${kind === 'booking' ? 'bk' : 'pl'}-${id}-${randomBytes(5).toString('hex')}`;
+	return `${TX_PREFIX[kind]}-${id}-${randomBytes(5).toString('hex')}`;
 }
 
 export function kindOf(txRef: string): PaymentKind | null {
-	if (txRef.startsWith('bk-')) return 'booking';
-	if (txRef.startsWith('pl-')) return 'plan';
-	return null;
+	const prefix = txRef.split('-')[0];
+	const found = (Object.keys(TX_PREFIX) as PaymentKind[]).find((k) => TX_PREFIX[k] === prefix);
+	return found ?? null;
 }
 
 function callbackUrls(origin: string, txRef: string) {
@@ -480,6 +484,131 @@ export async function settlePlan(
 }
 
 // ---------------------------------------------------------------------------
+// Vendor plans
+// ---------------------------------------------------------------------------
+
+export type VendorPlanInput = {
+	vendorId: number;
+	planId: number;
+	payer: { id: string; name: string; email: string; phone?: string | null };
+};
+
+async function priceVendorPlan(planId: number) {
+	const [plan] = await db
+		.select()
+		.from(subscriptionPlans)
+		.where(
+			and(
+				eq(subscriptionPlans.id, planId),
+				eq(subscriptionPlans.audience, 'vendor'),
+				eq(subscriptionPlans.isActive, true),
+				isNull(subscriptionPlans.deletedAt)
+			)
+		)
+		.limit(1);
+	if (!plan) throw new PaymentRefused('This plan is no longer available.');
+	return { plan, price: toMoney(plan.price) };
+}
+
+/** Starts paying for a vendor plan; a free plan is activated straight away. */
+export async function startVendorPlanChapa(input: VendorPlanInput, origin: string): Promise<PlanStart> {
+	const { plan, price } = await priceVendorPlan(input.planId);
+	const txRef = newTxRef('vendor_plan', input.vendorId);
+
+	if (price <= 0) {
+		const [row] = await db
+			.insert(payments)
+			.values({ vendorId: input.vendorId, subscriptionPlanId: plan.id, amount: '0.00', status: 'pending', transactionRef: txRef })
+			.$returningId();
+		await settleVendorPlan(row.id, { verifyPayload: 'Free plan' });
+		return { kind: 'activated' };
+	}
+
+	await db.insert(payments).values({
+		vendorId: input.vendorId,
+		subscriptionPlanId: plan.id,
+		amount: fromMoney(price),
+		currency: 'ETB',
+		paymentMethod: 'chapa',
+		status: 'pending',
+		transactionRef: txRef
+	});
+	try {
+		const url = await initializeTransaction({
+			amount: price,
+			name: input.payer.name,
+			email: input.payer.email,
+			phone: input.payer.phone,
+			txRef,
+			...callbackUrls(origin, txRef),
+			description: `${plan.name} vendor plan`
+		});
+		await db.update(payments).set({ checkoutUrl: url }).where(eq(payments.transactionRef, txRef));
+		return { kind: 'checkout', url };
+	} catch (err) {
+		await db
+			.update(payments)
+			.set({ status: 'failed', verifyPayload: String((err as Error).message).slice(0, 2000) })
+			.where(and(eq(payments.transactionRef, txRef), eq(payments.status, 'pending')));
+		throw new PaymentStartError(err);
+	}
+}
+
+export async function submitVendorPlanTransfer(
+	input: VendorPlanInput & { bankAccountId: number; receiptFile: string; reference?: string }
+) {
+	const { plan, price } = await priceVendorPlan(input.planId);
+	if (price <= 0) throw new PaymentRefused('This plan is free.');
+	await assertAccount(input.bankAccountId);
+	await db.insert(payments).values({
+		vendorId: input.vendorId,
+		subscriptionPlanId: plan.id,
+		amount: fromMoney(price),
+		currency: 'ETB',
+		paymentMethod: 'bank_transfer',
+		status: 'pending',
+		transactionRef: newTxRef('vendor_plan', input.vendorId),
+		bankAccountId: input.bankAccountId,
+		receiptFile: input.receiptFile,
+		verifyPayload: input.reference ? `Customer reference: ${input.reference}`.slice(0, 2000) : null
+	});
+	await notifyAdmins({
+		type: 'payment_review',
+		title: 'Transfer receipt to review',
+		body: `${input.payer.name} uploaded a receipt for ${formatETB(price)} (${plan.name} vendor plan).`,
+		link: '/admin/payments'
+	});
+}
+
+/** Marks a vendor plan payment completed and activates the plan, once, under a row lock. */
+export async function settleVendorPlan(
+	paymentId: number,
+	extra: Partial<typeof payments.$inferInsert> = {}
+): Promise<boolean> {
+	const settled = await db.transaction(async (tx) => {
+		const [p] = await tx.select().from(payments).where(eq(payments.id, paymentId)).for('update');
+		if (!p || p.status !== 'pending' || !p.vendorId || !p.subscriptionPlanId) return null;
+		const activated = await activateVendorPlan(p.vendorId, p.subscriptionPlanId, tx);
+		const now = new Date();
+		await tx
+			.update(payments)
+			.set({ status: 'completed', paidAt: now, verifiedAt: now, ...extra })
+			.where(eq(payments.id, p.id));
+		return { vendorId: p.vendorId, planName: activated?.planName ?? 'your plan', endsAt: activated?.endsAt };
+	});
+	if (settled) {
+		const [v] = await db.select({ userId: vendors.userId }).from(vendors).where(eq(vendors.id, settled.vendorId));
+		await notify(v?.userId, {
+			type: 'plan_activated',
+			title: 'Your vendor plan is active',
+			body: `${settled.planName} is active${settled.endsAt ? ` until ${settled.endsAt}` : ''}.`,
+			link: '/vendor-dashboard/plan'
+		});
+	}
+	return !!settled;
+}
+
+// ---------------------------------------------------------------------------
 // Settlement: Chapa verify, staff review, reconcile
 // ---------------------------------------------------------------------------
 
@@ -578,6 +707,8 @@ export async function verify(txRef: string): Promise<VerifyOutcome> {
 	if (kind === 'booking') {
 		const outcome = await confirmBookingPayment(row.id, { extra });
 		if (outcome.ok) await announceBookingPaid(row.id);
+	} else if (kind === 'vendor_plan') {
+		await settleVendorPlan(row.id, extra);
 	} else {
 		await settlePlan(row.id, extra);
 	}
@@ -609,7 +740,8 @@ export async function confirmTransfer(kind: PaymentKind, id: number, reviewerId:
 	if (row.method === 'chapa') {
 		throw new PaymentRefused('Chapa payments settle through Chapa. Use "Check with Chapa".');
 	}
-	if (!(await settlePlan(id, { reviewedBy: reviewerId }))) {
+	const settle = kind === 'vendor_plan' ? settleVendorPlan : settlePlan;
+	if (!(await settle(id, { reviewedBy: reviewerId }))) {
 		throw new PaymentRefused('This payment is no longer pending.');
 	}
 }
@@ -657,11 +789,12 @@ export async function rejectTransfer(
 			);
 		if (!res[0].affectedRows) throw new PaymentRefused('This payment is no longer pending.');
 		const [row] = await db
-			.select({ p1: couples.partner1UserId })
+			.select({ p1: couples.partner1UserId, vendorUser: vendors.userId })
 			.from(payments)
-			.innerJoin(couples, eq(couples.id, payments.coupleId))
+			.leftJoin(couples, eq(couples.id, payments.coupleId))
+			.leftJoin(vendors, eq(vendors.id, payments.vendorId))
 			.where(eq(payments.id, id));
-		payerId = row?.p1 ?? null;
+		payerId = row?.p1 ?? row?.vendorUser ?? null;
 	}
 
 	await notify(payerId, {

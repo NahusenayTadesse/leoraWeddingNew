@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { vendorBookings, vendors, vendorServices, bookingPayments } from '$lib/server/db/schema';
+import { vendorBookings, vendors, vendorServices, bookingPayments, vendorQuotes } from '$lib/server/db/schema';
 import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { contractsForBookings } from '$lib/server/contracts';
 
@@ -93,6 +93,25 @@ export async function listBookings(weddingPlanId: number) {
 		.orderBy(sql`${bookingPayments.createdAt} DESC`);
 
 	const contractByBooking = await contractsForBookings(rows.map((r) => r.id));
+	const openQuotes = await db
+		.select({
+			id: vendorQuotes.id,
+			bookingId: vendorQuotes.bookingId,
+			proposedPrice: vendorQuotes.proposedPrice,
+			notes: vendorQuotes.notes,
+			createdAt: vendorQuotes.createdAt
+		})
+		.from(vendorQuotes)
+		.where(
+			and(
+				inArray(
+					vendorQuotes.bookingId,
+					rows.map((r) => r.id)
+				),
+				eq(vendorQuotes.status, 'sent')
+			)
+		)
+		.orderBy(sql`${vendorQuotes.createdAt} DESC`);
 
 	return rows.map((r) => {
 		const t = byBooking.get(r.id);
@@ -107,6 +126,9 @@ export async function listBookings(weddingPlanId: number) {
 			pendingPaid: pending,
 			balance: Math.max(0, Math.round((agreed - paid - pending) * 100) / 100),
 			contract: contractByBooking.get(r.id) ?? null,
+			quotes: openQuotes
+				.filter((q) => q.bookingId === r.id)
+				.map((q) => ({ ...q, proposedPrice: Number(q.proposedPrice ?? 0) })),
 			payments: history
 				.filter((h) => h.bookingId === r.id)
 				.map((h) => ({
@@ -194,4 +216,40 @@ export function toDateInput(value: unknown): string {
 		return `${value.getFullYear()}-${m}-${d}`;
 	}
 	return String(value).slice(0, 10);
+}
+
+/**
+ * The couple accepts a vendor's quote: it becomes the booking's agreed price and any other open
+ * quotes on the booking are declined. Returns the vendor's user id for the notification.
+ */
+export async function respondToQuote(quoteId: number, weddingPlanId: number, accept: boolean) {
+	return db.transaction(async (tx) => {
+		const [q] = await tx
+			.select({
+				id: vendorQuotes.id,
+				bookingId: vendorQuotes.bookingId,
+				price: vendorQuotes.proposedPrice,
+				status: vendorQuotes.status,
+				vendorUserId: vendors.userId
+			})
+			.from(vendorQuotes)
+			.innerJoin(vendorBookings, eq(vendorBookings.id, vendorQuotes.bookingId))
+			.innerJoin(vendors, eq(vendors.id, vendorQuotes.vendorId))
+			.where(and(eq(vendorQuotes.id, quoteId), eq(vendorBookings.weddingPlanId, weddingPlanId)))
+			.for('update');
+		if (!q || q.status !== 'sent') return null;
+
+		await tx
+			.update(vendorQuotes)
+			.set({ status: accept ? 'accepted' : 'rejected' })
+			.where(eq(vendorQuotes.id, q.id));
+		if (accept) {
+			await tx.update(vendorBookings).set({ agreedPrice: q.price }).where(eq(vendorBookings.id, q.bookingId));
+			await tx
+				.update(vendorQuotes)
+				.set({ status: 'rejected' })
+				.where(and(eq(vendorQuotes.bookingId, q.bookingId), eq(vendorQuotes.status, 'sent')));
+		}
+		return { vendorUserId: q.vendorUserId, price: q.price, bookingId: q.bookingId };
+	});
 }

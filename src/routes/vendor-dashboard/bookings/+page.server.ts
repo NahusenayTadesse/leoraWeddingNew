@@ -274,6 +274,12 @@ export const actions: Actions = {
 			status: 'sent'
 		});
 
+		await notify(booking.partner1UserId, {
+			type: 'quote_received',
+			title: 'New quote',
+			body: `${vendor.businessName ?? 'Your vendor'} sent you a quote of ETB ${fromMoney(form.data.proposedPrice)}.`,
+			link: '/wedding/bookings'
+		});
 		return message(form, { type: 'success', text: 'Quote sent to the couple' });
 	},
 

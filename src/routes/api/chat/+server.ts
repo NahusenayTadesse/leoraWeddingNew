@@ -21,7 +21,7 @@ const COOKIE_MAX_AGE_SECONDS = 24 * 60 * 60;
 let client: GoogleGenAI | null = null;
 function ai(): GoogleGenAI {
 	if (!env.GEMINI_KEY) throw new Error('GEMINI_KEY is not configured');
-	return (client ??= new GoogleGenAI({ apiKey: env.GEMINI_KEY }));
+	return (client ??= new GoogleGenAI({ apiKey: env.GEMINI_KEY, httpOptions: { timeout: 30_000 } }));
 }
 
 // Using a standard high-efficiency Gemini model
@@ -288,9 +288,9 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress,
 			}
 		}
 
-		// 2. Append the execution output to the conversation history under the 'function' role
+		// 2. Append the tool results. Gemini takes function responses in a 'user' turn.
 		followUpContents.push({
-			role: 'function',
+			role: 'user',
 			parts: functionResponses.map((res) => ({ functionResponse: res }))
 		});
 

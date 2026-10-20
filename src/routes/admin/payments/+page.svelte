@@ -208,7 +208,7 @@
 								<p><span class="text-muted-foreground">Into:</span> {r.bank}</p>
 								{#if r.note}<p class="text-muted-foreground">{r.note}</p>{/if}
 								<p class="text-xs text-muted-foreground">
-									{r.kind === 'booking' ? 'Booking' : 'Plan'} payment #{r.id} · {new Date(r.createdAt).toLocaleString()}
+									{r.kind === 'booking' ? 'Booking' : r.kind === 'vendor_plan' ? 'Vendor plan' : 'Plan'} payment #{r.id} · {new Date(r.createdAt).toLocaleString()}
 								</p>
 								<div class="flex flex-wrap gap-2 pt-2">
 									<ConfirmAction

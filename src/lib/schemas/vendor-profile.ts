@@ -1,4 +1,5 @@
 import { z } from 'zod/v4';
+import { CANCELLATION_POLICIES } from '$lib/policy';
 
 /** Empty inputs must not coerce to 0 — z.coerce.number() turns '' into 0. */
 const blankToUndefined = (v: unknown) =>
@@ -26,7 +27,18 @@ export const vendorProfileSchema = z
 		email: z.email('Enter a valid email').optional().or(z.literal('')),
 		website: z.url('Enter a valid URL').optional().or(z.literal('')),
 		priceMin: z.preprocess(blankToUndefined, money.optional()),
-		priceMax: z.preprocess(blankToUndefined, money.optional())
+		priceMax: z.preprocess(blankToUndefined, money.optional()),
+		maxGuests: z.preprocess(
+			blankToUndefined,
+			z.coerce.number().int().positive('Enter a number of guests').max(65000).optional()
+		),
+		cancellationPolicy: z.enum(CANCELLATION_POLICIES),
+		depositPercent: z.coerce
+			.number()
+			.int()
+			.min(0, 'Between 0 and 100')
+			.max(100, 'Between 0 and 100'),
+		balanceDueDays: z.coerce.number().int().min(0, 'Zero or more days').max(180, 'At most 180 days')
 	})
 	.refine((d) => !d.priceMin || !d.priceMax || d.priceMin <= d.priceMax, {
 		message: 'The minimum price must be lower than the maximum',

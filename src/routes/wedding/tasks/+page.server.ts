@@ -12,7 +12,7 @@ import {
 	toDateInput
 } from '$lib/server/tasks';
 import { requireCoupleAndWedding } from '$lib/server/weddings';
-import { parse, bad } from '$lib/server/adminAction';
+import { parse, bad } from '@nahu/admin-kit/server/actionResults';
 import { and, eq } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 import { m } from '$lib/paraglide/messages.js';

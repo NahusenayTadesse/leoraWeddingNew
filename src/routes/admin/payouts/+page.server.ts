@@ -15,7 +15,7 @@ import {
 import { payoutCompleteSchema } from '$lib/schemas/admin';
 import { db } from '$lib/server/db';
 import { vendorPayouts, vendors, vendorWallets, walletTransactions } from '$lib/server/db/schema';
-import { parse, ok, bad } from '$lib/server/adminAction';
+import { parse, ok, bad } from '@nahu/admin-kit/server/actionResults';
 import { audit } from '$lib/server/auditLog';
 import { toMoney, fromMoney, formatETB } from '$lib/money';
 import { notify } from '$lib/server/notify';

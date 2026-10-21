@@ -1,6 +1,6 @@
 import { vendorPackages } from '$lib/server/db/schema';
 import { requireVendor } from '$lib/server/vendor';
-import { contentCrud } from '$lib/server/crud';
+import { contentCrud } from '@nahu/admin-kit/server/crud';
 import { vendorPackageAddSchema, vendorPackageEditSchema } from '$lib/schemas/vendor-packages';
 
 const crud = contentCrud({

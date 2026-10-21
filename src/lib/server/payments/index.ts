@@ -27,16 +27,18 @@ import {
 	refunds,
 	subscriptionPlans,
 	vendorBookings,
-	vendors
+	vendors,
+	weddingGifts
 } from '$lib/server/db/schema';
 import { confirmBookingPayment } from '$lib/server/bookingPayments';
 import { activateSubscription, activateVendorPlan } from '$lib/server/subscriptions';
 import { notify, notifyAdmins } from '$lib/server/notify';
 import { formatETB, fromMoney, toMoney } from '$lib/money';
-import { initializeTransaction, verifyTransaction } from './chapa';
+import { initializeTransaction, verifyTransaction } from '@nahu/admin-kit/server/chapa';
+import { giftReturnPath, settleGift } from '$lib/server/gifts';
 import { m } from '$lib/paraglide/messages.js';
 
-export type PaymentKind = 'booking' | 'plan' | 'vendor_plan';
+export type PaymentKind = 'booking' | 'plan' | 'vendor_plan' | 'gift';
 
 /** Money comparisons get a cent of slack for decimal round-tripping. */
 const TOLERANCE = 0.01;
@@ -44,10 +46,17 @@ const TOLERANCE = 0.01;
 const RETURN_PATH: Record<PaymentKind, string> = {
 	booking: '/wedding/bookings',
 	plan: '/pricing',
-	vendor_plan: '/vendor-dashboard/plan'
+	vendor_plan: '/vendor-dashboard/plan',
+	// Replaced by the couple's invitation once the gift is found (see `verify`).
+	gift: '/'
 };
 
-const TX_PREFIX: Record<PaymentKind, string> = { booking: 'bk', plan: 'pl', vendor_plan: 'vp' };
+const TX_PREFIX: Record<PaymentKind, string> = {
+	booking: 'bk',
+	plan: 'pl',
+	vendor_plan: 'vp',
+	gift: 'gf'
+};
 
 /** Something the customer can be told: the record can't be paid, the account is wrong… */
 export class PaymentRefused extends Error {
@@ -190,6 +199,7 @@ export async function startBookingChapa(input: BookingPayInput, origin: string):
 
 	try {
 		const checkoutUrl = await initializeTransaction({
+			title: 'Leora Events',
 			amount: input.amount,
 			name: input.payer.name,
 			email: input.payer.email,
@@ -386,6 +396,7 @@ export async function startPlanChapa(input: PlanPayInput, origin: string): Promi
 
 	try {
 		const url = await initializeTransaction({
+			title: 'Leora Events',
 			amount: total,
 			name: input.payer.name,
 			email: input.payer.email,
@@ -547,6 +558,7 @@ export async function startVendorPlanChapa(
 	});
 	try {
 		const url = await initializeTransaction({
+			title: 'Leora Events',
 			amount: price,
 			name: input.payer.name,
 			email: input.payer.email,
@@ -639,8 +651,15 @@ export type VerifyOutcome = {
 	retryable?: boolean;
 };
 
-/** Everything `verify` needs from either table, read the same way. */
+/** Everything `verify` needs from any table, read the same way. */
 async function attemptFor(kind: PaymentKind, txRef: string) {
+	if (kind === 'gift') {
+		const [r] = await db
+			.select({ id: weddingGifts.id, amount: weddingGifts.amount, status: weddingGifts.status })
+			.from(weddingGifts)
+			.where(eq(weddingGifts.txRef, txRef));
+		return r && { ...r, method: 'chapa' as const, settled: r.status === 'paid' };
+	}
 	if (kind === 'booking') {
 		const [r] = await db
 			.select({
@@ -667,7 +686,12 @@ async function attemptFor(kind: PaymentKind, txRef: string) {
 
 async function markFailed(kind: PaymentKind, id: number, payload: string) {
 	const values = { status: 'failed' as const, verifyPayload: payload.slice(0, 2000) };
-	if (kind === 'booking') {
+	if (kind === 'gift') {
+		await db
+			.update(weddingGifts)
+			.set(values)
+			.where(and(eq(weddingGifts.id, id), eq(weddingGifts.status, 'pending')));
+	} else if (kind === 'booking') {
 		await db
 			.update(bookingPayments)
 			.set(values)
@@ -687,7 +711,7 @@ async function markFailed(kind: PaymentKind, id: number, payload: string) {
  */
 export async function verify(txRef: string): Promise<VerifyOutcome> {
 	const kind = kindOf(txRef);
-	const returnPath = kind ? RETURN_PATH[kind] : '/';
+	const returnPath = kind === 'gift' ? await giftReturnPath(txRef) : kind ? RETURN_PATH[kind] : '/';
 	if (!kind) return { status: 'pending', kind, returnPath, retryable: false };
 
 	const row = await attemptFor(kind, txRef);
@@ -724,7 +748,9 @@ export async function verify(txRef: string): Promise<VerifyOutcome> {
 	}
 
 	const extra = { verifyPayload: result.raw };
-	if (kind === 'booking') {
+	if (kind === 'gift') {
+		await settleGift(row.id, result.raw);
+	} else if (kind === 'booking') {
 		const outcome = await confirmBookingPayment(row.id, { extra });
 		if (outcome.ok) await announceBookingPaid(row.id);
 	} else if (kind === 'vendor_plan') {
@@ -737,6 +763,7 @@ export async function verify(txRef: string): Promise<VerifyOutcome> {
 
 /** Staff checked a transfer receipt against the statement and the money is there. */
 export async function confirmTransfer(kind: PaymentKind, id: number, reviewerId: string) {
+	if (kind === 'gift') throw new PaymentRefused('Gifts are paid through Chapa only.');
 	if (kind === 'booking') {
 		const [row] = await db
 			.select({ method: bookingPayments.paymentMethod })
@@ -776,6 +803,7 @@ export async function rejectTransfer(
 	reason: string,
 	reviewerId: string
 ) {
+	if (kind === 'gift') throw new PaymentRefused('Gifts are paid through Chapa only.');
 	const values = {
 		status: 'failed' as const,
 		verifyPayload: `Rejected: ${reason}`.slice(0, 2000),
@@ -838,7 +866,7 @@ export async function reconcileStale(limit = 20): Promise<number> {
 	const tenMinutesAgo = new Date(Date.now() - 10 * 60_000);
 	const dayAgo = new Date(Date.now() - 24 * 60 * 60_000);
 
-	const [bookingRefs, planRefs] = await Promise.all([
+	const [bookingRefs, planRefs, giftRefs] = await Promise.all([
 		db
 			.select({ txRef: bookingPayments.transactionReference, createdAt: bookingPayments.createdAt })
 			.from(bookingPayments)
@@ -862,11 +890,17 @@ export async function reconcileStale(limit = 20): Promise<number> {
 				)
 			)
 			.orderBy(asc(payments.id))
+			.limit(limit),
+		db
+			.select({ txRef: weddingGifts.txRef, createdAt: weddingGifts.createdAt })
+			.from(weddingGifts)
+			.where(and(eq(weddingGifts.status, 'pending'), lt(weddingGifts.createdAt, tenMinutesAgo)))
+			.orderBy(asc(weddingGifts.id))
 			.limit(limit)
 	]);
 
 	let settled = 0;
-	for (const { txRef, createdAt } of [...bookingRefs, ...planRefs]) {
+	for (const { txRef, createdAt } of [...bookingRefs, ...planRefs, ...giftRefs]) {
 		if (!txRef) continue;
 		const outcome = await verify(txRef);
 		if (outcome.status === 'paid') settled++;

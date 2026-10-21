@@ -7,6 +7,8 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { PROMPT, searchVendorsForAi } from '$lib/server/prompt';
 import { env } from '$env/dynamic/private';
 import { takeToken } from '$lib/server/rateLimit';
+import { getCoupleByUserId } from '$lib/server/couples';
+import { plannerSummary } from '$lib/server/plannerSummary';
 
 // Import Google Gen AI SDK
 import { GoogleGenAI, Type, type Content, type FunctionResponse } from '@google/genai';
@@ -164,6 +166,18 @@ const tools = [
 	}
 ];
 
+/** Only offered to a signed-in couple; reads their own plan, so it takes no arguments. */
+const MY_PLAN_TOOL = {
+	name: 'getMyWeddingPlan',
+	description:
+		"The signed-in couple's own wedding plan: date (Gregorian and Ethiopian) and season notes, budget by category and overspending, guest and RSVP counts, vendor bookings with what is owed and when, overdue and upcoming tasks, events, and gifts. Use it for any question about their plan: what is left to book, whether they are over budget, what to do next, what they owe, how RSVPs are going.",
+	parameters: { type: Type.OBJECT, properties: {} }
+};
+
+const PLAN_INSTRUCTION = `
+
+The user is signed in as a couple planning their wedding on Leora. For questions about their own plan, call getMyWeddingPlan and answer from it: be specific (names, amounts in ETB, dates; give Ethiopian dates when helpful), point out what is late, over budget or still unbooked, and suggest the next two or three concrete steps with the Leora page to do them on (/wedding/bookings, /wedding/budget, /wedding/guests, /wedding/tasks, /vendors). seasonNotes keys mean: advent, lent, apostles, filseta = Orthodox fasts when many families avoid weddings; ramadan; after_timket, after_fasika = busy season, book early; kiremt = rainy season. When asked to write a message to a vendor or guests, draft it in the user's language, ready to send.`;
+
 const str = (v: unknown, max: number) =>
 	typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : undefined;
 
@@ -231,13 +245,23 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress,
 		 * First request:
 		 * Send history and configurations to Gemini.
 		 */
+		// A signed-in couple also gets their own plan as a tool.
+		const isCouple = !!locals.user && !!(await getCoupleByUserId(locals.user.id));
+		const config = isCouple
+			? {
+					systemInstruction: PROMPT + PLAN_INSTRUCTION,
+					tools: [
+						{
+							functionDeclarations: [...tools[0].functionDeclarations, MY_PLAN_TOOL]
+						}
+					]
+				}
+			: { systemInstruction: PROMPT, tools };
+
 		const firstResponse = await ai().models.generateContent({
 			model: MODEL,
 			contents: contents,
-			config: {
-				systemInstruction: PROMPT,
-				tools: tools
-			}
+			config
 		});
 
 		const functionCalls = firstResponse.functionCalls;
@@ -265,6 +289,21 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress,
 		const functionResponses: FunctionResponse[] = [];
 
 		for (const call of functionCalls) {
+			if (call.name === 'getMyWeddingPlan' && isCouple && locals.user) {
+				try {
+					functionResponses.push({
+						name: call.name,
+						response: { result: await plannerSummary(locals.user.id) }
+					});
+				} catch (error) {
+					console.error('getMyWeddingPlan failed:', error);
+					functionResponses.push({
+						name: call.name,
+						response: { error: 'Could not read the plan right now.' }
+					});
+				}
+				continue;
+			}
 			if (call.name !== 'searchVendors') {
 				functionResponses.push({
 					name: call.name,
@@ -306,10 +345,7 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress,
 		const finalResponse = await ai().models.generateContent({
 			model: MODEL,
 			contents: followUpContents,
-			config: {
-				systemInstruction: PROMPT,
-				tools: tools
-			}
+			config
 		});
 
 		return json({

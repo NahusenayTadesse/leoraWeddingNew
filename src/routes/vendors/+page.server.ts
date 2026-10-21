@@ -10,7 +10,22 @@ import {
 	toggleFavorite,
 	type VendorSort
 } from '$lib/server/vendorDirectory';
+import { getCoupleByUserId } from '$lib/server/couples';
+import { getWeddingByCoupleId } from '$lib/server/weddings';
+import { isoDay } from '$lib/server/availability';
 import type { Actions, PageServerLoad } from './$types';
+
+/** A signed-in couple's date and guest count, to fill the filters in one click. */
+async function myWeddingDetails(userId: string) {
+	const couple = await getCoupleByUserId(userId);
+	const wedding = couple ? await getWeddingByCoupleId(couple.id) : null;
+	if (!wedding?.weddingDate && !wedding?.guestCountEstimate) return null;
+	const day = wedding.weddingDate;
+	return {
+		date: day ? (day instanceof Date ? isoDay(day) : String(day).slice(0, 10)) : '',
+		guests: wedding.guestCountEstimate ?? null
+	};
+}
 
 const SORTS: VendorSort[] = ['recommended', 'rating', 'newest', 'name'];
 
@@ -27,13 +42,23 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 	const sort = SORTS.includes(sortParam) ? sortParam : 'recommended';
 	const pageParam = Number(url.searchParams.get('page'));
 	const page = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1;
+	const dateParam = url.searchParams.get('date') ?? '';
+	const date = /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : undefined;
+	const positive = (key: string) => {
+		const n = Number(url.searchParams.get(key));
+		return Number.isFinite(n) && n > 0 ? Math.floor(n) : undefined;
+	};
+	const guests = positive('guests');
+	const budget = positive('budget');
+	const shared = { q, city, minRating, date, guests, budget };
 
-	const [result, filters, categoryCounts, favoriteIds, favoriteForm] = await Promise.all([
-		listVendors({ q, categoryIds, city, minRating, sort, page }),
+	const [result, filters, categoryCounts, favoriteIds, favoriteForm, mine] = await Promise.all([
+		listVendors({ ...shared, categoryIds, sort, page }),
 		listDirectoryFilters(),
-		listCategoryCounts({ q, city, minRating }),
+		listCategoryCounts(shared),
 		locals.user ? getFavoriteVendorIds(locals.user.id) : Promise.resolve([]),
-		superValidate(zod4(favoriteSchema), { id: 'favorite' })
+		superValidate(zod4(favoriteSchema), { id: 'favorite' }),
+		locals.user ? myWeddingDetails(locals.user.id) : Promise.resolve(null)
 	]);
 
 	return {
@@ -47,7 +72,17 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 			})),
 			cityItems: filters.cities.map((c) => ({ value: c, name: c }))
 		},
-		applied: { q: q ?? '', categoryIds, city: city ?? '', sort, minRating },
+		applied: {
+			q: q ?? '',
+			categoryIds,
+			city: city ?? '',
+			sort,
+			minRating,
+			date: date ?? '',
+			guests: guests ?? null,
+			budget: budget ?? null
+		},
+		mine,
 		favoriteIds,
 		isLoggedIn: !!locals.user,
 		favoriteForm

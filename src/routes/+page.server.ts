@@ -2,6 +2,7 @@ import { db } from '$lib/server/db';
 import { vendors, vendorCategories, testimonials } from '$lib/server/db/schema';
 import { and, count, countDistinct, desc, eq, isNull } from 'drizzle-orm';
 import { auth } from '$lib/server/auth';
+import { coverImages } from '$lib/server/vendorDirectory';
 import { redirect } from 'sveltekit-flash-message/server';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -60,7 +61,7 @@ export const load: PageServerLoad = async () => {
 			.from(vendors)
 			.innerJoin(vendorCategories, eq(vendorCategories.id, vendors.categoryId))
 			.where(isPublicVendor)
-			.orderBy(desc(vendors.isFeatured), desc(vendors.ratingAvg))
+			.orderBy(desc(vendors.isFeatured), desc(vendors.ratingAvg), desc(vendors.reviewCount))
 			.limit(6),
 
 		db.select({ total: count() }).from(vendors).where(isPublicVendor),
@@ -83,9 +84,13 @@ export const load: PageServerLoad = async () => {
 			.limit(3)
 	]);
 
+	const covers = featuredVendors.length
+		? await coverImages(featuredVendors.map((v) => v.id))
+		: new Map<number, string>();
+
 	return {
 		categories,
-		vendors: featuredVendors,
+		vendors: featuredVendors.map((v) => ({ ...v, cover: covers.get(v.id) ?? null })),
 		testimonials: dynamicTestimonials,
 		stats: {
 			vendorCount: totals?.total ?? 0,

@@ -40,6 +40,8 @@ const TONES: Record<string, Tone> = {
 	requested: 'warning',
 	processing: 'info',
 	delivered: 'success',
+	held: 'info',
+	released: 'success',
 	// disputes
 	open: 'warning',
 	under_review: 'info',

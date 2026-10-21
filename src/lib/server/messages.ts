@@ -1,6 +1,13 @@
 import { db } from '$lib/server/db';
-import { messages, vendors, vendorCategories } from '$lib/server/db/schema';
-import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
+import {
+	messages,
+	vendors,
+	vendorCategories,
+	vendorBookings,
+	weddingPlans
+} from '$lib/server/db/schema';
+import { and, asc, eq, gte, inArray, isNull } from 'drizzle-orm';
+import { maskContacts } from '@nahu/admin-kit/contactMask';
 
 const contactableVendor = and(
 	eq(vendors.status, 'approved'),
@@ -117,12 +124,119 @@ export async function getVendorContact(vendorId: number) {
 	return row ?? null;
 }
 
+/** Whether the couple and vendor have a confirmed (or completed) booking together. */
+export async function haveBooked(coupleId: number, vendorId: number) {
+	const [row] = await db
+		.select({ id: vendorBookings.id })
+		.from(vendorBookings)
+		.innerJoin(weddingPlans, eq(weddingPlans.id, vendorBookings.weddingPlanId))
+		.where(
+			and(
+				eq(weddingPlans.coupleId, coupleId),
+				eq(vendorBookings.vendorId, vendorId),
+				inArray(vendorBookings.status, ['confirmed', 'completed']),
+				isNull(vendorBookings.deletedAt)
+			)
+		)
+		.limit(1);
+	return !!row;
+}
+
+/** A vendor may only write to couples who wrote to them or asked to book them. */
+export async function vendorKnowsCouple(vendorId: number, coupleId: number) {
+	const [thread] = await db
+		.select({ id: messages.id })
+		.from(messages)
+		.where(and(eq(messages.vendorId, vendorId), eq(messages.coupleId, coupleId)))
+		.limit(1);
+	if (thread) return true;
+	const [booking] = await db
+		.select({ id: vendorBookings.id })
+		.from(vendorBookings)
+		.innerJoin(weddingPlans, eq(weddingPlans.id, vendorBookings.weddingPlanId))
+		.where(and(eq(vendorBookings.vendorId, vendorId), eq(weddingPlans.coupleId, coupleId)))
+		.limit(1);
+	return !!booking;
+}
+
+export type SendResult = { ok: true; masked: boolean } | { ok: false; reason: 'unknown_couple' };
+
+/**
+ * Every typed message between a couple and a vendor goes through here. Until they have a confirmed
+ * booking, contact details are replaced (see `$lib/contactMask`), so the deal is made on Leora.
+ */
 export async function sendMessage(args: {
 	senderId: string;
 	receiverId: string;
 	coupleId: number;
 	vendorId: number;
 	body: string;
-}) {
-	await db.insert(messages).values(args);
+	from: 'couple' | 'vendor';
+}): Promise<SendResult> {
+	if (args.from === 'vendor' && !(await vendorKnowsCouple(args.vendorId, args.coupleId))) {
+		return { ok: false, reason: 'unknown_couple' };
+	}
+	const { text, masked } = (await haveBooked(args.coupleId, args.vendorId))
+		? { text: args.body, masked: false }
+		: maskContacts(args.body);
+	await db.insert(messages).values({
+		senderId: args.senderId,
+		receiverId: args.receiverId,
+		coupleId: args.coupleId,
+		vendorId: args.vendorId,
+		body: text
+	});
+	return { ok: true, masked };
+}
+
+/** Fewer conversations than this and the numbers say more about luck than the vendor. */
+const MIN_THREADS_FOR_STATS = 3;
+
+/**
+ * How quickly a vendor answers new couples, over the last 90 days: for each conversation a couple
+ * started, the time to the vendor's first reply. Null until there are enough conversations.
+ */
+export async function responseStats(vendorId: number, vendorUserId: string | null) {
+	if (!vendorUserId) return null;
+	const since = new Date(Date.now() - 90 * 24 * 3600_000);
+	const rows = await db
+		.select({
+			coupleId: messages.coupleId,
+			senderId: messages.senderId,
+			createdAt: messages.createdAt
+		})
+		.from(messages)
+		.where(and(eq(messages.vendorId, vendorId), gte(messages.createdAt, since)))
+		.orderBy(asc(messages.coupleId), asc(messages.createdAt));
+
+	const firstAsk = new Map<number, Date>();
+	const firstReply = new Map<number, Date>();
+	for (const r of rows) {
+		if (r.coupleId === null) continue;
+		const fromVendor = r.senderId === vendorUserId;
+		if (!firstAsk.has(r.coupleId)) {
+			// Only conversations the couple started count.
+			if (fromVendor) firstAsk.set(r.coupleId, new Date(NaN));
+			else firstAsk.set(r.coupleId, r.createdAt);
+		} else if (fromVendor && !firstReply.has(r.coupleId)) {
+			firstReply.set(r.coupleId, r.createdAt);
+		}
+	}
+
+	const asks = [...firstAsk].filter(([, at]) => !Number.isNaN(at.getTime()));
+	if (asks.length < MIN_THREADS_FOR_STATS) return null;
+	const hours = asks
+		.map(([couple, at]) => {
+			const reply = firstReply.get(couple);
+			return reply ? (reply.getTime() - at.getTime()) / 3600_000 : null;
+		})
+		.filter((h): h is number => h !== null)
+		.sort((a, b) => a - b);
+
+	return {
+		/** Share of conversations the vendor answered at all, 0–100. */
+		replyRate: Math.round((hours.length / asks.length) * 100),
+		/** Median hours to the first reply, or null if they never replied. */
+		medianHours: hours.length ? hours[Math.floor((hours.length - 1) / 2)] : null
+	};
 }

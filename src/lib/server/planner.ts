@@ -82,6 +82,59 @@ export async function removeEvent(coupleId: number, id: number, userId: string) 
 	return res.affectedRows > 0;
 }
 
+/**
+ * The traditional wedding week, as days and times (Addis Ababa) relative to the wedding day.
+ * `key` names the `tpl_<key>` / `tpl_<key>_note` messages; Telosh has no event type of its own.
+ */
+export const WEDDING_WEEK = [
+	{ key: 'shimgelegna', type: 'shimgelegna', days: -90, time: '10:00' },
+	{ key: 'engagement', type: 'engagement', days: -30, time: '15:00' },
+	{ key: 'telosh', type: 'other', days: -1, time: '18:00' },
+	{ key: 'ceremony', type: 'ceremony', days: 0, time: '14:00' },
+	{ key: 'melse', type: 'melse', days: 1, time: '15:00' },
+	{ key: 'kilikil', type: 'kilikil', days: 7, time: '13:00' }
+] as const;
+
+export type WeddingWeekKey = (typeof WEDDING_WEEK)[number]['key'];
+
+/**
+ * Adds the wedding-week events the couple doesn't have yet (by type, and by name for Telosh).
+ * `label` gives each event its name and note in the couple's language. Returns how many it added.
+ */
+export async function addWeddingWeek(
+	coupleId: number,
+	weddingDate: string,
+	userId: string,
+	label: (key: WeddingWeekKey) => { name: string; note: string }
+) {
+	const existing = await listEvents(coupleId);
+	const day = (offset: number) =>
+		new Date(Date.parse(`${weddingDate}T00:00:00Z`) + offset * 86_400_000)
+			.toISOString()
+			.slice(0, 10);
+
+	const rows = WEDDING_WEEK.filter(({ key, type }) => {
+		const { name } = label(key);
+		return type === 'other'
+			? !existing.some((e) => e.eventName === name)
+			: !existing.some((e) => e.eventType === type);
+	}).map(({ key, type, days, time }, i) => {
+		const { name, note } = label(key);
+		return {
+			coupleId,
+			eventType: type,
+			eventName: name,
+			eventDate: new Date(`${day(days)}T${time}:00+03:00`),
+			notes: note,
+			sortOrder: i,
+			createdBy: userId,
+			updatedBy: userId
+		};
+	});
+	if (rows.length) await db.insert(weddingEvents).values(rows);
+	return rows.length;
+}
+
 // ---------------------------------------------------------------------------
 // Seating
 // ---------------------------------------------------------------------------

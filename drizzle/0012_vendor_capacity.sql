@@ -1,0 +1,1 @@
+ALTER TABLE `vendors` ADD `max_guests` smallint unsigned;

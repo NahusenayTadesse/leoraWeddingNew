@@ -1,4 +1,8 @@
 <script lang="ts">
+	import Milestones from '$lib/components/Milestones.svelte';
+	import SeasonHints from '$lib/components/dates/SeasonHints.svelte';
+	import DateText from '@nahu/admin-kit/components/DateText.svelte';
+	import { dateLocale } from '$lib/dateLocale';
 	import { m } from '$lib/paraglide/messages.js';
 	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
 	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
@@ -24,24 +28,6 @@
 	let { data } = $props();
 
 	const etb = (n: number) => new Intl.NumberFormat('en-ET', { maximumFractionDigits: 0 }).format(n);
-
-	function prettyDate(iso: string) {
-		if (!iso) return null;
-		return new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', {
-			weekday: 'long',
-			day: 'numeric',
-			month: 'long',
-			year: 'numeric'
-		});
-	}
-
-	function shortDate(iso: string) {
-		if (!iso) return m.wov_no_date();
-		return new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', {
-			day: 'numeric',
-			month: 'short'
-		});
-	}
 
 	function dueLabel(days: number | null) {
 		if (days === null) return m.wov_no_due();
@@ -95,7 +81,11 @@
 					<div class="mt-3 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
 						{#if w.date}
 							<span class="flex items-center gap-1.5">
-								<CalendarHeart class="size-4" />{prettyDate(w.date)}
+								<CalendarHeart class="size-4" /><DateText
+									locale={dateLocale()}
+									value={w.date}
+									both
+								/>
 							</span>
 						{/if}
 						{#if w.city}
@@ -105,6 +95,7 @@
 							<span>{w.style}</span>
 						{/if}
 					</div>
+					<SeasonHints date={w.date} class="mt-2" />
 				</div>
 
 				<div class="text-right">
@@ -127,6 +118,20 @@
 				</div>
 			</div>
 		</Card.Root>
+
+		<Milestones
+			dateSet={!!w.date}
+			daysAway={w.daysAway}
+			partnerJoined={data.progress.partnerJoined}
+			budgetItems={data.budget.itemCount}
+			vendorsBooked={data.bookings.confirmed}
+			guests={data.guests.total}
+			cardPublished={data.progress.cardPublished}
+			rsvps={data.progress.rsvps}
+			tasksDone={data.tasks.done}
+			tasksTotal={data.tasks.total}
+			allPaid={data.bookings.total > 0 && data.bookings.outstanding === 0}
+		/>
 
 		<!-- Alerts -->
 		{#if data.tasks.overdue > 0 || overBudget || data.bookings.outstanding > 0}
@@ -320,7 +325,13 @@
 								<li class="flex items-center justify-between gap-3">
 									<div class="min-w-0">
 										<p class="truncate text-sm font-medium">{booking.vendorName}</p>
-										<p class="text-xs text-muted-foreground">{shortDate(booking.eventDate)}</p>
+										<p class="text-xs text-muted-foreground">
+											{#if booking.eventDate}<DateText
+													locale={dateLocale()}
+													value={booking.eventDate}
+													month="short"
+												/>{:else}{m.wov_no_date()}{/if}
+										</p>
 									</div>
 									<span class="text-sm font-medium tabular-nums">{etb(booking.balance)}</span>
 								</li>

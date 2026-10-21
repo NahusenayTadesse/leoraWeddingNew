@@ -217,10 +217,12 @@
 				<DropdownMenu.Item onclick={() => openFor('quote', b)}>
 					<Send class="size-4" /> Send quote
 				</DropdownMenu.Item>
-				<DropdownMenu.Item onclick={() => openFor('reschedule', b)}>
-					<CalendarClock class="size-4" /> Reschedule
-				</DropdownMenu.Item>
-				{#if b.status !== 'cancelled'}
+				{#if b.status !== 'completed'}
+					<DropdownMenu.Item onclick={() => openFor('reschedule', b)}>
+						<CalendarClock class="size-4" /> Reschedule
+					</DropdownMenu.Item>
+				{/if}
+				{#if b.status !== 'cancelled' && b.status !== 'completed'}
 					<DropdownMenu.Item onclick={() => openFor('cancel', b)}>
 						<X class="size-4" /> Cancel
 					</DropdownMenu.Item>
@@ -237,13 +239,17 @@
 						<TriangleAlert class="size-4" /> Report a problem
 					</DropdownMenu.Item>
 				{/if}
-				<DropdownMenu.Separator />
-				<DropdownMenu.Item onclick={() => openFor('edit', b)}>
-					<Pencil class="size-4" /> Edit
-				</DropdownMenu.Item>
-				<DropdownMenu.Item class="text-destructive" onclick={() => openFor('remove', b)}>
-					<Trash2 class="size-4" /> Delete
-				</DropdownMenu.Item>
+				{#if b.status !== 'completed'}
+					<DropdownMenu.Separator />
+					<DropdownMenu.Item onclick={() => openFor('edit', b)}>
+						<Pencil class="size-4" /> Edit
+					</DropdownMenu.Item>
+				{/if}
+				{#if b.status === 'pending' || b.status === 'cancelled'}
+					<DropdownMenu.Item class="text-destructive" onclick={() => openFor('remove', b)}>
+						<Trash2 class="size-4" /> Delete
+					</DropdownMenu.Item>
+				{/if}
 			</DropdownMenu.Content>
 		</DropdownMenu.Root>
 	</div>
@@ -329,7 +335,8 @@
 				id: row.id,
 				weddingPlanId: row.weddingPlanId,
 				serviceId: row.serviceId ?? undefined,
-				status: row.status,
+				// Completed is set by the system only; the edit action refuses those bookings anyway.
+				status: row.status === 'completed' ? undefined : row.status,
 				agreedPrice: row.agreedPrice ?? undefined,
 				eventDate: row.eventDate ?? ''
 			}

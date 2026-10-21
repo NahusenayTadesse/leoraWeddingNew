@@ -222,6 +222,8 @@ export const bookingPayments = mysqlTable(
 			.notNull(),
 		transactionReference: varchar('transaction_reference', { length: 150 }),
 		paidAt: timestamp('paid_at', { fsp: 3 }),
+		/** When the vendor's share moved from held to withdrawable. Null while held. */
+		releasedAt: timestamp('released_at', { fsp: 3 }),
 		...settlementFields(),
 		...secureFields
 	},
@@ -251,7 +253,8 @@ export const walletTransactions = mysqlTable(
 			'credit',
 			'debit',
 			'commission',
-			'payout'
+			'payout',
+			'release'
 		]).notNull(),
 		description: varchar('description', { length: 255 }),
 		createdAt: timestamp('created_at', { fsp: 3 }).defaultNow().notNull()

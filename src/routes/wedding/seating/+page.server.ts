@@ -8,7 +8,7 @@ import {
 	seatingOverview,
 	updateTable
 } from '$lib/server/planner';
-import { parse, ok, bad } from '$lib/server/adminAction';
+import { parse, ok, bad } from '@nahu/admin-kit/server/actionResults';
 import type { Actions, PageServerLoad } from './$types';
 import { m } from '$lib/paraglide/messages.js';
 

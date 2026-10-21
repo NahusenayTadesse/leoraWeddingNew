@@ -5,6 +5,7 @@ import {
 	getThreadMessages,
 	markThreadRead,
 	getVendorContact,
+	haveBooked,
 	sendMessage
 } from '$lib/server/messages';
 import type { Actions, PageServerLoad } from './$types';
@@ -23,6 +24,8 @@ export const load: PageServerLoad = async ({ parent, url, locals }) => {
 	let activeThread: {
 		vendor: { vendorId: number; businessName: string; categoryName: string | null };
 		messages: Awaited<ReturnType<typeof getThreadMessages>>;
+		/** Contact details flow freely only once they have a confirmed booking. */
+		booked: boolean;
 	} | null = null;
 
 	if (activeVendorId) {
@@ -30,9 +33,10 @@ export const load: PageServerLoad = async ({ parent, url, locals }) => {
 		const vendor = existing ?? (await getVendorContact(activeVendorId));
 
 		if (vendor) {
-			const [threadMessages] = await Promise.all([
+			const [threadMessages, , booked] = await Promise.all([
 				getThreadMessages(coupleId, activeVendorId),
-				markThreadRead(coupleId, activeVendorId, userId)
+				markThreadRead(coupleId, activeVendorId, userId),
+				haveBooked(coupleId, activeVendorId)
 			]);
 			activeThread = {
 				vendor: {
@@ -40,7 +44,8 @@ export const load: PageServerLoad = async ({ parent, url, locals }) => {
 					businessName: vendor.businessName,
 					categoryName: vendor.categoryName
 				},
-				messages: threadMessages
+				messages: threadMessages,
+				booked
 			};
 			const unread = threads.find((t) => t.vendorId === activeVendorId);
 			if (unread) unread.unread = 0;
@@ -68,14 +73,15 @@ export const actions: Actions = {
 		if (!vendor) return fail(404, { error: 'Vendor not found.' });
 		if (!vendor.userId) return fail(400, { error: "This vendor hasn't set up messaging yet." });
 
-		await sendMessage({
+		const sent = await sendMessage({
 			senderId: locals.user!.id,
 			receiverId: vendor.userId,
 			coupleId: couple.id,
 			vendorId,
-			body
+			body,
+			from: 'couple'
 		});
 
-		return { success: true };
+		return { success: true, masked: sent.ok && sent.masked };
 	}
 };

@@ -49,6 +49,7 @@ export const access = createAccess({
 		{ prefix: '/admin/bookings', permission: PERM.bookings },
 		{ prefix: '/admin/payments', permission: PERM.payments },
 		{ prefix: '/admin/payouts', permission: PERM.payouts },
+		{ prefix: '/admin/gifts', permission: PERM.payouts },
 		{ prefix: '/admin/disputes', permission: PERM.disputes },
 		{ prefix: '/admin/reviews', permission: PERM.reviews },
 		{ prefix: '/admin/subscriptions', permission: PERM.plans },

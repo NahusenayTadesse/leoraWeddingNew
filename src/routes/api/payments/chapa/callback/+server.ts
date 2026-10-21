@@ -1,6 +1,6 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { verify } from '$lib/server/payments';
-import { webhookSignatureOk } from '$lib/server/payments/chapa';
+import { webhookSignatureOk } from '@nahu/admin-kit/server/chapa';
 
 /**
  * Chapa calls `callback_url` with GET `?trx_ref=…&status=…` when a checkout finishes, and can also

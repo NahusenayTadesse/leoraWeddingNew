@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SeasonHints from '$lib/components/dates/SeasonHints.svelte';
 	import { m } from '$lib/paraglide/messages.js';
 	import { createForm } from '@nahu/admin-kit/forms/createForm';
 	import { weddingSchema, WEDDING_STYLES } from '$lib/schemas/wedding';
@@ -103,6 +104,7 @@
 					oldDays={false}
 					year={true}
 				/>
+				<SeasonHints date={$form.weddingDate} class="sm:col-span-2" />
 
 				<InputComp
 					label={m.wd_style()}

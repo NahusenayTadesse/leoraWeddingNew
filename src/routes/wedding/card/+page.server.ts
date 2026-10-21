@@ -12,7 +12,7 @@ import {
 	saveCard,
 	setPublished
 } from '$lib/server/cards';
-import { parse, ok, bad } from '$lib/server/adminAction';
+import { parse, ok, bad } from '@nahu/admin-kit/server/actionResults';
 import { m } from '$lib/paraglide/messages.js';
 import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';

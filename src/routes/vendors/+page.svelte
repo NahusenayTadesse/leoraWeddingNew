@@ -15,6 +15,7 @@
 	import { Checkbox } from '@nahu/admin-kit/components/ui/checkbox/index.js';
 	import { Slider } from '@nahu/admin-kit/components/ui/slider/index.js';
 	import { SvelteSet } from 'svelte/reactivity';
+	import DateInput from '@nahu/admin-kit/formComponents/DateInput.svelte';
 	import {
 		Search,
 		BadgeCheck,
@@ -97,14 +98,25 @@
 		query = '';
 		selectedCategories.clear();
 		minRating = 0;
-		apply({ q: null, category: null, city: null, minRating: null });
+		apply({
+			q: null,
+			category: null,
+			city: null,
+			minRating: null,
+			date: null,
+			guests: null,
+			budget: null
+		});
 	}
 
 	const hasFilters = $derived(
 		!!data.applied.q ||
 			data.applied.categoryIds.length > 0 ||
 			!!data.applied.city ||
-			data.applied.minRating > 0
+			data.applied.minRating > 0 ||
+			!!data.applied.date ||
+			!!data.applied.guests ||
+			!!data.applied.budget
 	);
 
 	const sortLabel = $derived(
@@ -199,6 +211,56 @@
 							{/each}
 						</Select.Content>
 					</Select.Root>
+				</div>
+
+				<Separator class="my-6" />
+
+				<div class="space-y-3">
+					<h3 class="text-xs font-bold tracking-wide text-muted-foreground uppercase">
+						{m.vdir_your_wedding()}
+					</h3>
+					<label class="block space-y-1 text-sm">
+						<span>{m.vdir_date()}</span>
+						<DateInput
+							name="date"
+							oldDays={false}
+							futureDays
+							bind:value={() => data.applied.date, (v) => apply({ date: v || null })}
+						/>
+					</label>
+					<label class="block space-y-1 text-sm">
+						<span>{m.vdir_guests()}</span>
+						<Input
+							type="number"
+							min="1"
+							inputmode="numeric"
+							placeholder="300"
+							value={data.applied.guests ?? ''}
+							onchange={(e) => apply({ guests: e.currentTarget.value })}
+						/>
+					</label>
+					<label class="block space-y-1 text-sm">
+						<span>{m.vdir_budget()}</span>
+						<Input
+							type="number"
+							min="1"
+							step="1000"
+							inputmode="numeric"
+							placeholder="100000"
+							value={data.applied.budget ?? ''}
+							onchange={(e) => apply({ budget: e.currentTarget.value })}
+						/>
+					</label>
+					{#if data.mine}
+						<button
+							type="button"
+							class="text-sm font-medium text-accent-foreground hover:underline"
+							onclick={() =>
+								apply({ date: data.mine?.date ?? null, guests: data.mine?.guests ?? null })}
+						>
+							{m.vdir_use_mine()}
+						</button>
+					{/if}
 				</div>
 
 				<Separator class="my-6" />

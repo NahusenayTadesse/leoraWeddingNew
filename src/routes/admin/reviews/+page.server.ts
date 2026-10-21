@@ -12,7 +12,7 @@ import {
 import { z } from 'zod/v4';
 import { db } from '$lib/server/db';
 import { vendorReviews, vendors } from '$lib/server/db/schema';
-import { parse, ok, bad } from '$lib/server/adminAction';
+import { parse, ok, bad } from '@nahu/admin-kit/server/actionResults';
 import { audit } from '$lib/server/auditLog';
 import type { Actions, PageServerLoad } from './$types';
 

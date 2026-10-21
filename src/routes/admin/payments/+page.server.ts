@@ -23,7 +23,7 @@ import {
 	subscriptionPlans,
 	user
 } from '$lib/server/db/schema';
-import { parse, ok, bad } from '$lib/server/adminAction';
+import { parse, ok, bad } from '@nahu/admin-kit/server/actionResults';
 import { audit } from '$lib/server/auditLog';
 import { toMoney } from '$lib/money';
 import { approveRefund } from '$lib/server/bookingPayments';

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { useDateFormat } from '@nahu/admin-kit/dateFormat.svelte';
+	import { dateLocale } from '$lib/dateLocale';
 	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
 	import ActionForm from '@nahu/admin-kit/formComponents/ActionForm.svelte';
 	import ContractPanel from '$lib/components/ContractPanel.svelte';
@@ -24,9 +26,13 @@
 		Wallet,
 		Ban,
 		BadgeCheck,
+		CircleCheck,
 		CircleDollarSign
 	} from '@lucide/svelte';
 
+	import { refundPercentFor, type CancellationPolicy } from '$lib/policy';
+
+	const formatDay = useDateFormat(dateLocale());
 	let { data } = $props();
 
 	const TYPE_ITEMS = [
@@ -38,7 +44,14 @@
 	const BOOKING_STATUS: Record<string, string> = {
 		pending: m.bk_status_pending(),
 		confirmed: m.bk_status_confirmed(),
+		completed: m.bk_status_completed(),
 		cancelled: m.bk_status_cancelled()
+	};
+
+	const POLICY_NAME: Record<CancellationPolicy, string> = {
+		flexible: m.policy_flexible(),
+		moderate: m.policy_moderate(),
+		strict: m.policy_strict()
 	};
 
 	const PAYMENT_STATUS: Record<string, string> = {
@@ -50,11 +63,21 @@
 
 	let bookingOpen = $state(false);
 	let paymentOpen = $state(false);
-	let pendingCancel = $state<{ id: number; label: string } | null>(null);
+	let pendingCancel = $state<{
+		id: number;
+		label: string;
+		paid: number;
+		percent: number;
+		policy: CancellationPolicy;
+	} | null>(null);
 	let payingFor = $state<{ id: number; label: string; balance: number } | null>(null);
 	let payMode = $state<'chapa' | 'transfer'>('chapa');
 	let refundFor = $state<{ paymentId: number; amount: number } | null>(null);
 	let disputeFor = $state<{ bookingId: number; label: string } | null>(null);
+	let deliveredFor = $state<{ bookingId: number; label: string } | null>(null);
+
+	/** Local calendar day, to compare with `YYYY-MM-DD` event dates. */
+	const today = new Date().toLocaleDateString('en-CA');
 	let contractFor = $state<number | null>(null);
 	const contractBooking = $derived(data.bookings.find((b) => b.id === contractFor) ?? null);
 	let chapaAmount = $state(0);
@@ -168,18 +191,14 @@
 	const etb = (n: number) => new Intl.NumberFormat('en-ET', { maximumFractionDigits: 0 }).format(n);
 
 	function statusVariant(status: string | null) {
-		if (status === 'confirmed') return 'default';
+		if (status === 'confirmed' || status === 'completed') return 'default';
 		if (status === 'cancelled') return 'destructive';
 		return 'secondary';
 	}
 
 	function eventLabel(iso: string) {
 		if (!iso) return m.wov_no_date_set();
-		return new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', {
-			day: 'numeric',
-			month: 'short',
-			year: 'numeric'
-		});
+		return formatDay(iso);
 	}
 
 	function openBooking() {
@@ -197,17 +216,25 @@
 			label: booking.vendorName,
 			balance: booking.balance
 		};
-		chapaAmount = booking.balance;
+		// Suggest the deposit first; the couple can still pay more, up to the balance.
+		const suggested = booking.depositDue > 0 ? booking.depositDue : booking.balance;
+		chapaAmount = suggested;
 		chapaType = booking.paid > 0 ? 'balance' : 'advance';
 		$transferData.bookingId = booking.id;
-		$transferData.amount = booking.balance;
+		$transferData.amount = suggested;
 		$transferData.paymentType = chapaType;
 		payMode = 'chapa';
 		paymentOpen = true;
 	}
 
 	function confirmCancel(booking: (typeof data.bookings)[number]) {
-		pendingCancel = { id: booking.id, label: booking.vendorName };
+		pendingCancel = {
+			id: booking.id,
+			label: booking.vendorName,
+			paid: booking.paid,
+			policy: booking.policy,
+			percent: refundPercentFor(booking.policy, booking.eventDate, today)
+		};
 		$cancelData.id = booking.id;
 	}
 
@@ -371,6 +398,15 @@
 								<p class="text-xs text-muted-foreground">
 									{m.bk_outstanding({ amount: etb(booking.balance) })}
 								</p>
+								{#if booking.status === 'confirmed' && booking.depositDue > 0}
+									<p class="text-xs font-medium text-foreground">
+										{m.bk_deposit_due({ amount: etb(booking.depositDue) })}
+									</p>
+								{:else if booking.balanceDueBy}
+									<p class="text-xs text-muted-foreground">
+										{m.bk_balance_due_by({ date: eventLabel(booking.balanceDueBy) })}
+									</p>
+								{/if}
 							{:else if booking.agreedPrice > 0 && booking.balance === 0}
 								<p class="text-xs font-medium text-emerald-600">{m.bk_settled()}</p>
 							{/if}
@@ -388,6 +424,9 @@
 									>
 								{/if}
 							</p>
+							{#if booking.paid > 0 && booking.status === 'confirmed'}
+								<p class="text-xs text-muted-foreground">{m.bk_held_note()}</p>
+							{/if}
 						</div>
 					{/if}
 
@@ -408,16 +447,29 @@
 							>
 								{m.bk_report()}
 							</Button>
-							<Button
-								variant="ghost"
-								size="sm"
-								class="text-destructive"
-								onclick={() => confirmCancel(booking)}
-							>
-								<Ban class="mr-2 size-4" />
-								{m.bk_cancel()}
-							</Button>
-							{#if booking.status === 'confirmed' && booking.balance > 0}
+							{#if booking.status !== 'completed'}
+								<Button
+									variant="ghost"
+									size="sm"
+									class="text-destructive"
+									onclick={() => confirmCancel(booking)}
+								>
+									<Ban class="mr-2 size-4" />
+									{m.bk_cancel()}
+								</Button>
+							{/if}
+							{#if booking.status === 'confirmed' && booking.eventDate && booking.eventDate <= today}
+								<Button
+									variant="outline"
+									size="sm"
+									onclick={() =>
+										(deliveredFor = { bookingId: booking.id, label: booking.vendorName })}
+								>
+									<CircleCheck class="mr-2 size-4" />
+									{m.bk_mark_delivered()}
+								</Button>
+							{/if}
+							{#if (booking.status === 'confirmed' || booking.status === 'completed') && booking.balance > 0}
 								<Button size="sm" onclick={() => openPayment(booking)}>
 									<CircleDollarSign class="mr-2 size-4" />
 									{m.pay_button()}
@@ -702,6 +754,13 @@
 			<AlertDialog.Title>{m.bk_cancel_title()}</AlertDialog.Title>
 			<AlertDialog.Description>
 				{m.bk_cancel_desc({ name: pendingCancel?.label ?? '' })}
+				{#if pendingCancel && pendingCancel.paid > 0}
+					{m.bk_cancel_refund({
+						policy: POLICY_NAME[pendingCancel.policy],
+						percent: pendingCancel.percent,
+						amount: etb(Math.round((pendingCancel.paid * pendingCancel.percent) / 100))
+					})}
+				{/if}
 			</AlertDialog.Description>
 		</AlertDialog.Header>
 		<form method="POST" action="?/cancel" use:cancelEnhance>
@@ -802,6 +861,34 @@
 							>{m.bk_cancel()}</Button
 						>
 						<Button type="submit" disabled={!!busy}>{m.bk_send()}</Button>
+					</Dialog.Footer>
+				{/snippet}
+			</ActionForm>
+		{/if}
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Delivered -->
+<Dialog.Root open={!!deliveredFor} onOpenChange={(open) => !open && (deliveredFor = null)}>
+	<Dialog.Content class="sm:max-w-md">
+		<Dialog.Header>
+			<Dialog.Title>
+				{#if deliveredFor}{m.bk_delivered_title({ vendor: deliveredFor.label })}{/if}
+			</Dialog.Title>
+			<Dialog.Description>{m.bk_delivered_body()}</Dialog.Description>
+		</Dialog.Header>
+		{#if deliveredFor}
+			<ActionForm
+				action="?/markDelivered"
+				fields={{ bookingId: deliveredFor.bookingId }}
+				onDone={() => (deliveredFor = null)}
+			>
+				{#snippet children({ busy })}
+					<Dialog.Footer>
+						<Button type="button" variant="outline" onclick={() => (deliveredFor = null)}
+							>{m.bk_cancel()}</Button
+						>
+						<Button type="submit" disabled={!!busy}>{m.bk_mark_delivered()}</Button>
 					</Dialog.Footer>
 				{/snippet}
 			</ActionForm>

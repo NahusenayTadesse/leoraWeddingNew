@@ -18,6 +18,7 @@ import {
 	weddingPlans
 } from '$lib/server/db/schema';
 import { and, asc, desc, eq, gte, inArray, isNull, like, lte, or, sql, count } from 'drizzle-orm';
+import { listingGate } from '$lib/server/vendorPlan';
 
 export const PAGE_SIZE = 12;
 
@@ -56,19 +57,38 @@ export async function featuredVendorIds() {
 	return [...new Set(rows.map((r) => r.vendorId))];
 }
 
-type ListArgs = {
+/** The filters every directory query shares (everything except the category). */
+export type DirectoryFilters = {
 	q?: string;
-	categoryIds?: number[];
 	city?: string;
 	minRating?: number;
+	/** `YYYY-MM-DD`: free that day (not blocked, not already booked). */
+	date?: string;
+	/** Can serve this many guests; vendors with no stated capacity are kept. */
+	guests?: number;
+	/** Starting price at or under this; vendors with no stated price are left out. */
+	budget?: number;
+};
+
+type ListArgs = DirectoryFilters & {
+	categoryIds?: number[];
 	sort?: VendorSort;
 	page?: number;
 };
 
 /** Shared WHERE builder so listVendors and listCategoryCounts stay in sync. */
-function directoryFilters(args: { q?: string; city?: string; minRating?: number }) {
-	const { q, city, minRating } = args;
-	const filters = [publicVendor];
+function directoryFilters(args: DirectoryFilters) {
+	const { q, city, minRating, date, guests, budget } = args;
+	const filters = [publicVendor, listingGate()];
+
+	if (date) {
+		filters.push(
+			sql`NOT EXISTS (SELECT 1 FROM vendor_availability va WHERE va.vendor_id = ${vendors.id} AND va.available_date = ${date} AND va.is_available = false)`,
+			sql`NOT EXISTS (SELECT 1 FROM vendor_bookings vb WHERE vb.vendor_id = ${vendors.id} AND vb.event_date = ${date} AND vb.status IN ('confirmed', 'completed') AND vb.deleted_at IS NULL)`
+		);
+	}
+	if (guests) filters.push(or(isNull(vendors.maxGuests), gte(vendors.maxGuests, guests))!);
+	if (budget) filters.push(lte(vendors.priceMin, budget.toFixed(2)));
 
 	if (q) {
 		const needle = `%${q}%`;
@@ -81,8 +101,8 @@ function directoryFilters(args: { q?: string; city?: string; minRating?: number 
 }
 
 export async function listVendors(args: ListArgs) {
-	const { q, categoryIds, city, minRating, sort = 'recommended', page = 1 } = args;
-	const filters = directoryFilters({ q, city, minRating });
+	const { categoryIds, sort = 'recommended', page = 1, ...shared } = args;
+	const filters = directoryFilters(shared);
 
 	if (categoryIds?.length) filters.push(inArray(vendors.categoryId, categoryIds));
 
@@ -123,6 +143,7 @@ export async function listVendors(args: ListArgs) {
 			city: vendors.city,
 			priceMin: vendors.priceMin,
 			priceMax: vendors.priceMax,
+			maxGuests: vendors.maxGuests,
 			isVerified: vendors.isVerified,
 			categoryId: vendors.categoryId,
 			categoryName: vendorCategories.name,
@@ -155,7 +176,7 @@ export async function listVendors(args: ListArgs) {
 }
 
 /** One representative image per vendor, taken from their first service. */
-async function coverImages(vendorIds: number[]) {
+export async function coverImages(vendorIds: number[]) {
 	const rows = await db
 		.select({
 			vendorId: vendorServices.vendorId,
@@ -192,7 +213,7 @@ export async function listDirectoryFilters() {
 		db
 			.selectDistinct({ city: vendors.city })
 			.from(vendors)
-			.where(publicVendor)
+			.where(and(publicVendor, listingGate()))
 			.orderBy(asc(vendors.city))
 	]);
 
@@ -207,7 +228,7 @@ export async function listDirectoryFilters() {
  * (everything except the category filter itself, so checking one category
  * doesn't hide the counts for the others).
  */
-export async function listCategoryCounts(args: { q?: string; city?: string; minRating?: number }) {
+export async function listCategoryCounts(args: DirectoryFilters) {
 	const filters = directoryFilters(args);
 
 	const rows = await db
@@ -226,10 +247,14 @@ export async function getVendor(vendorId: number) {
 			userId: vendors.userId,
 			businessName: vendors.businessName,
 			description: vendors.description,
-			phone: vendors.phone,
+			// No phone: couples get it once a booking is confirmed (see listBookings), so the first
+			// deal is made, and paid, on Leora.
 			city: vendors.city,
 			priceMin: vendors.priceMin,
 			priceMax: vendors.priceMax,
+			cancellationPolicy: vendors.cancellationPolicy,
+			depositPercent: vendors.depositPercent,
+			balanceDueDays: vendors.balanceDueDays,
 			isVerified: vendors.isVerified,
 			createdAt: vendors.createdAt,
 			categoryName: vendorCategories.name,
@@ -320,6 +345,8 @@ export async function getVendorReviews(vendorId: number, limit = 20) {
 			rating: vendorReviews.rating,
 			title: vendorReviews.title,
 			comment: vendorReviews.comment,
+			vendorReply: vendorReviews.vendorReply,
+			repliedAt: vendorReviews.repliedAt,
 			createdAt: vendorReviews.createdAt,
 			authorName: user.name,
 			authorImage: user.image,
@@ -382,7 +409,7 @@ export async function canReviewVendor(userId: string, vendorId: number): Promise
 			and(
 				eq(weddingPlans.coupleId, coupleId),
 				eq(vendorBookings.vendorId, vendorId),
-				eq(vendorBookings.status, 'confirmed'),
+				inArray(vendorBookings.status, ['confirmed', 'completed']),
 				isNull(vendorBookings.deletedAt),
 				or(
 					sql`${vendorBookings.eventDate} <= CURRENT_DATE`,

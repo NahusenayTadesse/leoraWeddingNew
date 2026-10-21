@@ -15,6 +15,12 @@
 		resetForm: false
 	});
 
+	const POLICY_ITEMS = [
+		{ value: 'flexible', name: 'Flexible: full refund up to 7 days before, 50% after' },
+		{ value: 'moderate', name: 'Moderate: full up to 30 days, 50% up to 7 days, then none' },
+		{ value: 'strict', name: 'Strict: 50% up to 60 days before, then none' }
+	];
+
 	const STATUS_VARIANT: Record<string, 'secondary' | 'default' | 'destructive'> = {
 		pending: 'secondary',
 		approved: 'default',
@@ -126,6 +132,49 @@
 					{form}
 					{errors}
 				/>
+			</div>
+
+			<InputComp
+				label="Largest party you can serve (guests)"
+				name="maxGuests"
+				type="number"
+				placeholder="Leave empty if it doesn't apply, e.g. photography"
+				{form}
+				{errors}
+			/>
+
+			<div class="mt-2 space-y-2 border-t pt-4">
+				<h2 class="font-medium">Booking terms</h2>
+				<p class="text-sm text-muted-foreground">
+					Couples see these before they book. When a couple cancels, Leora refunds them by your
+					policy and pays you the rest; if you cancel, they get everything back.
+				</p>
+				<InputComp
+					label="Cancellation policy"
+					name="cancellationPolicy"
+					type="select"
+					items={POLICY_ITEMS}
+					{form}
+					{errors}
+				/>
+				<div class="grid gap-2 sm:grid-cols-2">
+					<InputComp
+						label="Deposit to book (%)"
+						name="depositPercent"
+						type="number"
+						placeholder="30"
+						{form}
+						{errors}
+					/>
+					<InputComp
+						label="Balance due (days before the event)"
+						name="balanceDueDays"
+						type="number"
+						placeholder="14"
+						{form}
+						{errors}
+					/>
+				</div>
 			</div>
 
 			<Button type="submit" class="mt-4 w-full sm:w-auto" disabled={$delayed}>

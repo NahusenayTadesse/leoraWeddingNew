@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db';
 import { prices, vendorServices, vendors, serviceCategories } from '$lib/server/db/schema';
 import { and, eq, isNull, sql } from 'drizzle-orm';
+import { listingGate } from '$lib/server/vendorPlan';
 
 /**
  * Per-service price aggregate, as a joinable derived table.
@@ -43,7 +44,9 @@ export const isListable = and(
 	isNull(vendorServices.deletedAt),
 	eq(vendors.status, 'approved'),
 	eq(vendors.isActive, true),
-	isNull(vendors.deletedAt)
+	isNull(vendors.deletedAt),
+	// Read once at startup: REQUIRE_VENDOR_PLAN is a deploy-time switch.
+	listingGate()
 );
 
 /** The column shape both the carousel and the shop grid render from. */

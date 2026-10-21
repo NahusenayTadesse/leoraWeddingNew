@@ -2,7 +2,7 @@ import { z } from 'zod/v4';
 import { requireCoupleAndWedding } from '$lib/server/weddings';
 import { CardRefused, checkIn, checkInList } from '$lib/server/cards';
 import { getCoupleByUserId } from '$lib/server/couples';
-import { parse, bad } from '$lib/server/adminAction';
+import { parse, bad } from '@nahu/admin-kit/server/actionResults';
 import { m } from '$lib/paraglide/messages.js';
 import type { Actions, PageServerLoad } from './$types';
 

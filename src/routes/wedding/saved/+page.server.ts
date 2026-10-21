@@ -1,7 +1,7 @@
 import { z } from 'zod/v4';
 import { getCoupleByUserId } from '$lib/server/couples';
 import { listSavedVendors, unsaveVendors } from '$lib/server/planner';
-import { parse, ok, bad } from '$lib/server/adminAction';
+import { parse, ok, bad } from '@nahu/admin-kit/server/actionResults';
 import type { Actions, PageServerLoad } from './$types';
 import { m } from '$lib/paraglide/messages.js';
 

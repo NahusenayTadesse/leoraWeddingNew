@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { formatPriceRange } from '$lib/price';
+	import { assetUrl } from '$lib/assetUrl';
 	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
 	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
 	import * as Accordion from '$lib/components/ui/accordion';
@@ -155,6 +157,14 @@
 				phase with one another.
 			-->
 			<div class="hero-visual" use:inview={startHero}>
+				<img
+					class="hero-photo"
+					src="/demo/couples/1.webp"
+					alt=""
+					width="1200"
+					height="900"
+					fetchpriority="high"
+				/>
 				<div class="floatcard fc-budget">
 					<div class="fc-label">{m.home_fc_budget()}</div>
 					<div class="fc-value">ETB {heroBudget.toLocaleString()}</div>
@@ -211,6 +221,62 @@
 	</div>
 </section>
 
+{#if data.vendors.length}
+	<section class="mx-auto max-w-[1180px] px-5 py-16 sm:px-8">
+		<div class="flex flex-wrap items-end justify-between gap-4">
+			<div>
+				<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">
+					{m.home_top_eyebrow()}
+				</p>
+				<h2 class="mt-2 font-display text-3xl font-extrabold text-balance sm:text-4xl">
+					{m.home_top_title()}
+				</h2>
+			</div>
+			<Button href="/vendors" variant="outline"
+				>{m.home_top_all()}<ArrowRight class="ml-1.5 size-4" /></Button
+			>
+		</div>
+		<div class="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+			{#each data.vendors as v (v.id)}
+				<a href="/vendors/{v.id}" class="group">
+					<Card.Root
+						class="h-full overflow-hidden p-0 transition-colors group-hover:border-primary"
+					>
+						<div class="aspect-[4/3] overflow-hidden bg-muted">
+							{#if v.cover}
+								<img
+									src={assetUrl(v.cover)}
+									alt={v.businessName}
+									loading="lazy"
+									class="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+								/>
+							{/if}
+						</div>
+						<div class="space-y-1 p-4">
+							<div class="flex items-center justify-between gap-2">
+								<h3 class="truncate font-semibold">{v.businessName}</h3>
+								{#if Number(v.ratingAvg) > 0}
+									<span class="inline-flex items-center gap-1 text-sm text-primary">
+										<Star class="size-3.5 fill-current" />{Number(v.ratingAvg).toFixed(1)}
+										<span class="text-muted-foreground">({v.reviewCount})</span>
+									</span>
+								{/if}
+							</div>
+							<p class="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+								{v.categoryName} · {v.city}
+								{#if v.isVerified}<ShieldCheck class="size-3.5 text-primary" />{/if}
+							</p>
+							{#if formatPriceRange(v.priceMin, v.priceMax)}
+								<p class="text-[13px] font-medium">{formatPriceRange(v.priceMin, v.priceMax)}</p>
+							{/if}
+						</div>
+					</Card.Root>
+				</a>
+			{/each}
+		</div>
+	</section>
+{/if}
+
 <!-- ========================= MARKETPLACE ========================= -->
 <section class="mx-auto max-w-[1180px] px-5 py-16 sm:px-8">
 	<p class="text-[12.5px] font-bold tracking-[0.08em] text-accent-foreground uppercase">
@@ -226,7 +292,7 @@
 	{#if data.categories.length}
 		<div class="mt-9 grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
 			{#each data.categories as category (category.id)}
-				<a href="/vendors?category={category.slug}">
+				<a href="/vendors?category={category.id}">
 					<Card.Root class="cat-card h-full hover:border-primary">
 						<Card.Content class="flex items-center gap-3.5">
 							<span class="grid size-11 shrink-0 place-items-center rounded-xl bg-accent text-xl">
@@ -504,11 +570,20 @@
 					<Card.Content class="flex h-full flex-col">
 						<p class="text-[14px] leading-relaxed">"{t.message}"</p>
 						<div class="mt-5 flex items-center gap-3 pt-4">
-							<span
-								class="grid size-10 shrink-0 place-items-center rounded-full bg-accent text-[12.5px] font-bold text-accent-foreground"
-							>
-								{initials(t.name)}
-							</span>
+							{#if t.avatar}
+								<img
+									src={assetUrl(t.avatar)}
+									alt=""
+									class="size-10 shrink-0 rounded-full object-cover"
+									loading="lazy"
+								/>
+							{:else}
+								<span
+									class="grid size-10 shrink-0 place-items-center rounded-full bg-accent text-[12.5px] font-bold text-accent-foreground"
+								>
+									{initials(t.name)}
+								</span>
+							{/if}
 							<span>
 								<span class="block text-[13.5px] font-bold">{t.name}</span>
 								{#if t.position}
@@ -587,6 +662,16 @@
 	.hero-visual {
 		position: relative;
 		height: 460px;
+	}
+	.hero-photo {
+		position: absolute;
+		inset: 8% 9% 10% 12%;
+		width: 79%;
+		height: 82%;
+		object-fit: cover;
+		border-radius: 28px;
+		box-shadow: var(--card-shadow);
+		z-index: 0;
 	}
 
 	.floatcard {
@@ -692,6 +777,12 @@
 			height: auto;
 			display: grid;
 			gap: 14px;
+		}
+		.hero-photo {
+			position: static;
+			width: 100%;
+			height: auto;
+			aspect-ratio: 4 / 3;
 		}
 		.floatcard {
 			position: static;

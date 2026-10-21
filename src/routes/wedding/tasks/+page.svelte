@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { useDateFormat } from '@nahu/admin-kit/dateFormat.svelte';
+	import { dateLocale } from '$lib/dateLocale';
 	import { m } from '$lib/paraglide/messages.js';
 	import ActionForm from '@nahu/admin-kit/formComponents/ActionForm.svelte';
 	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
@@ -17,6 +19,7 @@
 	import { Separator } from '@nahu/admin-kit/components/ui/separator/index.js';
 	import { Plus, Pencil, Trash2, ListChecks, Sparkles, CalendarClock } from '@lucide/svelte';
 
+	const formatDay = useDateFormat(dateLocale());
 	let { data } = $props();
 
 	type Task = (typeof data.tasks)[number];
@@ -106,11 +109,7 @@
 		if (diff === 1) return m.wov_due_tomorrow();
 		if (diff < 0) return m.wov_overdue({ days: Math.abs(diff) });
 		if (diff <= 60) return m.wov_in_days({ days: diff });
-		return new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', {
-			day: 'numeric',
-			month: 'short',
-			year: 'numeric'
-		});
+		return formatDay(iso);
 	}
 
 	function openCreate() {

@@ -89,16 +89,16 @@
 	<PageHeader
 		title="Payments"
 		tabTitle="Payments — Vendor Dashboard"
-		description="Couples pay through Leora by Chapa or bank transfer. Confirmed payments are added to your wallet, less commission, and you can ask for a payout at any time."
+		description="Couples pay through Leora by Chapa or bank transfer. Confirmed payments, less commission, are held by Leora until the service is delivered: when the couple confirms it, or 3 days after the event with no problem reported. Then they are yours to withdraw."
 	/>
 
 	<div class="grid gap-4 md:grid-cols-3">
 		<Card.Root>
 			<Card.Content class="py-5">
 				<p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-					Wallet balance
+					On hold until delivery
 				</p>
-				<p class="mt-1 text-2xl font-bold">{formatETB(data.balance)}</p>
+				<p class="mt-1 text-2xl font-bold">{formatETB(data.held)}</p>
 			</Card.Content>
 		</Card.Root>
 		<Card.Root>

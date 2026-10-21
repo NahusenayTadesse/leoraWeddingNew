@@ -6,7 +6,7 @@ import { guestLists } from '$lib/server/db/schema';
 import { guestSchema, bulkGuestSchema, guestIdSchema } from '$lib/schemas/guest';
 import { listGuests, assertGuestOwnership, parseGuestLines } from '$lib/server/guests';
 import { requireCoupleAndWedding } from '$lib/server/weddings';
-import { parse, bad } from '$lib/server/adminAction';
+import { parse, bad } from '@nahu/admin-kit/server/actionResults';
 import { and, eq } from 'drizzle-orm';
 import { newInviteToken } from '$lib/server/cards';
 import type { Actions, PageServerLoad } from './$types';

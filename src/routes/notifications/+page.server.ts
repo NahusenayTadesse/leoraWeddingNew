@@ -3,7 +3,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import { z } from 'zod/v4';
 import { db } from '$lib/server/db';
 import { notifications } from '$lib/server/db/schema';
-import { parse, ok } from '$lib/server/adminAction';
+import { parse, ok } from '@nahu/admin-kit/server/actionResults';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {

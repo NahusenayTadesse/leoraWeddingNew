@@ -2,7 +2,7 @@ import { z } from 'zod/v4';
 import { requireVendor } from '$lib/server/vendor';
 import { busyDays, toggleBlocked } from '$lib/server/availability';
 import { monthRange } from '$lib/server/monthRange';
-import { parse, ok, bad } from '$lib/server/adminAction';
+import { parse, ok, bad } from '@nahu/admin-kit/server/actionResults';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {

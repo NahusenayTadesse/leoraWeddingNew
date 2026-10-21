@@ -1,4 +1,4 @@
-import { and, between, eq, isNull } from 'drizzle-orm';
+import { and, between, eq, inArray, isNull } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { vendorAvailability, vendorBookings } from '$lib/server/db/schema';
 
@@ -30,7 +30,7 @@ export async function busyDays(vendorId: number, from: string, to: string) {
 			.where(
 				and(
 					eq(vendorBookings.vendorId, vendorId),
-					eq(vendorBookings.status, 'confirmed'),
+					inArray(vendorBookings.status, ['confirmed', 'completed']),
 					isNull(vendorBookings.deletedAt),
 					between(vendorBookings.eventDate, from, to)
 				)

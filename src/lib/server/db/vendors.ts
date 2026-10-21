@@ -12,6 +12,7 @@ import {
 	timestamp,
 	index,
 	unique,
+	primaryKey,
 	check
 } from 'drizzle-orm/mysql-core';
 import { sql } from 'drizzle-orm';
@@ -69,12 +70,29 @@ export const vendors = mysqlTable(
 		priceMin: decimal('price_min', { precision: 12, scale: 2 }),
 		priceMax: decimal('price_max', { precision: 12, scale: 2 }),
 
+		/**
+		 * Largest party the vendor can serve (venue seats, catering covers). Null when it doesn't
+		 * apply, e.g. a photographer; the directory's guest filter keeps those.
+		 */
+		maxGuests: smallint('max_guests', { unsigned: true }),
+
+		/** Booking terms; the rules behind each value are in `$lib/policy`. */
+		cancellationPolicy: mysqlEnum('cancellation_policy', ['flexible', 'moderate', 'strict'])
+			.default('moderate')
+			.notNull(),
+		/** Share of the agreed price that secures the date. */
+		depositPercent: tinyint('deposit_percent', { unsigned: true }).default(30).notNull(),
+		/** The full balance is due this many days before the event. */
+		balanceDueDays: smallint('balance_due_days', { unsigned: true }).default(14).notNull(),
+
 		/** Denormalised from `vendor_reviews`; recompute on review write. */
 		ratingAvg: decimal('rating_avg', { precision: 3, scale: 2 }).default('0.00').notNull(),
 		reviewCount: int('review_count', { unsigned: true }).default(0).notNull(),
 
 		isFeatured: boolean('is_featured').default(false).notNull(),
+		/** Staff checked the trade licence and the owner's ID (set on /admin/vendors/[id]). */
 		isVerified: boolean('is_verified').default(false).notNull(),
+		verifiedAt: timestamp('verified_at', { fsp: 3 }),
 		/**
 		 * The approval workflow. Public listings must filter on
 		 * `status = 'approved'` — `isVerified` is a trust badge, not a gate.
@@ -126,6 +144,9 @@ export const vendorReviews = mysqlTable(
 		rating: tinyint('rating', { unsigned: true }).notNull(),
 		title: varchar('title', { length: 150 }),
 		comment: text('comment'),
+		/** The vendor's one public answer, shown under the review. */
+		vendorReply: text('vendor_reply'),
+		repliedAt: timestamp('replied_at', { fsp: 3 }),
 		...secureFields,
 		aliveKey
 	},
@@ -136,6 +157,22 @@ export const vendorReviews = mysqlTable(
 		index('vendor_reviews_vendor_idx').on(table.vendorId),
 		check('vendor_reviews_rating_ck', sql`rating between 1 and 5`)
 	]
+);
+
+/**
+ * Public profile views, one counter per vendor per day: enough for the vendor's dashboard,
+ * nothing about who viewed. Written by `recordProfileView`.
+ */
+export const vendorProfileViews = mysqlTable(
+	'vendor_profile_views',
+	{
+		vendorId: int('vendor_id')
+			.notNull()
+			.references(() => vendors.id, { onDelete: 'cascade' }),
+		day: date('day', { mode: 'string' }).notNull(),
+		views: int('views', { unsigned: true }).default(0).notNull()
+	},
+	(table) => [primaryKey({ columns: [table.vendorId, table.day] })]
 );
 
 /** A couple's shortlist. Replaces the old user-scoped `favorites`. */
@@ -330,12 +367,25 @@ export const vendorBookings = mysqlTable(
 			.notNull()
 			.references(() => vendors.id),
 		serviceId: int('service_id').references(() => vendorServices.id, { onDelete: 'set null' }),
-		status: mysqlEnum('status', ['pending', 'confirmed', 'cancelled']).default('pending').notNull(),
+		/**
+		 * `completed` = the service was delivered: the couple said so, or the event date passed
+		 * the hold window with no open dispute (see `releaseHeldFunds`). Only the system sets it.
+		 */
+		status: mysqlEnum('status', ['pending', 'confirmed', 'completed', 'cancelled'])
+			.default('pending')
+			.notNull(),
 		agreedPrice: decimal('agreed_price', { precision: 10, scale: 2 }),
 		eventDate: date('event_date', { mode: 'string' }),
+		completedAt: timestamp('completed_at', { fsp: 3 }),
 		cancellationReason: text('cancellation_reason'),
 		cancelledBy: mysqlEnum('cancelled_by', ['couple', 'vendor', 'admin']),
 		cancelledAt: timestamp('cancelled_at', { fsp: 3 }),
+		/**
+		 * Share of the confirmed payments the couple was owed back when the booking was cancelled
+		 * (100 when the vendor cancelled). Set means refunds were raised and the vendor's kept share
+		 * can be released once staff settle them.
+		 */
+		refundPercent: tinyint('refund_percent', { unsigned: true }),
 		...secureFields
 	},
 	(table) => [
@@ -432,6 +482,12 @@ export const vendorWallets = mysqlTable('vendor_wallets', {
 		.notNull()
 		.references(() => vendors.id, { onDelete: 'cascade' })
 		.primaryKey(),
+	/** Released money: what the vendor can withdraw. */
 	balance: decimal('balance', { precision: 14, scale: 2 }).default('0.00').notNull(),
+	/**
+	 * Paid by couples but not yet earned: held until the service is delivered, so a vendor who
+	 * disappears before the wedding has not already withdrawn the couple's money.
+	 */
+	heldBalance: decimal('held_balance', { precision: 14, scale: 2 }).default('0.00').notNull(),
 	...secureFields
 });

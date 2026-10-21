@@ -7,6 +7,7 @@ import {
 	Crown,
 	CreditCard,
 	Gavel,
+	Gift,
 	Landmark,
 	LayoutDashboard,
 	MessageSquare,
@@ -29,6 +30,7 @@ export const ADMIN_NAVIGATION: NavItem[] = [
 	{ title: 'Bookings', url: '/admin/bookings', icon: CalendarCheck },
 	{ title: 'Payments', url: '/admin/payments', icon: Wallet },
 	{ title: 'Payouts', url: '/admin/payouts', icon: Landmark },
+	{ title: 'Gift payouts', url: '/admin/gifts', icon: Gift },
 	{ title: 'Disputes', url: '/admin/disputes', icon: Gavel },
 	{ title: 'Reviews', url: '/admin/reviews', icon: Star },
 	{ title: 'Subscriptions', url: '/admin/subscriptions', icon: CreditCard },
@@ -47,6 +49,7 @@ export const VENDOR_NAVIGATION: NavItem[] = [
 	{ title: 'Bookings', url: '/vendor-dashboard/bookings', icon: CalendarCheck },
 	{ title: 'Availability', url: '/vendor-dashboard/availability', icon: CalendarDays },
 	{ title: 'Payments', url: '/vendor-dashboard/payments', icon: Wallet },
+	{ title: 'Reviews', url: '/vendor-dashboard/reviews', icon: Star },
 	{ title: 'Plan', url: '/vendor-dashboard/plan', icon: Crown },
 	{ title: 'Messages', url: '/vendor-dashboard/messages', icon: MessageSquare }
 ];

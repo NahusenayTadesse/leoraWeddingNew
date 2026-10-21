@@ -1,8 +1,17 @@
 import { z } from 'zod/v4';
 import { requireCoupleAndWedding } from '$lib/server/weddings';
 import { getCoupleByUserId } from '$lib/server/couples';
-import { addEvent, EVENT_TYPES, listEvents, removeEvent, updateEvent } from '$lib/server/planner';
-import { parse, ok, bad } from '$lib/server/adminAction';
+import {
+	addEvent,
+	addWeddingWeek,
+	EVENT_TYPES,
+	listEvents,
+	removeEvent,
+	updateEvent,
+	type WeddingWeekKey
+} from '$lib/server/planner';
+import { parse, ok, bad } from '@nahu/admin-kit/server/actionResults';
+import { isoDay } from '$lib/server/availability';
 import type { Actions, PageServerLoad } from './$types';
 import { m } from '$lib/paraglide/messages.js';
 
@@ -35,7 +44,29 @@ export const load: PageServerLoad = async ({ locals }) => {
 	return { events };
 };
 
+const WEEK_LABELS: Record<WeddingWeekKey, () => { name: string; note: string }> = {
+	shimgelegna: () => ({ name: m.tpl_shimgelegna(), note: m.tpl_shimgelegna_note() }),
+	engagement: () => ({ name: m.tpl_engagement(), note: m.tpl_engagement_note() }),
+	telosh: () => ({ name: m.tpl_telosh(), note: m.tpl_telosh_note() }),
+	ceremony: () => ({ name: m.tpl_ceremony(), note: m.tpl_ceremony_note() }),
+	melse: () => ({ name: m.tpl_melse(), note: m.tpl_melse_note() }),
+	kilikil: () => ({ name: m.tpl_kilikil(), note: m.tpl_kilikil_note() })
+};
+
 export const actions = {
+	/** One click: the traditional wedding week, dated from the wedding day. */
+	weddingWeek: async ({ locals }) => {
+		const { couple, wedding } = await requireCoupleAndWedding(locals);
+		const date = wedding.weddingDate
+			? wedding.weddingDate instanceof Date
+				? isoDay(wedding.weddingDate)
+				: String(wedding.weddingDate).slice(0, 10)
+			: null;
+		if (!date) return bad(m.srv_tpl_no_date());
+		const added = await addWeddingWeek(couple.id, date, locals.user!.id, (k) => WEEK_LABELS[k]());
+		return ok(added ? m.srv_tpl_added({ count: added }) : m.srv_tpl_none());
+	},
+
 	add: async ({ request, locals }) => {
 		const { couple } = await requireCoupleAndWedding(locals);
 		const p = await parse(request, eventSchema);

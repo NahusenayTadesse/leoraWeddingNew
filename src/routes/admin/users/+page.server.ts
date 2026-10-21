@@ -15,7 +15,7 @@ import {
 import { db } from '$lib/server/db';
 import { user, session, roles, couples, vendors } from '$lib/server/db/schema';
 import { userBanSchema, userRoleSchema } from '$lib/schemas/admin';
-import { parse, ok } from '$lib/server/adminAction';
+import { parse, ok } from '@nahu/admin-kit/server/actionResults';
 import { audit } from '$lib/server/auditLog';
 import { requirePermission } from '$lib/server/permissions';
 import { PERM } from '$lib/access';

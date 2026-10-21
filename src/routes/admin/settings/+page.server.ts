@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod/v4';
-import { parse, ok, bad } from '$lib/server/adminAction';
+import { parse, ok, bad } from '@nahu/admin-kit/server/actionResults';
 import { message, superValidate } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { commissionSchema } from '$lib/schemas/admin';

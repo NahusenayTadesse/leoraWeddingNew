@@ -10,6 +10,7 @@ import { auth } from '$lib/server/auth';
 import { addUser, addVendor, loginSchema } from '$lib/ZodSchema';
 import { couples, roles, user, vendors } from '$lib/server/db/schema';
 import { LIMITS, takeToken } from '$lib/server/rateLimit';
+import { makeInviteCode } from '$lib/server/partners';
 
 /** Where better-auth sends a freshly verified user (signed in) — see /auth/verified. */
 const VERIFIED_CALLBACK = '/auth/verified';
@@ -57,16 +58,6 @@ async function roleIdByName(name: string): Promise<number | null> {
 		.limit(1)
 		.then((r) => r[0]);
 	return row?.id ?? null;
-}
-
-/**
- * The code the second partner types in to join an existing workspace.
- * Ambiguous characters (0/O, 1/I) are left out — this gets read aloud.
- */
-function makeInviteCode(): string {
-	const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-	const bytes = crypto.getRandomValues(new Uint8Array(8));
-	return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('');
 }
 
 /** `abebe-and-tsehay-7fa2` — public-facing, so it must not collide. */

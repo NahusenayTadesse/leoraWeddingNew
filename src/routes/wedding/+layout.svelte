@@ -13,7 +13,10 @@
 		Bookmark,
 		MessageSquare,
 		Mail,
-		ScanLine
+		ScanLine,
+		Gift,
+		Images,
+		LayoutGrid
 	} from '@lucide/svelte';
 	import { m } from '$lib/paraglide/messages.js';
 	import { cn } from '$lib/utils';
@@ -31,11 +34,14 @@
 		{ href: '/wedding/events', label: m.nav_events(), icon: CalendarRange },
 		{ href: '/wedding/guests', label: m.nav_guests(), icon: Users },
 		{ href: '/wedding/card', label: m.nav_card_editor(), icon: Mail },
+		{ href: '/wedding/gifts', label: m.nav_gifts(), icon: Gift },
+		{ href: '/wedding/guestbook', label: m.nav_guestbook(), icon: Images },
 		{ href: '/wedding/check-in', label: m.nav_check_in(), icon: ScanLine },
 		{ href: '/wedding/seating', label: m.nav_seating(), icon: Armchair },
 		{ href: '/wedding/tasks', label: m.nav_tasks(), icon: ListChecks },
 		{ href: '/wedding/bookings', label: m.nav_bookings(), icon: Store },
 		{ href: '/wedding/saved', label: m.nav_saved(), icon: Bookmark },
+		{ href: '/wedding/boards', label: m.nav_boards(), icon: LayoutGrid },
 		{ href: '/wedding/messages', label: m.nav_messages(), icon: MessageSquare }
 	];
 

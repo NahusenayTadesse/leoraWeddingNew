@@ -1,4 +1,5 @@
 <script lang="ts">
+	import DemoLinks from './demo/DemoLinks.svelte';
 	import { m } from '$lib/paraglide/messages.js';
 	import './layout.css';
 	import { getFlash } from 'sveltekit-flash-message';
@@ -112,3 +113,5 @@
 {:else}
 	{@render children()}
 {/if}
+
+<DemoLinks />

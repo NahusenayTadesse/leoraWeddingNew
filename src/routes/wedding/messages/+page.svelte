@@ -143,6 +143,9 @@
 				{/if}
 			</div>
 
+			{#if !data.activeThread.booked}
+				<p class="border-t px-3.5 pt-2 text-xs text-muted-foreground">{m.msg_contact_hidden()}</p>
+			{/if}
 			<ActionForm
 				action="?/send"
 				submit={() => {

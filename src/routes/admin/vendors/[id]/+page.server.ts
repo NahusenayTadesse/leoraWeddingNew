@@ -18,7 +18,13 @@ import {
 	weddingPlans
 } from '$lib/server/db/schema';
 import { toMoney } from '$lib/money';
-import type { PageServerLoad } from './$types';
+import { parse, ok, bad } from '@nahu/admin-kit/server/actionResults';
+import { requirePermission } from '$lib/server/permissions';
+import { PERM } from '$lib/access';
+import { audit } from '$lib/server/auditLog';
+import { notify } from '$lib/server/notify';
+import { z } from 'zod/v4';
+import type { Actions, PageServerLoad } from './$types';
 
 /** Everything about one vendor on one screen: listing, plan, money, bookings, reviews, disputes. */
 export const load: PageServerLoad = async ({ params }) => {
@@ -141,3 +147,37 @@ export const load: PageServerLoad = async ({ params }) => {
 		disputes: openDisputes
 	};
 };
+
+export const actions = {
+	/**
+	 * Grants or removes the Verified badge. Staff grant it only after checking the business's trade
+	 * licence and the owner's ID; the public page tells couples that is what it means.
+	 */
+	setVerified: async (event) => {
+		requirePermission(event.locals, PERM.vendorsApprove);
+		const p = await parse(event.request, z.object({ verified: z.enum(['yes', 'no']) }));
+		if ('error' in p) return p.error;
+		const id = Number(event.params.id);
+		const verified = p.data.verified === 'yes';
+		const [res] = await db
+			.update(vendors)
+			.set({ isVerified: verified, verifiedAt: verified ? new Date() : null })
+			.where(eq(vendors.id, id));
+		if (!res.affectedRows) return bad('Vendor not found', 404);
+
+		await audit(event, verified ? 'vendor.verify' : 'vendor.unverify', 'vendor', id);
+		const [owner] = await db
+			.select({ userId: vendors.userId })
+			.from(vendors)
+			.where(eq(vendors.id, id));
+		if (verified) {
+			await notify(owner?.userId, {
+				type: 'vendor_verified',
+				title: 'Your business is verified',
+				body: 'Couples now see the Verified badge on your listing.',
+				link: '/vendor-dashboard/profile'
+			});
+		}
+		return ok(verified ? 'Vendor verified' : 'Verification removed');
+	}
+} satisfies Actions;

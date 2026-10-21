@@ -13,7 +13,7 @@ import {
 import { db } from '$lib/server/db';
 import { vendors, vendorCategories } from '$lib/server/db/schema';
 import { vendorStatusSchema } from '$lib/schemas/admin';
-import { parse, ok, bad } from '$lib/server/adminAction';
+import { parse, ok, bad } from '@nahu/admin-kit/server/actionResults';
 import { statusLabel } from '$lib/status';
 import { audit } from '$lib/server/auditLog';
 import { notify } from '$lib/server/notify';

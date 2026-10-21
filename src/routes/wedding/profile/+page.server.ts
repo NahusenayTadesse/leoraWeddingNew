@@ -1,15 +1,22 @@
 import { superValidate, setError, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { db } from '$lib/server/db';
-import { couples } from '$lib/server/db/schema';
+import { couples, user } from '$lib/server/db/schema';
+import { makeInviteCode, removePartner, resetInvite } from '$lib/server/partners';
+import { ok, bad } from '@nahu/admin-kit/server/actionResults';
 import { coupleSchema } from '$lib/schemas/couples';
 import { getCoupleByUserId, uniqueSlug } from '$lib/server/couples';
 import { and, eq, isNull } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 import { m } from '$lib/paraglide/messages.js';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	const couple = await getCoupleByUserId(locals.user!.id);
+	const isPartner1 = !!couple && couple.partner1UserId === locals.user!.id;
+	const partnerId = couple ? (isPartner1 ? couple.partner2UserId : couple.partner1UserId) : null;
+	const [partner] = partnerId
+		? await db.select({ name: user.name }).from(user).where(eq(user.id, partnerId))
+		: [];
 
 	const form = await superValidate(
 		couple
@@ -25,11 +32,21 @@ export const load: PageServerLoad = async ({ locals }) => {
 		zod4(coupleSchema)
 	);
 
-	return { form, isNew: !couple, verified: couple?.verified ?? false };
+	return {
+		form,
+		isNew: !couple,
+		verified: couple?.verified ?? false,
+		partner: {
+			/** Only partner 1 manages the invite. */
+			canInvite: isPartner1,
+			name: partner?.name ?? null,
+			inviteUrl: couple && isPartner1 ? `${url.origin}/join/${couple.inviteCode}` : null
+		}
+	};
 };
 
 export const actions: Actions = {
-	default: async ({ request, locals }) => {
+	save: async ({ request, locals }) => {
 		const userId = locals.user!.id;
 		const form = await superValidate(request, zod4(coupleSchema));
 		if (!form.valid)
@@ -61,7 +78,7 @@ export const actions: Actions = {
 				await db.insert(couples).values({
 					...values,
 					partner1UserId: userId,
-					inviteCode: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
+					inviteCode: makeInviteCode(),
 					createdBy: userId,
 					updatedBy: userId
 				});
@@ -77,5 +94,19 @@ export const actions: Actions = {
 			type: 'success',
 			text: existing ? m.srv_details_updated() : m.srv_profile_ready()
 		});
+	},
+
+	newInviteLink: async ({ locals }) => {
+		const couple = await getCoupleByUserId(locals.user!.id);
+		if (!couple || !(await resetInvite(couple.id, locals.user!.id)))
+			return bad(m.srv_not_yours(), 403);
+		return ok(m.srv_partner_new_link());
+	},
+
+	removePartner: async ({ locals }) => {
+		const couple = await getCoupleByUserId(locals.user!.id);
+		if (!couple || !(await removePartner(couple.id, locals.user!.id)))
+			return bad(m.srv_not_yours(), 403);
+		return ok(m.srv_partner_removed());
 	}
 };

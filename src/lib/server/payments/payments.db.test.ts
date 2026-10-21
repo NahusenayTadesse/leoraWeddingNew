@@ -65,11 +65,11 @@ async function setup(agreed = 30000) {
 	return { vendor, couple, booking, accountId, payer, pay };
 }
 
-const walletOf = async (vendorId: number) =>
-	Number(
-		(await db.select().from(vendorWallets).where(eq(vendorWallets.vendorId, vendorId)))[0]
-			?.balance ?? 0
-	);
+/** Everything credited to the vendor, held or released (holds are covered in hold.db.test.ts). */
+const walletOf = async (vendorId: number) => {
+	const [w] = await db.select().from(vendorWallets).where(eq(vendorWallets.vendorId, vendorId));
+	return Number(w?.balance ?? 0) + Number(w?.heldBalance ?? 0);
+};
 
 const lastBookingPayment = async () =>
 	(await db.select().from(bookingPayments).orderBy(bookingPayments.id)).at(-1)!;

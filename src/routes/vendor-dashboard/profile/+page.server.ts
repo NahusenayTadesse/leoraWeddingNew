@@ -23,7 +23,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 				email: vendors.email,
 				website: vendors.website,
 				priceMin: vendors.priceMin,
-				priceMax: vendors.priceMax
+				priceMax: vendors.priceMax,
+				maxGuests: vendors.maxGuests,
+				cancellationPolicy: vendors.cancellationPolicy,
+				depositPercent: vendors.depositPercent,
+				balanceDueDays: vendors.balanceDueDays
 			})
 			.from(vendors)
 			.where(eq(vendors.id, vendor.id))
@@ -45,7 +49,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 			email: row?.email ?? undefined,
 			website: row?.website ?? undefined,
 			priceMin: row?.priceMin ? Number(row.priceMin) : undefined,
-			priceMax: row?.priceMax ? Number(row.priceMax) : undefined
+			priceMax: row?.priceMax ? Number(row.priceMax) : undefined,
+			maxGuests: row?.maxGuests ?? undefined
 		},
 		zod4(vendorProfileSchema)
 	);
@@ -65,7 +70,7 @@ export const actions: Actions = {
 			);
 		}
 
-		const { priceMin, priceMax, email, website, ...rest } = form.data;
+		const { priceMin, priceMax, maxGuests, email, website, ...rest } = form.data;
 
 		await db
 			.update(vendors)
@@ -75,6 +80,7 @@ export const actions: Actions = {
 				website: website || null,
 				priceMin: priceMin !== undefined ? fromMoney(priceMin) : null,
 				priceMax: priceMax !== undefined ? fromMoney(priceMax) : null,
+				maxGuests: maxGuests ?? null,
 				updatedBy: locals.user!.id
 			})
 			.where(eq(vendors.id, vendor.id));

@@ -179,6 +179,7 @@ export async function cardBySlug(slug: string, viewerCoupleId?: number | null) {
 			coverImage: card?.coverImage ?? null,
 			rsvpDeadline: card?.rsvpDeadline ?? null,
 			mapUrl: card?.mapUrl ?? null,
+			giftsEnabled: card?.giftsEnabled ?? false,
 			published: card?.published ?? false
 		},
 		weddingDate: plan?.weddingDate ?? null,

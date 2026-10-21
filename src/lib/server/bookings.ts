@@ -7,6 +7,7 @@ import {
 	vendorQuotes
 } from '$lib/server/db/schema';
 import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { balanceDueDate, depositAmount } from '$lib/policy';
 import { contractsForBookings } from '$lib/server/contracts';
 
 /** Vendor's contact user + display name, for the auto-generated booking-request message. */
@@ -38,6 +39,9 @@ export async function listBookings(weddingPlanId: number) {
 			vendorName: vendors.businessName,
 			vendorPhone: vendors.phone,
 			vendorVerified: vendors.isVerified,
+			policy: vendors.cancellationPolicy,
+			depositPercent: vendors.depositPercent,
+			balanceDueDays: vendors.balanceDueDays,
 			serviceId: vendorBookings.serviceId,
 			serviceTitle: vendorServices.title,
 			status: vendorBookings.status,
@@ -124,13 +128,19 @@ export async function listBookings(weddingPlanId: number) {
 		const agreed = Number(r.agreedPrice ?? 0);
 		const paid = Number(t?.confirmed ?? 0);
 		const pending = Number(t?.pending ?? 0);
+		const eventDay = r.eventDate ? String(r.eventDate).slice(0, 10) : null;
 
 		return {
 			...r,
+			// Shared once the vendor has confirmed; before that, talk through Leora messages.
+			vendorPhone: r.status === 'confirmed' || r.status === 'completed' ? r.vendorPhone : null,
 			agreedPrice: agreed,
 			paid,
 			pendingPaid: pending,
 			balance: Math.max(0, Math.round((agreed - paid - pending) * 100) / 100),
+			/** Still owed towards the deposit that secures the date. */
+			depositDue: Math.max(0, depositAmount(agreed, r.depositPercent) - paid - pending),
+			balanceDueBy: balanceDueDate(eventDay, r.balanceDueDays),
 			contract: contractByBooking.get(r.id) ?? null,
 			quotes: openQuotes
 				.filter((q) => q.bookingId === r.id)

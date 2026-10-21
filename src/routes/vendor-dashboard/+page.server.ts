@@ -8,6 +8,7 @@ import {
 	weddingPlans,
 	couples
 } from '$lib/server/db/schema';
+import { vendorFunnel } from '$lib/server/vendorStats';
 import type { PageServerLoad } from './$types';
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -25,7 +26,7 @@ export const load: PageServerLoad = async ({ parent }) => {
 				.groupBy(vendorBookings.status),
 
 			db
-				.select({ balance: vendorWallets.balance })
+				.select({ balance: vendorWallets.balance, held: vendorWallets.heldBalance })
 				.from(vendorWallets)
 				.where(eq(vendorWallets.vendorId, vendor.id))
 				.limit(1),
@@ -72,13 +73,20 @@ export const load: PageServerLoad = async ({ parent }) => {
 		)
 		.then((r) => r[0]?.c ?? 0);
 
+	const funnel = await vendorFunnel(vendor.id, vendor.userId);
+
 	return {
+		funnel,
 		stats: {
 			pending: byStatus.pending ?? 0,
 			confirmedUpcoming: upcomingConfirmed,
 			totalBookings:
-				(byStatus.pending ?? 0) + (byStatus.confirmed ?? 0) + (byStatus.cancelled ?? 0),
+				(byStatus.pending ?? 0) +
+				(byStatus.confirmed ?? 0) +
+				(byStatus.completed ?? 0) +
+				(byStatus.cancelled ?? 0),
 			walletBalance: Number(wallet?.balance ?? 0),
+			heldBalance: Number(wallet?.held ?? 0),
 			serviceCount,
 			packageCount
 		},

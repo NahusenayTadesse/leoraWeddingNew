@@ -5,6 +5,7 @@
 	import FormDialog from '@nahu/admin-kit/formComponents/FormDialog.svelte';
 	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
 	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
+	import ActionForm from '@nahu/admin-kit/formComponents/ActionForm.svelte';
 	import PageHeader from '$lib/components/admin/PageHeader.svelte';
 	import { bookingCancelSchema } from '$lib/schemas/admin';
 	import { date, longText, money, sortable, status } from '$lib/cells';
@@ -39,6 +40,12 @@
 			cell: ({ row }) => money(row.original.price)
 		},
 		{
+			id: 'held',
+			header: 'On hold',
+			meta: { align: 'right' },
+			cell: ({ row }) => (row.original.held > 0 ? money(row.original.held) : '')
+		},
+		{
 			id: 'status',
 			accessorKey: 'status',
 			header: 'Status',
@@ -61,6 +68,20 @@
 {#snippet actionsCell(row: Row)}
 	{#if row.status === 'pending'}
 		<Button size="sm" variant="destructive" onclick={() => openCancel(row)}>Cancel</Button>
+	{:else if row.held > 0}
+		<ActionForm action="?/release" fields={{ id: row.id }}>
+			{#snippet children({ busy })}
+				<Button
+					type="submit"
+					size="sm"
+					variant="outline"
+					disabled={!!busy}
+					title="Pay the vendor their held share now"
+				>
+					Release funds
+				</Button>
+			{/snippet}
+		</ActionForm>
 	{/if}
 {/snippet}
 

@@ -4,6 +4,7 @@ import { listGuests } from '$lib/server/guests';
 import { listTasks, toDateInput } from '$lib/server/tasks';
 import { listBookings } from '$lib/server/bookings';
 import { listVendors } from '$lib/server/vendorDirectory';
+import { getCard } from '$lib/server/cards';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ parent }) => {
@@ -18,12 +19,13 @@ export const load: PageServerLoad = async ({ parent }) => {
 		};
 	}
 
-	const [budgetItems, guests, tasks, bookings, recommended] = await Promise.all([
+	const [budgetItems, guests, tasks, bookings, recommended, card] = await Promise.all([
 		listBudgetItems(couple.id),
 		listGuests(couple.id),
 		listTasks(couple.id),
 		listBookings(wedding.id),
-		listVendors({ sort: 'recommended', page: 1 })
+		listVendors({ sort: 'recommended', page: 1 }),
+		getCard(couple.id)
 	]);
 
 	const activeBookings = bookings.filter((b) => b.status !== 'cancelled');
@@ -100,7 +102,8 @@ export const load: PageServerLoad = async ({ parent }) => {
 
 		bookings: {
 			total: activeBookings.length,
-			confirmed: activeBookings.filter((b) => b.status === 'confirmed').length,
+			confirmed: activeBookings.filter((b) => b.status === 'confirmed' || b.status === 'completed')
+				.length,
 			pending: activeBookings.filter((b) => b.status === 'pending').length,
 			agreed: activeBookings.reduce((s, b) => s + b.agreedPrice, 0),
 			paid: activeBookings.reduce((s, b) => s + b.paid, 0),
@@ -117,6 +120,13 @@ export const load: PageServerLoad = async ({ parent }) => {
 					balance: b.balance,
 					eventDate: toDateInput(b.eventDate)
 				}))
+		},
+
+		/** What the milestone badges are earned from. */
+		progress: {
+			partnerJoined: !!couple.partner1UserId && !!couple.partner2UserId,
+			cardPublished: !!card?.published,
+			rsvps: guests.filter((g) => g.rsvpStatus === 'confirmed').length
 		},
 
 		recommended: recommended.vendors.slice(0, 3).map((v) => ({

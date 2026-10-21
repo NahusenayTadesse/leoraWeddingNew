@@ -16,10 +16,18 @@ import { vendorBookings, vendors, weddingPlans, couples } from '$lib/server/db/s
 import { bookingCancelSchema } from '$lib/schemas/admin';
 import { audit } from '$lib/server/auditLog';
 import { toMoney } from '$lib/money';
+import { parse, ok, bad } from '@nahu/admin-kit/server/actionResults';
+import { releaseBookingNow } from '$lib/server/bookingPayments';
+import { requirePermission } from '$lib/server/permissions';
+import { PERM } from '$lib/access';
+import { z } from 'zod/v4';
 import type { Actions, PageServerLoad } from './$types';
 
 const FILTERS = ['status'] as const;
 type Filter = (typeof FILTERS)[number];
+
+/** The vendor's share of this booking's confirmed payments that is still on hold. */
+const heldNet = sql<string>`(SELECT COALESCE(SUM(pc.net_amount), 0) FROM booking_payments bp JOIN payment_commissions pc ON pc.booking_payment_id = bp.id WHERE bp.booking_id = ${vendorBookings.id} AND bp.status = 'confirmed' AND bp.released_at IS NULL AND bp.deleted_at IS NULL)`;
 
 const coupleName = sql<string>`concat_ws(' & ', nullif(${couples.brideName}, ''), nullif(${couples.groomName}, ''))`;
 
@@ -68,6 +76,7 @@ export const load: PageServerLoad = async ({ url }) => {
 					createdAt: vendorBookings.createdAt,
 					cancelledBy: vendorBookings.cancelledBy,
 					reason: vendorBookings.cancellationReason,
+					held: heldNet,
 					vendor: vendors.businessName,
 					couple: coupleName
 				})
@@ -97,6 +106,7 @@ export const load: PageServerLoad = async ({ url }) => {
 		rows: rows.map((r) => ({
 			...r,
 			price: r.price === null ? null : toMoney(r.price),
+			held: toMoney(r.held),
 			couple: r.couple || 'Couple'
 		})),
 		server: { pagination: pagination(query, total), facets, filters: currentQuery(query) },
@@ -134,5 +144,25 @@ export const actions = {
 			reason: form.data.reason
 		});
 		return message(form, { type: 'success', text: 'Booking cancelled' });
+	},
+
+	/**
+	 * Releases a booking's held money to the vendor now: for a cancelled booking whose deposit the
+	 * vendor keeps, or a delivery the couple never confirmed. Refused while a dispute is open.
+	 */
+	release: async (event) => {
+		requirePermission(event.locals, PERM.paymentsManage);
+		const p = await parse(event.request, z.object({ id: z.coerce.number().int().positive() }));
+		if ('error' in p) return p.error;
+		const result = await releaseBookingNow(p.data.id);
+		if (!result.ok) return bad(result.reason);
+		await audit(event, 'booking.release_funds', 'vendor_booking', p.data.id, {
+			released: result.released
+		});
+		return ok(
+			result.released > 0
+				? `Released ETB ${result.released.toFixed(2)} to the vendor.`
+				: 'Nothing to release (a refund may be waiting for review).'
+		);
 	}
 } satisfies Actions;

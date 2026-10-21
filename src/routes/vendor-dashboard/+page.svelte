@@ -22,9 +22,23 @@
 		suspended: 'Suspended'
 	};
 
+	const funnelSteps = $derived([
+		{ label: 'Profile views', value: data.funnel.views },
+		{ label: 'Saved by couples', value: data.funnel.saves },
+		{ label: 'Inquiries', value: data.funnel.inquiries },
+		{ label: 'Bookings', value: data.funnel.bookings },
+		{
+			label: 'Inquiries that booked',
+			value: data.funnel.inquiries
+				? `${Math.round((data.funnel.bookings / data.funnel.inquiries) * 100)}%`
+				: '—'
+		}
+	]);
+
 	const BOOKING_STATUS_VARIANT: Record<string, 'secondary' | 'default' | 'destructive'> = {
 		pending: 'secondary',
 		confirmed: 'default',
+		completed: 'default',
 		cancelled: 'destructive'
 	};
 
@@ -106,6 +120,11 @@
 				<div>
 					<p class="text-xs text-muted-foreground">Wallet balance</p>
 					<p class="text-2xl font-semibold">{formatETB(data.stats.walletBalance)}</p>
+					{#if data.stats.heldBalance > 0}
+						<p class="text-xs text-muted-foreground">
+							+ {formatETB(data.stats.heldBalance)} on hold
+						</p>
+					{/if}
 				</div>
 				<Wallet class="size-8 text-muted-foreground" />
 			</Card.Content>
@@ -125,6 +144,24 @@
 			</Card.Content>
 		</Card.Root>
 	</div>
+
+	<!-- Funnel -->
+	<Card.Root>
+		<Card.Header>
+			<Card.Title>Last 30 days</Card.Title>
+			<Card.Description>How couples found you and how many booked.</Card.Description>
+		</Card.Header>
+		<Card.Content>
+			<dl class="grid grid-cols-2 gap-4 sm:grid-cols-5">
+				{#each funnelSteps as step (step.label)}
+					<div>
+						<dt class="text-xs text-muted-foreground">{step.label}</dt>
+						<dd class="text-2xl font-semibold tabular-nums">{step.value}</dd>
+					</div>
+				{/each}
+			</dl>
+		</Card.Content>
+	</Card.Root>
 
 	<div class="grid gap-4 lg:grid-cols-3">
 		<!-- Recent bookings -->

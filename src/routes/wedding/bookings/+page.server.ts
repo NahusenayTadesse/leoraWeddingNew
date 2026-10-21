@@ -18,7 +18,9 @@ import { ClaimRefused, openDispute, requestRefund } from '$lib/server/claims';
 import { notify } from '$lib/server/notify';
 import { isBlocked } from '$lib/server/availability';
 import { signContract } from '$lib/server/contracts';
-import { parse, ok, bad } from '$lib/server/adminAction';
+import { completeBooking } from '$lib/server/bookingPayments';
+import { cancelBooking } from '$lib/server/cancellations';
+import { parse, ok, bad } from '@nahu/admin-kit/server/actionResults';
 import { z } from 'zod/v4';
 
 const refundSchema = z.object({
@@ -43,7 +45,6 @@ import {
 } from '$lib/server/bookings';
 import { requireCoupleAndWedding } from '$lib/server/weddings';
 import { formatETB } from '$lib/money';
-import { and, eq, isNull } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 
 /** Formats a `YYYY-MM-DD` date input as a calendar date, without UTC-shift. */
@@ -148,30 +149,38 @@ export const actions: Actions = {
 		const booking = await getBookingForWedding(form.data.id, wedding.id);
 		if (!booking) return message(form, { type: 'error', text: m.srv_not_yours() }, { status: 403 });
 
-		if (booking.status === 'cancelled') {
-			return message(form, { type: 'success', text: m.srv_already_cancelled() });
+		const outcome = await cancelBooking({
+			bookingId: booking.id,
+			by: 'couple',
+			userId: locals.user!.id,
+			weddingPlanId: wedding.id
+		});
+		if (!outcome.ok) {
+			if (outcome.reason === 'already_cancelled')
+				return message(form, { type: 'success', text: m.srv_already_cancelled() });
+			if (outcome.reason === 'completed')
+				return message(form, { type: 'error', text: m.srv_booking_completed() }, { status: 409 });
+			return message(form, { type: 'error', text: m.srv_not_yours() }, { status: 403 });
 		}
-
-		await db
-			.update(vendorBookings)
-			.set({ status: 'cancelled', updatedBy: locals.user!.id })
-			.where(
-				and(
-					eq(vendorBookings.id, form.data.id),
-					eq(vendorBookings.weddingPlanId, wedding.id),
-					isNull(vendorBookings.deletedAt)
-				)
-			);
 
 		const vendor = await getVendorForMessage(booking.vendorId);
 		await notify(vendor?.userId, {
 			type: 'booking_cancelled',
 			title: 'Booking cancelled by couple',
-			body: 'A couple cancelled their booking with you.',
+			body:
+				outcome.refundTotal > 0
+					? `A couple cancelled their booking with you. Under your cancellation policy they get ${outcome.refundPercent}% of what they paid back (${formatETB(outcome.refundTotal)}); the rest is yours.`
+					: 'A couple cancelled their booking with you.',
 			link: '/vendor-dashboard/bookings'
 		});
 
-		return message(form, { type: 'success', text: m.srv_booking_cancelled() });
+		return message(form, {
+			type: 'success',
+			text:
+				outcome.refundTotal > 0
+					? m.srv_booking_cancelled_refund({ amount: formatETB(outcome.refundTotal) })
+					: m.srv_booking_cancelled()
+		});
 	},
 
 	/**
@@ -291,6 +300,20 @@ export const actions: Actions = {
 			throw err;
 		}
 		return ok(m.srv_dispute_thanks());
+	},
+
+	/** The couple confirms the vendor delivered; their held payments are released to the vendor. */
+	markDelivered: async ({ request, locals }) => {
+		const { wedding } = await requireCoupleAndWedding(locals);
+		const p = await parse(request, z.object({ bookingId: z.coerce.number().int().positive() }));
+		if ('error' in p) return p.error;
+		const outcome = await completeBooking(p.data.bookingId, wedding.id, locals.user!.id);
+		if (!outcome.ok) {
+			if (outcome.reason === 'not_found') return bad(m.srv_not_yours(), 403);
+			if (outcome.reason === 'too_early') return bad(m.srv_delivered_too_early());
+			return bad(m.srv_delivered_not_confirmed());
+		}
+		return ok(outcome.heldByDispute ? m.srv_delivered_dispute() : m.srv_delivered_thanks());
 	},
 
 	/** Signs the booking's contract with the typed full name. */

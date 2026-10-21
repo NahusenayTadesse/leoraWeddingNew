@@ -35,3 +35,5 @@ src/lib/paraglide
 project.inlang/cache
 .playwright-mcp
 .tempFiles-test
+# Playwright
+test-results

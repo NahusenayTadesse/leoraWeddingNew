@@ -34,7 +34,8 @@
 			title: m.footer_legal(),
 			links: [
 				[m.footer_terms(), '/terms'],
-				[m.footer_privacy(), '/privacy']
+				[m.footer_privacy(), '/privacy'],
+				[m.credits_title(), '/credits']
 			]
 		}
 	] as const);

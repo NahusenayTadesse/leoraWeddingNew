@@ -5,7 +5,7 @@ import { zod4 } from 'sveltekit-superforms/adapters';
 import { couponCreateSchema } from '$lib/schemas/admin';
 import { db } from '$lib/server/db';
 import { coupons } from '$lib/server/db/schema';
-import { parse, ok, bad } from '$lib/server/adminAction';
+import { parse, ok, bad } from '@nahu/admin-kit/server/actionResults';
 import { audit } from '$lib/server/auditLog';
 import { fromMoney, toMoney } from '$lib/money';
 import type { Actions, PageServerLoad } from './$types';

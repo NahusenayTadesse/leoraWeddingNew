@@ -2,7 +2,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { db } from '$lib/server/db';
-import { vendorBookings, vendorQuotes, messages, couples } from '$lib/server/db/schema';
+import { vendorBookings, vendorQuotes, couples } from '$lib/server/db/schema';
 import { requireVendor } from '$lib/server/vendor';
 import { listVendorServices } from '$lib/server/bookings';
 import {
@@ -18,10 +18,14 @@ import {
 } from '$lib/server/vendor-bookings';
 import { fromMoney } from '$lib/money';
 import { notify } from '$lib/server/notify';
+import { isoDay } from '$lib/server/availability';
+import { cancelBooking } from '$lib/server/cancellations';
+import { checkBookingAllowance } from '$lib/server/vendorPlan';
+import { sendMessage } from '$lib/server/messages';
 import { ClaimRefused, openDispute } from '$lib/server/claims';
 import { attachContract, contractsForBookings, signContract } from '$lib/server/contracts';
 import { saveUploadedFile, UploadRefused } from '@nahu/admin-kit/server/files';
-import { parse, ok, bad } from '$lib/server/adminAction';
+import { parse, ok, bad } from '@nahu/admin-kit/server/actionResults';
 import { z as zv4 } from 'zod/v4';
 import {
 	bookingTab,
@@ -33,9 +37,29 @@ import {
 	vendorBookingEditSchema,
 	replySchema
 } from '$lib/schemas/vendor-bookings';
-import { idSchema as crudIdSchema } from '$lib/server/crud';
+import { idSchema as crudIdSchema } from '@nahu/admin-kit/server/crud';
 import { currentQuery, pagination, parseTableQuery } from '@nahu/admin-kit/server/queryFilters';
 import type { Actions, PageServerLoad } from './$types';
+
+const COMPLETED_LOCKED =
+	'This booking is completed and can no longer be changed. Contact support if something is wrong.';
+
+/**
+ * Held money is released a few days after the event date, so a vendor must not move an existing
+ * booking into the past: that would release a couple's payment for a service not yet given.
+ */
+const PAST_DATE = 'Pick today or a later date.';
+
+/** Why the vendor's plan doesn't allow another confirmed booking, or null when it does. */
+async function planRefusal(vendorId: number) {
+	const allowance = await checkBookingAllowance(vendorId);
+	if (allowance.ok) return null;
+	return allowance.reason === 'no_plan'
+		? 'Choose a plan to confirm bookings.'
+		: `Your plan includes ${allowance.limit} bookings and you have used them. Upgrade to confirm more.`;
+}
+const movesIntoPast = (before: string | null | undefined, after: string | null | undefined) =>
+	!!after && after !== (before ?? null) && after < isoDay(new Date());
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const vendor = await requireVendor(locals, '/vendor-dashboard/bookings');
@@ -116,6 +140,9 @@ export const actions: Actions = {
 			);
 		}
 
+		const overLimit = form.data.status === 'confirmed' ? await planRefusal(vendor.id) : null;
+		if (overLimit) return message(form, { type: 'error', text: overLimit }, { status: 402 });
+
 		try {
 			await db.insert(vendorBookings).values({
 				weddingPlanId: form.data.weddingPlanId,
@@ -148,6 +175,15 @@ export const actions: Actions = {
 		const before = await getVendorBooking(vendor.id, form.data.id);
 		if (!before)
 			return message(form, { type: 'error', text: 'Booking not found' }, { status: 404 });
+		if (before.status === 'completed')
+			return message(form, { type: 'error', text: COMPLETED_LOCKED }, { status: 409 });
+		if (movesIntoPast(before.eventDate, form.data.eventDate))
+			return message(form, { type: 'error', text: PAST_DATE }, { status: 400 });
+		const overLimit =
+			form.data.status === 'confirmed' && before.status !== 'confirmed'
+				? await planRefusal(vendor.id)
+				: null;
+		if (overLimit) return message(form, { type: 'error', text: overLimit }, { status: 402 });
 
 		try {
 			const [result] = await db
@@ -189,6 +225,14 @@ export const actions: Actions = {
 			return message(form, { type: 'error', text: 'Invalid request' }, { status: 400 });
 		}
 
+		const target = await getVendorBooking(vendor.id, form.data.id);
+		if (target && (target.status === 'confirmed' || target.status === 'completed'))
+			return message(
+				form,
+				{ type: 'error', text: 'Confirmed bookings can be cancelled, not deleted.' },
+				{ status: 409 }
+			);
+
 		try {
 			await db
 				.update(vendorBookings)
@@ -210,6 +254,11 @@ export const actions: Actions = {
 		const booking = await getVendorBooking(vendor.id, form.data.id);
 		if (!booking)
 			return message(form, { type: 'error', text: 'Booking not found' }, { status: 404 });
+		if (booking.status === 'completed')
+			return message(form, { type: 'error', text: COMPLETED_LOCKED }, { status: 409 });
+
+		const overLimit = booking.status === 'confirmed' ? null : await planRefusal(vendor.id);
+		if (overLimit) return message(form, { type: 'error', text: overLimit }, { status: 402 });
 
 		const eventDate = booking.eventDate;
 		if (!form.data.allowOverlap && eventDate) {
@@ -254,16 +303,21 @@ export const actions: Actions = {
 		if (!booking)
 			return message(form, { type: 'error', text: 'Booking not found' }, { status: 404 });
 
-		await db
-			.update(vendorBookings)
-			.set({
-				status: 'cancelled',
-				cancellationReason: form.data.reason,
-				cancelledBy: 'vendor',
-				cancelledAt: new Date(),
-				updatedBy: locals.user!.id
-			})
-			.where(and(eq(vendorBookings.id, booking.id), eq(vendorBookings.vendorId, vendor.id)));
+		// The couple gets everything they paid back when the vendor cancels.
+		const outcome = await cancelBooking({
+			bookingId: booking.id,
+			by: 'vendor',
+			userId: locals.user!.id,
+			reason: form.data.reason,
+			vendorId: vendor.id
+		});
+		if (!outcome.ok) {
+			if (outcome.reason === 'completed')
+				return message(form, { type: 'error', text: COMPLETED_LOCKED }, { status: 409 });
+			if (outcome.reason === 'already_cancelled')
+				return message(form, { type: 'success', text: 'Booking already cancelled' });
+			return message(form, { type: 'error', text: 'Booking not found' }, { status: 404 });
+		}
 
 		await notify(booking.partner1UserId, {
 			type: 'booking_cancelled',
@@ -310,6 +364,10 @@ export const actions: Actions = {
 		const booking = await getVendorBooking(vendor.id, form.data.id);
 		if (!booking)
 			return message(form, { type: 'error', text: 'Booking not found' }, { status: 404 });
+		if (booking.status === 'completed')
+			return message(form, { type: 'error', text: COMPLETED_LOCKED }, { status: 409 });
+		if (movesIntoPast(booking.eventDate, form.data.eventDate))
+			return message(form, { type: 'error', text: PAST_DATE }, { status: 400 });
 
 		if (!form.data.allowOverlap && booking.status === 'confirmed') {
 			const conflict = await hasConfirmedConflict(vendor.id, form.data.eventDate, booking.id);
@@ -354,15 +412,27 @@ export const actions: Actions = {
 			);
 		}
 
-		await db.insert(messages).values({
+		const sent = await sendMessage({
 			senderId: locals.user!.id,
 			receiverId,
 			coupleId: form.data.coupleId,
 			vendorId: vendor.id,
-			body: form.data.body
+			body: form.data.body,
+			from: 'vendor'
 		});
+		if (!sent.ok)
+			return message(
+				form,
+				{ type: 'error', text: 'You can only message couples who contacted you' },
+				{ status: 403 }
+			);
 
-		return message(form, { type: 'success', text: 'Reply sent' });
+		return message(form, {
+			type: 'success',
+			text: sent.masked
+				? 'Reply sent. Contact details are hidden until the booking is confirmed.'
+				: 'Reply sent'
+		});
 	},
 
 	markRead: async ({ request, locals }) => {

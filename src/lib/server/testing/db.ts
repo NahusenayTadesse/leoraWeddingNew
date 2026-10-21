@@ -17,10 +17,16 @@ import {
 } from '$lib/server/db/schema';
 
 const TABLES = [
+	'gift_payouts',
+	'wedding_gifts',
+	'guest_posts',
+	'board_items',
+	'inspiration_boards',
 	'wedding_cards',
 	'guest_lists',
 	'wedding_events',
 	'notifications',
+	'messages',
 	'wallet_transactions',
 	'payment_commissions',
 	'refunds',
@@ -29,6 +35,8 @@ const TABLES = [
 	'vendor_wallets',
 	'vendor_payouts',
 	'vendor_promotions',
+	'vendor_profile_views',
+	'saved_vendors',
 	'vendor_subscriptions',
 	'subscriptions',
 	'contracts',

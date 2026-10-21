@@ -11,7 +11,7 @@ import {
 import { z } from 'zod/v4';
 import { db } from '$lib/server/db';
 import { contactMessages } from '$lib/server/db/schema';
-import { parse, ok } from '$lib/server/adminAction';
+import { parse, ok } from '@nahu/admin-kit/server/actionResults';
 import { audit } from '$lib/server/auditLog';
 import type { Actions, PageServerLoad } from './$types';
 

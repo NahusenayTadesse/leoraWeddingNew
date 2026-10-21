@@ -6,6 +6,7 @@
 	import Kpi from '$lib/components/admin/Kpi.svelte';
 	import { formatETB, formatETBWhole } from '$lib/money';
 	import { statusLabel } from '$lib/status';
+	import ActionForm from '@nahu/admin-kit/formComponents/ActionForm.svelte';
 
 	let { data } = $props();
 
@@ -17,6 +18,20 @@
 	<PageHeader title={v.businessName} description="{v.category ?? 'Vendor'} · {v.city ?? '—'}">
 		<Button href="/vendors/{v.id}" variant="outline" target="_blank">Public page</Button>
 		<Button href="/admin/vendors" variant="ghost">All vendors</Button>
+		<ActionForm action="?/setVerified" fields={{ verified: v.isVerified ? 'no' : 'yes' }}>
+			{#snippet children({ busy })}
+				<Button
+					type="submit"
+					variant={v.isVerified ? 'ghost' : 'default'}
+					disabled={!!busy}
+					title={v.isVerified
+						? 'Remove the Verified badge'
+						: 'Only after checking their trade licence and the owner’s ID'}
+				>
+					{v.isVerified ? 'Remove verification' : 'Mark verified'}
+				</Button>
+			{/snippet}
+		</ActionForm>
 	</PageHeader>
 
 	<div class="flex flex-wrap gap-2">

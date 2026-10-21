@@ -58,10 +58,22 @@
 			<h1 class="text-2xl font-semibold tracking-tight">{m.events_title()}</h1>
 			<p class="text-sm text-muted-foreground">{m.events_sub()}</p>
 		</div>
-		<Button onclick={() => (editing = 'new')}>
-			<PlusIcon class="mr-2 size-4" />{m.events_add()}
-		</Button>
+		<div class="flex flex-wrap gap-2">
+			<ActionForm action="?/weddingWeek">
+				{#snippet children({ busy })}
+					<Button type="submit" variant="outline" disabled={!!busy} title={m.tpl_lead()}>
+						{m.tpl_button()}
+					</Button>
+				{/snippet}
+			</ActionForm>
+			<Button onclick={() => (editing = 'new')}>
+				<PlusIcon class="mr-2 size-4" />{m.events_add()}
+			</Button>
+		</div>
 	</div>
+	{#if data.events.length === 0}
+		<p class="text-sm text-muted-foreground">{m.tpl_lead()}</p>
+	{/if}
 
 	{#if data.events.length === 0}
 		<Card.Root class="p-10 text-center text-sm text-muted-foreground">{m.events_empty()}</Card.Root>

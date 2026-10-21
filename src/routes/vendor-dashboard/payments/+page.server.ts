@@ -11,7 +11,7 @@ import {
 	user
 } from '$lib/server/db/schema';
 import { requireVendor } from '$lib/server/vendor';
-import { parse, ok, bad } from '$lib/server/adminAction';
+import { parse, ok, bad } from '@nahu/admin-kit/server/actionResults';
 import { audit } from '$lib/server/auditLog';
 import { notify } from '$lib/server/notify';
 import { formatETB, fromMoney, toMoney } from '$lib/money';
@@ -33,7 +33,7 @@ async function openPayoutTotal(vendorId: number) {
 
 /**
  * Couples pay through Leora (Chapa, or a transfer staff confirm), so this page only shows what
- * arrived and what the wallet holds; vendors no longer confirm payments themselves. From here
+ * arrived and what the wallet holds (on hold until the service is delivered, then withdrawable); vendors no longer confirm payments themselves. From here
  * they ask for a payout, which an admin completes on /admin/payouts.
  */
 export const load: PageServerLoad = async ({ locals }) => {
@@ -47,6 +47,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 				method: bookingPayments.paymentMethod,
 				type: bookingPayments.paymentType,
 				status: bookingPayments.status,
+				releasedAt: bookingPayments.releasedAt,
 				createdAt: bookingPayments.createdAt,
 				bride: couples.brideName,
 				groom: couples.groomName
@@ -64,7 +65,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			)
 			.orderBy(desc(bookingPayments.createdAt)),
 		db
-			.select({ balance: vendorWallets.balance })
+			.select({ balance: vendorWallets.balance, held: vendorWallets.heldBalance })
 			.from(vendorWallets)
 			.where(eq(vendorWallets.vendorId, vendor.id)),
 		db
@@ -79,9 +80,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const balance = toMoney(wallet?.balance);
 	return {
 		balance,
+		held: toMoney(wallet?.held),
 		available: Math.max(0, Math.round((balance - open) * 100) / 100),
-		rows: rows.map((r) => ({
+		rows: rows.map(({ releasedAt, ...r }) => ({
 			...r,
+			// A confirmed payment is either still held until delivery or released to the wallet.
+			status: r.status === 'confirmed' ? (releasedAt ? 'released' : 'held') : r.status,
 			amount: toMoney(r.amount),
 			couple: [r.bride, r.groom].filter(Boolean).join(' & ') || 'Couple'
 		})),

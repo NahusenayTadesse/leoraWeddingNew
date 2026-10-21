@@ -7,7 +7,7 @@ import {
 	vendorSubscriptions,
 	vendors
 } from '$lib/server/db/schema';
-import { contentCrud } from '$lib/server/crud';
+import { contentCrud } from '@nahu/admin-kit/server/crud';
 import { subscriptionPlanAddSchema, subscriptionPlanEditSchema } from '$lib/schemas/admin';
 import { audit } from '$lib/server/auditLog';
 import type { Actions, PageServerLoad } from './$types';

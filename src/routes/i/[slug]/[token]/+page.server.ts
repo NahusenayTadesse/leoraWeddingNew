@@ -5,6 +5,7 @@ import { CardRefused, cardBySlug, guestByToken, submitRsvp } from '$lib/server/c
 import { getCoupleByUserId } from '$lib/server/couples';
 import { LIMITS, takeToken } from '$lib/server/rateLimit';
 import { m } from '$lib/paraglide/messages.js';
+import { giftAction, postAction } from '$lib/server/guestActions';
 import type { Actions, PageServerLoad } from './$types';
 
 async function pageFor(slug: string, locals: App.Locals) {
@@ -44,7 +45,9 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 			checkedIn: !!guest.checkedInAt
 		},
 		qr,
-		closed
+		closed,
+		giftThanks: url.searchParams.get('gift') === 'thanks',
+		wallUrl: `/i/${params.slug}/wall?t=${encodeURIComponent(params.token)}`
 	};
 };
 
@@ -63,7 +66,25 @@ const rsvpSchema = z.object({
 		.transform((v) => v || null)
 });
 
+/** The guest behind a personal link, for the actions below. */
+async function guestFor(slug: string, token: string, locals: App.Locals) {
+	const page = await pageFor(slug, locals);
+	const guest = await guestByToken(page.couple.id, token);
+	if (!guest) error(404, m.inv_invalid_link());
+	return { page, guest };
+}
+
 export const actions: Actions = {
+	gift: async (event) => {
+		const { page, guest } = await guestFor(event.params.slug, event.params.token, event.locals);
+		return giftAction(event, page.couple.id, guest.id);
+	},
+
+	post: async (event) => {
+		const { page, guest } = await guestFor(event.params.slug, event.params.token, event.locals);
+		return postAction(event, page.couple.id, guest.id);
+	},
+
 	rsvp: async ({ params, locals, request, getClientAddress }) => {
 		if (!takeToken(`rsvp:${getClientAddress()}`, LIMITS.signup)) {
 			return fail(429, { message: { type: 'error', text: m.auth_too_many() } });

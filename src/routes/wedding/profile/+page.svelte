@@ -6,7 +6,18 @@
 	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
 	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
 	import { Badge } from '@nahu/admin-kit/components/ui/badge/index.js';
-	import { BadgeCheck, Loader2 } from '@lucide/svelte';
+	import ActionForm from '@nahu/admin-kit/formComponents/ActionForm.svelte';
+	import { BadgeCheck, Loader2, Users } from '@lucide/svelte';
+	import { toast } from 'svelte-sonner';
+
+	async function copyInvite(link: string) {
+		try {
+			await navigator.clipboard.writeText(link);
+			toast.success(m.partner_copied());
+		} catch {
+			// Clipboard blocked (http, old browser): the link is on screen to copy by hand.
+		}
+	}
 
 	let { data } = $props();
 
@@ -34,7 +45,7 @@
 		{/if}
 	</div>
 
-	<form method="POST" use:enhance>
+	<form method="POST" action="?/save" use:enhance>
 		<Card.Root>
 			<Card.Header>
 				<Card.Title>{m.cp_couple()}</Card.Title>
@@ -104,4 +115,62 @@
 			</Card.Footer>
 		</Card.Root>
 	</form>
+
+	{#if !data.isNew && (data.partner.canInvite || data.partner.name)}
+		<Card.Root>
+			<Card.Header>
+				<Card.Title class="flex items-center gap-2"
+					><Users class="size-4" />{m.partner_title()}</Card.Title
+				>
+				{#if data.partner.name}
+					<Card.Description>{m.partner_joined({ name: data.partner.name })}</Card.Description>
+				{:else}
+					<Card.Description>{m.partner_lead()}</Card.Description>
+				{/if}
+			</Card.Header>
+			{#if data.partner.canInvite}
+				<Card.Content class="space-y-3">
+					{#if !data.partner.name && data.partner.inviteUrl}
+						<div class="flex flex-wrap gap-2">
+							<input
+								readonly
+								value={data.partner.inviteUrl}
+								aria-label={m.partner_title()}
+								class="min-w-0 flex-1 rounded-md border bg-muted px-3 py-2 text-sm"
+								onfocus={(e) => e.currentTarget.select()}
+							/>
+							<Button type="button" onclick={() => copyInvite(data.partner.inviteUrl ?? '')}>
+								{m.partner_copy()}
+							</Button>
+						</div>
+					{/if}
+					<div class="flex flex-wrap gap-2">
+						{#if !data.partner.name}
+							<ActionForm action="?/newInviteLink">
+								{#snippet children({ busy })}
+									<Button type="submit" variant="ghost" size="sm" disabled={!!busy}>
+										{m.partner_new_link()}
+									</Button>
+								{/snippet}
+							</ActionForm>
+						{:else}
+							<ActionForm action="?/removePartner">
+								{#snippet children({ busy })}
+									<Button
+										type="submit"
+										variant="ghost"
+										size="sm"
+										class="text-destructive"
+										disabled={!!busy}
+									>
+										{m.partner_remove()}
+									</Button>
+								{/snippet}
+							</ActionForm>
+						{/if}
+					</div>
+				</Card.Content>
+			{/if}
+		</Card.Root>
+	{/if}
 </div>

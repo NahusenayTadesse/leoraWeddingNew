@@ -46,7 +46,10 @@ function tabCondition(tab: BookingTab) {
 		case 'upcoming':
 			return and(eq(vendorBookings.status, 'confirmed'), gte(vendorBookings.eventDate, today));
 		case 'past':
-			return and(eq(vendorBookings.status, 'confirmed'), lt(vendorBookings.eventDate, today));
+			return and(
+				inArray(vendorBookings.status, ['confirmed', 'completed']),
+				lt(vendorBookings.eventDate, today)
+			);
 		default:
 			return undefined;
 	}
@@ -161,17 +164,23 @@ export async function listVendorBookings(
 	for (const q of quotes) if (!latestQuote.has(q.bookingId)) latestQuote.set(q.bookingId, q);
 
 	return {
-		rows: rows.map((r) => ({
-			...r,
-			coupleNames: r.coupleNames || 'Couple',
-			agreedPrice: r.agreedPrice ? Number(r.agreedPrice) : null,
-			quote: latestQuote.get(r.id)
-				? {
-						...latestQuote.get(r.id)!,
-						proposedPrice: Number(latestQuote.get(r.id)!.proposedPrice)
-					}
-				: null
-		})),
+		rows: rows.map((r) => {
+			// The couple's contact details are shared once the vendor confirms; until then, messages.
+			const booked = r.status === 'confirmed' || r.status === 'completed';
+			return {
+				...r,
+				coupleEmail: booked ? r.coupleEmail : null,
+				couplePhone: booked ? r.couplePhone : null,
+				coupleNames: r.coupleNames || 'Couple',
+				agreedPrice: r.agreedPrice ? Number(r.agreedPrice) : null,
+				quote: latestQuote.get(r.id)
+					? {
+							...latestQuote.get(r.id)!,
+							proposedPrice: Number(latestQuote.get(r.id)!.proposedPrice)
+						}
+					: null
+			};
+		}),
 		total: Number(total),
 		facets
 	};
@@ -231,7 +240,7 @@ export async function hasConfirmedConflict(
 ) {
 	const conditions = [
 		eq(vendorBookings.vendorId, vendorId),
-		eq(vendorBookings.status, 'confirmed'),
+		inArray(vendorBookings.status, ['confirmed', 'completed']),
 		eq(vendorBookings.eventDate, eventDate),
 		isNull(vendorBookings.deletedAt)
 	];

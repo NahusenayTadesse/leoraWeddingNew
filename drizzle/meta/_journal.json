@@ -71,6 +71,55 @@
       "when": 1792529999786,
       "tag": "0009_wedding_cards",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1792573683036,
+      "tag": "0010_payment_hold",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1792574169729,
+      "tag": "0011_booking_terms",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1792574931619,
+      "tag": "0012_vendor_capacity",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "5",
+      "when": 1792575155751,
+      "tag": "0013_trust_signals",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "5",
+      "when": 1792575534985,
+      "tag": "0014_profile_views",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "5",
+      "when": 1792580490270,
+      "tag": "0015_celebration",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "5",
+      "when": 1792581107517,
+      "tag": "0016_board_share",
+      "breakpoints": true
     }
   ]
 }

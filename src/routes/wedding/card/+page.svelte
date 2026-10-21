@@ -1,4 +1,5 @@
 <script lang="ts">
+	import DateInput from '@nahu/admin-kit/formComponents/DateInput.svelte';
 	import ActionForm from '@nahu/admin-kit/formComponents/ActionForm.svelte';
 	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
 	import { Badge } from '@nahu/admin-kit/components/ui/badge/index.js';
@@ -182,15 +183,15 @@
 								></textarea>
 							</label>
 							<div class="grid gap-4 sm:grid-cols-2">
-								<label class="block space-y-1.5 text-sm font-medium">
+								<div class="space-y-1.5 text-sm font-medium">
 									<span>{m.ced_deadline()}</span>
-									<input
+									<DateInput
 										name="rsvpDeadline"
-										type="date"
 										value={p.card.rsvpDeadline ?? ''}
-										class="h-10 w-full rounded-md border bg-background px-3 font-normal"
+										oldDays={false}
+										futureDays
 									/>
-								</label>
+								</div>
 								<label class="block space-y-1.5 text-sm font-medium">
 									<span>{m.ced_map()}</span>
 									<input

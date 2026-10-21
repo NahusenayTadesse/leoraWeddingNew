@@ -1,5 +1,6 @@
 <script lang="ts">
 	import InvitationCard from '$lib/components/card/InvitationCard.svelte';
+	import GuestPanels from '$lib/components/card/GuestPanels.svelte';
 	import { m } from '$lib/paraglide/messages.js';
 	import type { PageProps } from './$types';
 
@@ -33,6 +34,11 @@
 		events={p.events}
 	>
 		<p class="text-center text-sm opacity-70">{m.inv_general_hint()}</p>
+		<GuestPanels
+			events={p.events}
+			giftsEnabled={p.card.giftsEnabled && !p.isPreview}
+			giftThanks={data.giftThanks}
+		/>
 	</InvitationCard>
 </main>
 

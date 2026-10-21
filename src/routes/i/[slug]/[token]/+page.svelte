@@ -1,8 +1,10 @@
 <script lang="ts">
+	import { useDateFormat } from '@nahu/admin-kit/dateFormat.svelte';
+	import { dateLocale } from '$lib/dateLocale';
 	import ActionForm from '@nahu/admin-kit/formComponents/ActionForm.svelte';
 	import InvitationCard from '$lib/components/card/InvitationCard.svelte';
+	import GuestPanels from '$lib/components/card/GuestPanels.svelte';
 	import { m } from '$lib/paraglide/messages.js';
-	import { getLocale } from '$lib/paraglide/runtime';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -17,14 +19,8 @@
 	// svelte-ignore state_referenced_locally
 	let editing = $state(!g.replied);
 
-	const deadline = $derived(
-		p.card.rsvpDeadline
-			? new Date(`${p.card.rsvpDeadline}T12:00:00+03:00`).toLocaleDateString(
-					getLocale() === 'am' ? 'am-ET' : 'en-GB',
-					{ day: 'numeric', month: 'long', year: 'numeric' }
-				)
-			: null
-	);
+	const formatDay = useDateFormat(dateLocale());
+	const deadline = $derived(p.card.rsvpDeadline ? formatDay(p.card.rsvpDeadline, 'long') : null);
 </script>
 
 <svelte:head>
@@ -130,6 +126,15 @@
 				{/if}
 			</section>
 		{/if}
+
+		<GuestPanels
+			events={p.events}
+			defaultName={g.fullName}
+			giftsEnabled={p.card.giftsEnabled && !p.isPreview}
+			giftThanks={data.giftThanks}
+			canPost
+			wallUrl={data.wallUrl}
+		/>
 	</InvitationCard>
 </main>
 

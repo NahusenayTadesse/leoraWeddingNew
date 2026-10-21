@@ -224,6 +224,13 @@ export const weddingCards = mysqlTable('wedding_cards', {
 	coverImage: varchar('cover_image', { length: 255 }),
 	rsvpDeadline: date('rsvp_deadline', { mode: 'string' }),
 	mapUrl: varchar('map_url', { length: 500 }),
+	/** Guests may send a money gift from the invitation. */
+	giftsEnabled: boolean('gifts_enabled').default(false).notNull(),
+	/**
+	 * Secret in the photo-wall link printed on the tables, so anyone at the wedding can post
+	 * without a personal invite, and nobody else can. A new key retires the old link.
+	 */
+	wallKey: varchar('wall_key', { length: 24 }),
 	published: boolean('published').default(false).notNull(),
 	publishedAt: timestamp('published_at', { fsp: 3 }),
 	createdAt: timestamp('created_at', { fsp: 3 }).defaultNow().notNull(),

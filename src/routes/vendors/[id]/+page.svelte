@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { useDateFormat } from '@nahu/admin-kit/dateFormat.svelte';
+	import { dateLocale } from '$lib/dateLocale';
 	import ActionForm from '@nahu/admin-kit/formComponents/ActionForm.svelte';
 	import HiddenField from '@nahu/admin-kit/formComponents/HiddenField.svelte';
 	import { formatPriceRange } from '$lib/price';
@@ -8,6 +10,7 @@
 	import InputComp from '@nahu/admin-kit/formComponents/InputComp.svelte';
 	import * as Card from '@nahu/admin-kit/components/ui/card/index.js';
 	import * as Tabs from '@nahu/admin-kit/components/ui/tabs/index.js';
+	import { page } from '$app/state';
 	import * as Avatar from '@nahu/admin-kit/components/ui/avatar/index.js';
 	import * as Select from '@nahu/admin-kit/components/ui/select/index.js';
 	import { Button } from '@nahu/admin-kit/components/ui/button/index.js';
@@ -20,15 +23,31 @@
 		Star,
 		BadgeCheck,
 		MapPin,
-		Phone,
 		Heart,
 		Store,
 		Loader2,
 		CalendarPlus,
 		ExternalLink,
-		MessageSquare
+		MessageSquare,
+		Clock,
+		Bookmark
 	} from '@lucide/svelte';
 
+	/** "an hour", "5 hours", "2 days": rounded up, so the promise is one the vendor keeps. */
+	function replyTime(hours: number) {
+		if (hours <= 1) return m.vdet_hour();
+		if (hours < 24) return m.vdet_hours({ count: Math.ceil(hours) });
+		const days = Math.ceil(hours / 24);
+		return days === 1 ? m.vdet_day() : m.vdet_days({ count: days });
+	}
+
+	const POLICY_TEXT = {
+		flexible: { name: m.policy_flexible(), desc: m.policy_flexible_desc() },
+		moderate: { name: m.policy_moderate(), desc: m.policy_moderate_desc() },
+		strict: { name: m.policy_strict(), desc: m.policy_strict_desc() }
+	};
+
+	const formatDay = useDateFormat(dateLocale());
 	let { data } = $props();
 
 	/**
@@ -41,7 +60,6 @@
 			'@type': 'LocalBusiness',
 			name: data.vendor.businessName,
 			description: data.vendor.description ?? undefined,
-			telephone: data.vendor.phone ?? undefined,
 			address: data.vendor.city
 				? { '@type': 'PostalAddress', addressLocality: data.vendor.city, addressCountry: 'ET' }
 				: undefined,
@@ -77,7 +95,10 @@
 		return service.prices.find((p) => p.amount === amount) ?? service.prices[0] ?? null;
 	}
 
-	let tab = $state('services');
+	// `?tab=reviews` opens straight on a tab, e.g. from the "leave a review" notification.
+	const TABS = ['services', 'about', 'reviews', 'availability'];
+	const initialTab = page.url.searchParams.get('tab') ?? '';
+	let tab = $state(TABS.includes(initialTab) ? initialTab : 'services');
 
 	// svelte-ignore state_referenced_locally
 	const { form, errors, enhance, submitting } = createForm(data.form, reviewSchema, {
@@ -111,10 +132,7 @@
 
 	function reviewDate(value: unknown) {
 		if (!value) return '';
-		return new Date(value as string).toLocaleDateString('en-GB', {
-			month: 'short',
-			year: 'numeric'
-		});
+		return formatDay(value as string | Date);
 	}
 </script>
 
@@ -138,7 +156,9 @@
 			<div class="flex flex-wrap items-center gap-2">
 				<h1 class="text-3xl font-semibold tracking-tight">{data.vendor.businessName}</h1>
 				{#if data.vendor.isVerified}
-					<Badge class="gap-1"><BadgeCheck class="size-3.5" /> {m.vdet_verified()}</Badge>
+					<Badge class="gap-1" title={m.vdet_verified_means()}
+						><BadgeCheck class="size-3.5" /> {m.vdet_verified()}</Badge
+					>
 				{/if}
 			</div>
 
@@ -225,7 +245,7 @@
 							{#each data.services as service (service.id)}
 								{@const cover = service.featuredImage || service.images[0]}
 								<Card.Root class="overflow-hidden p-0">
-									<div class="aspect-video bg-muted">
+									<div class="relative aspect-video bg-muted">
 										{#if cover}
 											<img
 												src={assetUrl(cover)}
@@ -233,6 +253,30 @@
 												loading="lazy"
 												class="size-full object-cover"
 											/>
+											{#if data.canSave}
+												<ActionForm
+													action="?/saveToBoard"
+													fields={{ serviceId: service.id, image: cover }}
+													class="absolute top-2 right-2 flex items-center gap-1"
+												>
+													{#snippet children({ busy })}
+														{#if data.boards.length > 1}
+															<select
+																name="boardId"
+																aria-label={m.boards_title()}
+																class="h-8 max-w-28 rounded-md border bg-background/90 px-1 text-xs"
+															>
+																{#each data.boards as board (board.id)}
+																	<option value={board.id}>{board.name}</option>
+																{/each}
+															</select>
+														{/if}
+														<Button type="submit" size="sm" variant="secondary" disabled={!!busy}>
+															<Bookmark class="mr-1 size-3.5" />{m.boards_save()}
+														</Button>
+													{/snippet}
+												</ActionForm>
+											{/if}
 										{:else}
 											<div class="flex size-full items-center justify-center text-muted-foreground">
 												<Store class="size-8" />
@@ -281,6 +325,22 @@
 								</p>
 							</div>
 						{/if}
+
+						<Separator class="my-6" />
+						<div class="space-y-1 text-sm">
+							<p class="text-xs text-muted-foreground">{m.vdet_booking_terms()}</p>
+							<p>
+								<span class="font-medium">{POLICY_TEXT[data.vendor.cancellationPolicy].name}:</span>
+								{POLICY_TEXT[data.vendor.cancellationPolicy].desc}
+								{m.policy_vendor_cancels()}
+							</p>
+							<p class="text-muted-foreground">
+								{m.policy_deposit({
+									percent: data.vendor.depositPercent,
+									days: data.vendor.balanceDueDays
+								})}
+							</p>
+						</div>
 					</Card.Root>
 				</Tabs.Content>
 
@@ -430,6 +490,16 @@
 											{#if review.comment}
 												<p class="mt-2 text-sm leading-relaxed">{review.comment}</p>
 											{/if}
+											{#if review.vendorReply}
+												<div class="mt-3 border-l-2 border-primary/40 pl-3 text-sm">
+													<p class="text-xs font-medium text-muted-foreground">
+														{m.vdet_vendor_reply({ vendor: data.vendor.businessName })}
+													</p>
+													<p class="mt-1 leading-relaxed whitespace-pre-line">
+														{review.vendorReply}
+													</p>
+												</div>
+											{/if}
 										</div>
 									</div>
 								</Card.Root>
@@ -459,12 +529,25 @@
 				<h2 class="font-medium">{m.vdet_get_in_touch()}</h2>
 
 				<div class="mt-4 space-y-3 text-sm">
-					<a
-						href="tel:{data.vendor.phone}"
-						class="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-					>
-						<Phone class="size-4" />{data.vendor.phone}
-					</a>
+					{#if data.response?.medianHours != null}
+						<p class="flex items-start gap-2">
+							<Clock class="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+							<span>
+								{m.vdet_replies_within({ time: replyTime(data.response.medianHours) })}
+								<span class="block text-xs text-muted-foreground">
+									{m.vdet_reply_rate({ rate: data.response.replyRate })}
+								</span>
+							</span>
+						</p>
+					{/if}
+					{#if data.vendor.isVerified}
+						<p class="flex items-start gap-2 text-muted-foreground">
+							<BadgeCheck class="mt-0.5 size-4 shrink-0 text-primary" />{m.vdet_verified_means()}
+						</p>
+					{/if}
+					<p class="flex items-start gap-2 text-muted-foreground">
+						<MessageSquare class="mt-0.5 size-4 shrink-0" />{m.vdet_phone_after_booking()}
+					</p>
 
 					{#if fullAddress}
 						<p class="flex items-start gap-2 text-muted-foreground">

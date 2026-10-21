@@ -2,7 +2,7 @@ import { isNull } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { serviceCategories, vendorServices } from '$lib/server/db/schema';
 import { requireVendor } from '$lib/server/vendor';
-import { contentCrud } from '$lib/server/crud';
+import { contentCrud } from '@nahu/admin-kit/server/crud';
 import { vendorServiceAddSchema, vendorServiceEditSchema } from '$lib/schemas/vendor-services';
 import type { PageServerLoad } from './$types';
 

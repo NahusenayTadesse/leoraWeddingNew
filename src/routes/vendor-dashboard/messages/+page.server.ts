@@ -1,8 +1,9 @@
 import { fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { messages, couples } from '$lib/server/db/schema';
+import { couples } from '$lib/server/db/schema';
 import { and, eq, isNull } from 'drizzle-orm';
 import { requireVendor } from '$lib/server/vendor';
+import { haveBooked, sendMessage } from '$lib/server/messages';
 import {
 	listThreadsForVendor,
 	listConversation,
@@ -22,19 +23,22 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	let activeThread: {
 		couple: { coupleId: number; coupleName: string };
 		messages: Awaited<ReturnType<typeof listConversation>>;
+		booked: boolean;
 	} | null = null;
 
 	if (activeCoupleId) {
 		const existing = threads.find((t) => t.coupleId === activeCoupleId);
 
 		if (existing) {
-			const [threadMessages] = await Promise.all([
+			const [threadMessages, , booked] = await Promise.all([
 				listConversation(vendor.id, activeCoupleId),
-				markThreadRead(vendor.id, vendor.userId, activeCoupleId)
+				markThreadRead(vendor.id, vendor.userId, activeCoupleId),
+				haveBooked(activeCoupleId, vendor.id)
 			]);
 			activeThread = {
 				couple: { coupleId: activeCoupleId, coupleName: existing.coupleName },
-				messages: threadMessages
+				messages: threadMessages,
+				booked
 			};
 			existing.unread = 0;
 		}
@@ -67,14 +71,16 @@ export const actions: Actions = {
 			return fail(400, { error: 'This couple has no linked account to message.' });
 		}
 
-		await db.insert(messages).values({
+		const sent = await sendMessage({
 			senderId: locals.user!.id,
 			receiverId,
 			coupleId,
 			vendorId: vendor.id,
-			body
+			body,
+			from: 'vendor'
 		});
+		if (!sent.ok) return fail(403, { error: 'You can only message couples who contacted you.' });
 
-		return { success: true };
+		return { success: true, masked: sent.masked };
 	}
 };

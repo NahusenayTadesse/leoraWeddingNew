@@ -134,6 +134,12 @@
 				{/if}
 			</div>
 
+			{#if !data.activeThread.booked}
+				<p class="border-t px-3.5 pt-2 text-xs text-muted-foreground">
+					Phone numbers, emails and social handles are hidden until the booking is confirmed.
+					Couples pay through Leora, so you are paid for every booking made here.
+				</p>
+			{/if}
 			<ActionForm
 				action="?/send"
 				submit={() => {

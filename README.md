@@ -20,7 +20,7 @@ mariadb -u root -e "CREATE DATABASE leora_dev CHARACTER SET utf8mb4 COLLATE utf8
                     GRANT ALL ON leora_test.* TO 'dev'@'localhost';"
 npm run db:migrate                       # schema, from drizzle/
 mariadb -u dev leora_dev < database/seed.sql   # roles, permissions, plans, categories, locations
-mariadb -u dev leora_dev < database/demo.sql   # optional sample vendors (dev only)
+npm run seed:demo                         # optional demo marketplace (see below)
 node scripts/create-user.mjs --email you@example.com --role Admin   # first admin
 
 npm run dev
@@ -87,10 +87,21 @@ replacing `build/` (a running server keeps the old file list and fails on files 
 (nginx, Caddy) that terminates TLS, forwards `X-Forwarded-For`/`-Proto`, and gzips/brotli-compresses HTML
 responses (adapter-node pre-compresses static assets but not pages).
 
+### Demo server
+
+For a showcase on a fresh server and database: migrate, load `database/seed.sql`, then
+`npm run seed:demo`. It fills the marketplace with 34 fictional vendors (photos in `static/demo`,
+credited on `/credits`), 24 couples at every stage, guests, bookings, held and released payments,
+reviews, gifts and a photo wall. Dates are relative to the day it runs: one couple marries that
+day. It prints the demo logins (`admin@leora.demo`, `hana@leora.demo`, `selam@leora.demo`,
+`mesk@leora.demo`, …); every password is `LeoraDemo2026!`. Set `REQUIRE_STAFF_2FA=false` so the
+demo admin can sign in without two-step setup. `npm run seed:demo -- --reset` re-seeds from scratch
+(it wipes every account and booking, so never on a real site).
+
 ### First deploy checklist
 
 1. Create the database (`utf8mb4`), set the env vars, `npm run db:migrate`.
-2. Load `database/seed.sql` (not `demo.sql`).
+2. Load `database/seed.sql` (and nothing else: `npm run seed:demo` is for demo servers only).
 3. `node scripts/create-user.mjs --email … --role Admin`, sign in, and turn on two-step
    verification at **Account → Password & security** (required for staff in production).
 4. Admin → Settings: set the commission and add the bank accounts customers transfer to.
@@ -129,7 +140,7 @@ src/lib/server/db/       Drizzle schema (see docs/schema-conventions.md)
 src/routes/              public site, /wedding (couples), /vendor-dashboard, /admin
 messages/                translations (en, am) — Paraglide
 drizzle/                 migrations
-database/                seed.sql (reference data), demo.sql (dev sample vendors)
+database/                seed.sql (reference data)
 scripts/                 create-user, baseline-migrations
 leoara_php/              legacy PHP app, kept for reference only
 ```

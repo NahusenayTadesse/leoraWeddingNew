@@ -39,3 +39,4 @@ export * from './vendors';
 export * from './payments';
 export * from './communications';
 export * from './locations';
+export * from './celebration';

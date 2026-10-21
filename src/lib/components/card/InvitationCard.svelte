@@ -4,6 +4,7 @@
 	import { assetUrl } from '$lib/assetUrl';
 	import { m } from '$lib/paraglide/messages.js';
 	import { getLocale } from '$lib/paraglide/runtime';
+	import { formatDateIn } from '@nahu/admin-kit/calendars';
 
 	type Event = {
 		id: number;
@@ -85,6 +86,15 @@
 				})
 			: null
 	);
+	/** The same day on the Ethiopian calendar, as guests' families will say it. */
+	const ethiopianDate = $derived(
+		target
+			? formatDateIn(
+					new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date(target)),
+					'ethiopian'
+				)
+			: null
+	);
 	const when = (d: Date | string | null) =>
 		d
 			? new Date(d).toLocaleString(locale, {
@@ -133,6 +143,7 @@
 
 		{#if longDate}
 			<p class="date"><CalendarHeartIcon class="size-4" aria-hidden="true" />{longDate}</p>
+			{#if ethiopianDate}<p class="date ethiopian">{ethiopianDate}</p>{/if}
 		{/if}
 		{#if city}
 			<p class="city"><MapPinIcon class="size-4" aria-hidden="true" />{city}</p>
@@ -284,6 +295,11 @@
 	}
 	.city {
 		margin-top: 4px;
+		font-weight: 500;
+		color: var(--muted);
+	}
+	.date.ethiopian {
+		margin-top: 2px;
 		font-weight: 500;
 		color: var(--muted);
 	}
